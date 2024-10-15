@@ -313,6 +313,38 @@
 <a href="#313" id="313">313</a>
 <a href="#314" id="314">314</a>
 <a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
+<a href="#326" id="326">326</a>
+<a href="#327" id="327">327</a>
+<a href="#328" id="328">328</a>
+<a href="#329" id="329">329</a>
+<a href="#330" id="330">330</a>
+<a href="#331" id="331">331</a>
+<a href="#332" id="332">332</a>
+<a href="#333" id="333">333</a>
+<a href="#334" id="334">334</a>
+<a href="#335" id="335">335</a>
+<a href="#336" id="336">336</a>
+<a href="#337" id="337">337</a>
+<a href="#338" id="338">338</a>
+<a href="#339" id="339">339</a>
+<a href="#340" id="340">340</a>
+<a href="#341" id="341">341</a>
+<a href="#342" id="342">342</a>
+<a href="#343" id="343">343</a>
+<a href="#344" id="344">344</a>
+<a href="#345" id="345">345</a>
+<a href="#346" id="346">346</a>
+<a href="#347" id="347">347</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Keymanager interface.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -325,7 +357,7 @@
     policy::TrustedSigners,
 };
 <span class="kw">use </span>oasis_core_runtime::{
-    common::namespace::Namespace,
+    common::{crypto::signature::PublicKey, namespace::Namespace},
     consensus::{beacon::EpochTime, verifier::Verifier},
     future::block_on,
     identity::Identity,
@@ -357,20 +389,18 @@
             identity,
             key_cache_sizes,
             signers,
-            <span class="macro">vec!</span>[],
         ));
 
         <span class="comment">// Setup the quote policy update handler.
         </span><span class="kw">let </span>handler_remote_client = remote_client.clone();
         rpc.set_keymanager_quote_policy_update_handler(<span class="prelude-val">Some</span>(Box::new(<span class="kw">move </span>|policy| {
-            handler_remote_client.set_quote_policy(policy);
+            block_on(handler_remote_client.set_quote_policy(policy));
         })));
 
         <span class="comment">// Setup the status update handler.
         </span><span class="kw">let </span>handler_remote_client = remote_client.clone();
         rpc.set_keymanager_status_update_handler(<span class="prelude-val">Some</span>(Box::new(<span class="kw">move </span>|status| {
-            handler_remote_client
-                .set_status(status)
+            block_on(handler_remote_client.set_status(status))
                 .expect(<span class="string">"failed to update km client status"</span>);
         })));
 
@@ -389,6 +419,21 @@
     /// Public and private key queries will be allowed.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>with_private_context(<span class="self">self</span>: <span class="kw-2">&amp;</span>Arc&lt;<span class="self">Self</span>&gt;) -&gt; Box&lt;<span class="kw">dyn </span>KeyManager&gt; {
         Box::new(KeyManagerClientWithContext::new(<span class="self">self</span>.clone(), <span class="bool-val">true</span>)) <span class="kw">as </span>Box&lt;<span class="kw">dyn </span>KeyManager&gt;
+    }
+
+    <span class="doccomment">/// Key manager runtime identifier this client is connected to. It may be `None` in case the
+    /// identifier is not known yet (e.g. the client has not yet been initialized).
+    ///
+    /// See the oasis-core documentation for details.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>runtime_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Namespace&gt; {
+        <span class="self">self</span>.inner.runtime_id()
+    }
+
+    <span class="doccomment">/// Key manager runtime signing key used to sign messages from the key manager.
+    ///
+    /// See the oasis-core documentation for details.
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>runtime_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PublicKey&gt; {
+        <span class="self">self</span>.inner.runtime_signing_key()
     }
 
     <span class="doccomment">/// Clear local key cache.
@@ -456,6 +501,17 @@
 
 <span class="doccomment">/// Key manager interface.
 </span><span class="kw">pub trait </span>KeyManager {
+    <span class="doccomment">/// Key manager runtime identifier this client is connected to. It may be `None` in case the
+    /// identifier is not known yet (e.g. the client has not yet been initialized).
+    ///
+    /// See the oasis-core documentation for details.
+    </span><span class="kw">fn </span>runtime_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Namespace&gt;;
+
+    <span class="doccomment">/// Key manager runtime signing key used to sign messages from the key manager.
+    ///
+    /// See the oasis-core documentation for details.
+    </span><span class="kw">fn </span>runtime_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PublicKey&gt;;
+
     <span class="doccomment">/// Clear local key cache.
     ///
     /// See the oasis-core documentation for details.
@@ -578,6 +634,14 @@
 }
 
 <span class="kw">impl </span>KeyManager <span class="kw">for </span>KeyManagerClientWithContext {
+    <span class="kw">fn </span>runtime_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Namespace&gt; {
+        <span class="self">self</span>.parent.runtime_id()
+    }
+
+    <span class="kw">fn </span>runtime_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PublicKey&gt; {
+        <span class="self">self</span>.parent.runtime_signing_key()
+    }
+
     <span class="kw">fn </span>clear_cache(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="self">self</span>.parent.clear_cache();
     }

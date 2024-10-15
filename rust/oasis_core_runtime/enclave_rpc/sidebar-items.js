@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["client","context","demux","dispatcher","session","types"]};
+window.SIDEBAR_ITEMS = {"mod":["client","context","demux","dispatcher","session","sessions","types"]};

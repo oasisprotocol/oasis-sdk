@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ProtocolError"],"struct":["HostInfo","Protocol","ProtocolUntrustedLocalStorage"],"type":["Stream"]};
+window.SIDEBAR_ITEMS = {"enum":["ProtocolError","Stream"],"struct":["HostInfo","Protocol","ProtocolUntrustedLocalStorage"]};

@@ -129,6 +129,7 @@
 <a href="#129" id="129">129</a>
 <a href="#130" id="130">130</a>
 <a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Wrapper to make development of ROFL components easier.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -138,11 +139,12 @@
 
 <span class="kw">use crate</span>::{
     core::{
+        app,
         common::version,
         config::Config,
         consensus::{roothash, verifier::TrustRoot},
         dispatcher::{PostInitState, PreInitState},
-        rofl, start_runtime,
+        start_runtime,
     },
     crypto,
     types::transaction,
@@ -244,7 +246,7 @@
 }
 
 <span class="attr">#[async_trait]
-</span><span class="kw">impl </span>rofl::App <span class="kw">for </span>AppWrapper {
+</span><span class="kw">impl </span>app::App <span class="kw">for </span>AppWrapper {
     <span class="kw">async fn </span>on_runtime_block(<span class="kw-2">&amp;</span><span class="self">self</span>, blk: <span class="kw-2">&amp;</span>roothash::AnnotatedBlock) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="self">self</span>.cmdq
             .send(processor::Command::ProcessRuntimeBlock(blk.clone()))

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/18da8bc/runtime/src/attestation.rs`."><title>attestation.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/3b1fc77/runtime/src/attestation.rs`."><title>attestation.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -136,6 +136,29 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Functionality related to the enclave attestation flow.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -143,9 +166,10 @@
 <span class="kw">use </span>slog::{info, Logger};
 
 <span class="kw">use crate</span>::{
+    app::App,
     common::{
-        crypto::signature::Signer, logger::get_logger, namespace::Namespace, sgx::Quote,
-        version::Version,
+        crypto::signature::Signer, logger::get_logger, namespace::Namespace, panic::AbortOnPanic,
+        sgx::Quote, version::Version,
     },
     consensus::{
         registry::{EndorsedCapabilityTEE, SGXAttestation, ATTESTATION_SIGNATURE_CONTEXT},
@@ -164,7 +188,8 @@
     host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
     consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
     runtime_id: Namespace,
-    version: <span class="prelude-ty">Option</span>&lt;Version&gt;,
+    version: Version,
+    app: Arc&lt;<span class="kw">dyn </span>App&gt;,
     logger: Logger,
 }
 
@@ -175,7 +200,8 @@
         host: Arc&lt;<span class="kw">dyn </span>Host&gt;,
         consensus_verifier: Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
         runtime_id: Namespace,
-        version: <span class="prelude-ty">Option</span>&lt;Version&gt;,
+        version: Version,
+        app: Arc&lt;<span class="kw">dyn </span>App&gt;,
     ) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             identity,
@@ -183,6 +209,7 @@
             consensus_verifier,
             runtime_id,
             version,
+            app,
             logger: get_logger(<span class="string">"runtime/attestation"</span>),
         }
     }
@@ -210,17 +237,20 @@
     }
 
     <span class="kw">fn </span>target_info_init(<span class="kw-2">&amp;</span><span class="self">self</span>, target_info: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+        <span class="comment">// Make sure to abort the process on panics during attestation process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
+
         <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Initializing the runtime target info"</span>);
         <span class="self">self</span>.identity.init_target_info(target_info)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakInitResponse {})
     }
 
     <span class="kw">fn </span>report_init(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
-        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Initializing the runtime key report"</span>);
-        <span class="kw">let </span>(rak_pub, rek_pub, report, nonce) = <span class="self">self</span>.identity.init_report();
+        <span class="comment">// Make sure to abort the process on panics during attestation process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
 
-        <span class="kw">let </span>report: <span class="kw-2">&amp;</span>[u8] = report.as_ref();
-        <span class="kw">let </span>report = report.to_vec();
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Initializing the runtime key report"</span>);
+        <span class="kw">let </span>(rak_pub, rek_pub, report, nonce) = <span class="self">self</span>.identity.init_report()<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Body::RuntimeCapabilityTEERakReportResponse {
             rak_pub,
@@ -230,21 +260,37 @@
         })
     }
 
-    <span class="kw">async fn </span>set_quote(<span class="kw-2">&amp;</span><span class="self">self</span>, quote: Quote) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
-        <span class="kw">if </span><span class="self">self</span>.identity.quote_policy().is_none() {
-            <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Configuring quote policy"</span>);
+    <span class="kw">async fn </span>set_quote_policy(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="macro">info!</span>(<span class="self">self</span>.logger, <span class="string">"Configuring quote policy"</span>);
 
-            <span class="comment">// TODO: Make async.
+        <span class="comment">// Use the correct quote policy for verifying our own identity based on what kind of
+        // application this is. For ROFL, ask the application, for RONL, query consensus.
+        </span><span class="kw">let </span>policy = <span class="kw">if </span><span class="self">self</span>.app.is_rofl() {
+            <span class="comment">// ROFL, ask the app for policy.
+            </span><span class="self">self</span>.app.quote_policy().<span class="kw">await</span><span class="question-mark">?
+        </span>} <span class="kw">else </span>{
+            <span class="comment">// RONL.
+            // TODO: Make async.
             </span><span class="kw">let </span>consensus_verifier = <span class="self">self</span>.consensus_verifier.clone();
             <span class="kw">let </span>version = <span class="self">self</span>.version;
             <span class="kw">let </span>runtime_id = <span class="self">self</span>.runtime_id;
-            <span class="kw">let </span>policy = tokio::task::block_in_place(<span class="kw">move </span>|| {
+            tokio::task::block_in_place(<span class="kw">move </span>|| {
                 <span class="comment">// Obtain current quote policy from (verified) consensus state.
-                </span>PolicyVerifier::new(consensus_verifier).quote_policy(<span class="kw-2">&amp;</span>runtime_id, version)
-            })<span class="question-mark">?</span>;
+                </span>PolicyVerifier::new(consensus_verifier).quote_policy(<span class="kw-2">&amp;</span>runtime_id, <span class="prelude-val">Some</span>(version))
+            })<span class="question-mark">?
+        </span>};
 
-            <span class="self">self</span>.identity.set_quote_policy(policy)<span class="question-mark">?</span>;
-        }
+        <span class="self">self</span>.identity.set_quote_policy(policy)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">async fn </span>set_quote(<span class="kw-2">&amp;</span><span class="self">self</span>, quote: Quote) -&gt; <span class="prelude-ty">Result</span>&lt;Body&gt; {
+        <span class="comment">// Make sure to abort the process on panics during attestation process.
+        </span><span class="kw">let </span>_guard = AbortOnPanic;
+
+        <span class="comment">// Ensure a quote policy is configured.
+        </span><span class="self">self</span>.set_quote_policy().<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="macro">info!</span>(
             <span class="self">self</span>.logger,

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","TCBStatus"],"struct":["EnclaveTCBLevel","EnclaveTCBVersions","QEIdentity","QeEcdsaP256Verifier","QuoteBundle","QuotePolicy","SignedQEIdentity","SignedTCBInfo","TCBBundle","TCBComponent","TCBInfo","TCBLevel","TCBVersions","TDXModule"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"fn":["td_enclave_identity"],"struct":["Quote","QuoteBundle","QuotePolicy","TCBBundle","TdAttributes","TdReport","TdxModulePolicy","TdxQuotePolicy"]};

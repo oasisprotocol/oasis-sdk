@@ -214,14 +214,34 @@
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime.
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>oasis_core_runtime::{
-    common::version,
+    common::{sgx, version},
     config::Config,
     consensus::verifier::TrustRoot,
     dispatcher::{PostInitState, PreInitState},
+    enclave_rpc::session,
     start_runtime,
     types::{FeatureScheduleControl, Features},
 };
@@ -402,6 +422,24 @@
             );
             <span class="comment">// Register EnclaveRPC methods.
             </span>dispatcher.register_enclaverpc(state.rpc_dispatcher);
+            <span class="comment">// Make sure we allow a wide amount of valid quotes for EnclaveRPC because our clients
+            // are other runtime components and we should accept them all.
+            </span><span class="kw">let </span>session_builder = session::Builder::default()
+                .local_identity(state.identity.clone())
+                .quote_policy(<span class="prelude-val">Some</span>(Arc::new(sgx::QuotePolicy {
+                    ias: <span class="prelude-val">Some</span>(sgx::ias::QuotePolicy {
+                        disabled: <span class="bool-val">true</span>, <span class="comment">// Disable legacy EPID attestation.
+                        </span>..Default::default()
+                    }),
+                    pcs: <span class="prelude-val">Some</span>(sgx::pcs::QuotePolicy {
+                        <span class="comment">// Allow TDX since that is not part of the default policy.
+                        </span>tdx: <span class="prelude-val">Some</span>(sgx::pcs::TdxQuotePolicy {
+                            allowed_tdx_modules: <span class="macro">vec!</span>[],
+                        }),
+                        ..Default::default()
+                    }),
+                })));
+            state.rpc_demux.set_session_builder(session_builder);
 
             PostInitState {
                 txn_dispatcher: <span class="prelude-val">Some</span>(Box::new(dispatcher)),

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["bytes","crypto","key_format","logger","namespace","process","quantity","sgx","time","version","versioned"]};
+window.SIDEBAR_ITEMS = {"mod":["bytes","crypto","key_format","logger","namespace","panic","process","quantity","sgx","time","version","versioned"]};

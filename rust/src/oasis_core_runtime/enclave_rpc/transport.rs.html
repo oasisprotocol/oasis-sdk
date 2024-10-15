@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/18da8bc/runtime/src/enclave_rpc/transport.rs`."><title>transport.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/3b1fc77/runtime/src/enclave_rpc/transport.rs`."><title>transport.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -125,7 +125,13 @@
 <a href="#125" id="125">125</a>
 <a href="#126" id="126">126</a>
 <a href="#127" id="127">127</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::{Arc, Mutex};
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, Error <span class="kw">as </span>AnyError};
 <span class="kw">use </span>async_trait::async_trait;
@@ -134,51 +140,63 @@
 
 <span class="kw">use </span><span class="kw">super</span>::types;
 
+<span class="comment">// Enclave's response.
+</span><span class="kw">pub struct </span>EnclaveResponse {
+    <span class="comment">// Actual response data.
+    </span><span class="kw">pub </span>data: Vec&lt;u8&gt;,
+    <span class="comment">// The public key of the node that generated the response.
+    </span><span class="kw">pub </span>node: signature::PublicKey,
+}
+
 <span class="doccomment">/// An EnclaveRPC transport.
 </span><span class="attr">#[async_trait]
 </span><span class="kw">pub trait </span>Transport: Send + Sync {
     <span class="kw">async fn </span>write_noise_session(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
         session_id: types::SessionID,
         data: Vec&lt;u8&gt;,
         untrusted_plaintext: String,
         nodes: Vec&lt;signature::PublicKey&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
-        <span class="comment">// Frame message.
-        </span><span class="kw">let </span>frame = types::Frame {
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EnclaveResponse, AnyError&gt; {
+        <span class="kw">let </span>frame = types::Frame {
             session: session_id,
             untrusted_plaintext,
             payload: data,
         };
 
-        <span class="self">self</span>.write_message_impl(cbor::to_vec(frame), types::Kind::NoiseSession, nodes)
-            .<span class="kw">await
+        <span class="self">self</span>.write_message_impl(
+            request_id,
+            cbor::to_vec(frame),
+            types::Kind::NoiseSession,
+            nodes,
+        )
+        .<span class="kw">await
     </span>}
 
     <span class="kw">async fn </span>write_insecure_query(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
         data: Vec&lt;u8&gt;,
         nodes: Vec&lt;signature::PublicKey&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
-        <span class="self">self</span>.write_message_impl(data, types::Kind::InsecureQuery, nodes)
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EnclaveResponse, AnyError&gt; {
+        <span class="self">self</span>.write_message_impl(request_id, data, types::Kind::InsecureQuery, nodes)
             .<span class="kw">await
     </span>}
 
     <span class="kw">async fn </span>write_message_impl(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
         data: Vec&lt;u8&gt;,
         kind: types::Kind,
         nodes: Vec&lt;signature::PublicKey&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt;;
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EnclaveResponse, AnyError&gt;;
 
-    <span class="kw">fn </span>set_peer_feedback(<span class="kw-2">&amp;</span><span class="self">self</span>, _pfid: u64, _peer_feedback: <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;) {
-        <span class="comment">// Default implementation doesn't do anything.
-    </span>}
-
-    <span class="kw">fn </span>get_peer_feedback_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-        <span class="comment">// Default implementation doesn't do anything.
-        </span><span class="number">0
-    </span>}
+    <span class="kw">async fn </span>submit_peer_feedback(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
+        feedback: types::PeerFeedback,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), AnyError&gt;;
 }
 
 <span class="doccomment">/// A transport implementation which can be used from inside the runtime and uses the Runtime Host
@@ -186,8 +204,6 @@
 </span><span class="kw">pub struct </span>RuntimeTransport {
     <span class="kw">pub </span>protocol: Arc&lt;Protocol&gt;,
     <span class="kw">pub </span>endpoint: String,
-
-    peer_feedback: Mutex&lt;(u64, <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;)&gt;,
 }
 
 <span class="kw">impl </span>RuntimeTransport {
@@ -195,7 +211,6 @@
         <span class="self">Self </span>{
             protocol,
             endpoint: endpoint.to_string(),
-            peer_feedback: Mutex::new((<span class="number">0</span>, <span class="prelude-val">None</span>)),
         }
     }
 }
@@ -204,52 +219,49 @@
 </span><span class="kw">impl </span>Transport <span class="kw">for </span>RuntimeTransport {
     <span class="kw">async fn </span>write_message_impl(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
         data: Vec&lt;u8&gt;,
         kind: types::Kind,
         nodes: Vec&lt;signature::PublicKey&gt;,
-    ) -&gt; <span class="prelude-ty">Result</span>&lt;(Vec&lt;u8&gt;, signature::PublicKey), AnyError&gt; {
-        <span class="kw">let </span>peer_feedback = {
-            <span class="kw">let </span><span class="kw-2">mut </span>pf = <span class="self">self</span>.peer_feedback.lock().unwrap();
-            <span class="kw">let </span>peer_feedback = pf.<span class="number">1</span>.take();
-
-            <span class="comment">// If non-success feedback was propagated this means that the peer will be changed for
-            // subsequent requests. Increment pfid to make sure that we don't incorporate stale
-            // feedback.
-            </span><span class="kw">if </span>!<span class="macro">matches!</span>(peer_feedback, <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(types::PeerFeedback::Success)) {
-                pf.<span class="number">0 </span>+= <span class="number">1</span>;
-            }
-
-            peer_feedback
-        };
-
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;EnclaveResponse, AnyError&gt; {
         <span class="kw">let </span>rsp = <span class="self">self
             </span>.protocol
             .call_host_async(Body::HostRPCCallRequest {
                 endpoint: <span class="self">self</span>.endpoint.clone(),
+                request_id,
                 request: data,
                 kind,
                 nodes,
+            })
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+
+        <span class="kw">match </span>rsp {
+            Body::HostRPCCallResponse { response, node } =&gt; <span class="prelude-val">Ok</span>(EnclaveResponse {
+                data: response,
+                node,
+            }),
+            <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"bad response type"</span>)),
+        }
+    }
+
+    <span class="kw">async fn </span>submit_peer_feedback(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        request_id: u64,
+        peer_feedback: types::PeerFeedback,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), AnyError&gt; {
+        <span class="kw">let </span>rsp = <span class="self">self
+            </span>.protocol
+            .call_host_async(Body::HostSubmitPeerFeedbackRequest {
+                endpoint: <span class="self">self</span>.endpoint.clone(),
+                request_id,
                 peer_feedback,
             })
             .<span class="kw">await</span><span class="question-mark">?</span>;
 
         <span class="kw">match </span>rsp {
-            Body::HostRPCCallResponse { response, node } =&gt; <span class="prelude-val">Ok</span>((response, node)),
+            Body::HostSubmitPeerFeedbackResponse {} =&gt; <span class="prelude-val">Ok</span>(()),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"bad response type"</span>)),
         }
     }
-
-    <span class="kw">fn </span>set_peer_feedback(<span class="kw-2">&amp;</span><span class="self">self</span>, pfid: u64, peer_feedback: <span class="prelude-ty">Option</span>&lt;types::PeerFeedback&gt;) {
-        <span class="kw">let </span><span class="kw-2">mut </span>pf = <span class="self">self</span>.peer_feedback.lock().unwrap();
-        <span class="kw">if </span>pf.<span class="number">0 </span>!= pfid {
-            <span class="kw">return</span>;
-        }
-
-        pf.<span class="number">1 </span>= peer_feedback;
-    }
-
-    <span class="kw">fn </span>get_peer_feedback_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u64 {
-        <span class="self">self</span>.peer_feedback.lock().unwrap().<span class="number">0
-    </span>}
 }
 </code></pre></div></section></main></body></html>

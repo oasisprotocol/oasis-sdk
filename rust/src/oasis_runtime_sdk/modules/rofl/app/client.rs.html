@@ -542,7 +542,6 @@
 <a href="#542" id="542">542</a>
 <a href="#543" id="543">543</a>
 <a href="#544" id="544">544</a>
-<a href="#545" id="545">545</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::{
@@ -722,6 +721,7 @@
     state: Arc&lt;processor::State&lt;A&gt;&gt;,
     cmdq: mpsc::WeakSender&lt;processor::Command&gt;,
     latest_round: Arc&lt;AtomicU64&gt;,
+    rpc: Arc&lt;RpcClient&gt;,
 }
 
 <span class="kw">impl</span>&lt;A&gt; ClientImpl&lt;A&gt;
@@ -730,9 +730,21 @@
 {
     <span class="kw">fn </span>new(state: Arc&lt;processor::State&lt;A&gt;&gt;, cmdq: mpsc::WeakSender&lt;processor::Command&gt;) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            state,
             cmdq,
             latest_round: Arc::new(AtomicU64::new(<span class="number">0</span>)),
+            rpc: Arc::new(RpcClient::new_runtime(
+                state.host.clone(),
+                ENCLAVE_RPC_ENDPOINT_RONL,
+                session::Builder::default()
+                    .use_endorsement(<span class="bool-val">true</span>)
+                    .quote_policy(<span class="prelude-val">None</span>) <span class="comment">// Forbid all until configured.
+                    </span>.local_identity(state.identity.clone())
+                    .remote_enclaves(<span class="prelude-val">Some</span>(HashSet::new())), <span class="comment">// Forbid all until configured.
+                </span><span class="number">2</span>, <span class="comment">// Maximum number of sessions (one extra for reserve).
+                </span><span class="number">1</span>, <span class="comment">// Maximum number of sessions per peer (we only communicate with RONL).
+                </span><span class="number">1</span>, <span class="comment">// Stale session timeout.
+            </span>)),
+            state,
         }
     }
 
@@ -775,7 +787,7 @@
         <span class="comment">// TODO: Consider using PolicyVerifier when it has the needed methods (and is async).
         </span><span class="kw">let </span>state = <span class="self">self</span>.state.consensus_verifier.latest_state().<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let </span>runtime_id = <span class="self">self</span>.state.host.get_runtime_id();
-        <span class="kw">let </span>enclaves = tokio::task::spawn_blocking(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt; {
+        <span class="kw">let </span>tee = tokio::task::spawn_blocking(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt; {
             <span class="kw">let </span>beacon = BeaconState::new(<span class="kw-2">&amp;</span>state);
             <span class="kw">let </span>epoch = beacon.epoch()<span class="question-mark">?</span>;
             <span class="kw">let </span>registry = RegistryState::new(<span class="kw-2">&amp;</span>state);
@@ -787,35 +799,19 @@
                 .ok_or(<span class="macro">anyhow!</span>(<span class="string">"active runtime deployment not available"</span>))<span class="question-mark">?</span>;
 
             <span class="kw">match </span>runtime.tee_hardware {
-                TEEHardware::TEEHardwareIntelSGX =&gt; <span class="prelude-val">Ok</span>(HashSet::from_iter(
-                    ad.try_decode_tee::&lt;SGXConstraints&gt;()<span class="question-mark">?</span>.enclaves().clone(),
-                )),
+                TEEHardware::TEEHardwareIntelSGX =&gt; <span class="prelude-val">Ok</span>(ad.try_decode_tee::&lt;SGXConstraints&gt;()<span class="question-mark">?</span>),
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unsupported TEE platform"</span>)),
             }
         })
         .<span class="kw">await</span><span class="question-mark">??</span>;
 
-        <span class="kw">let </span>identity = <span class="self">self
-            </span>.state
-            .host
-            .get_identity()
-            .ok_or(<span class="macro">anyhow!</span>(<span class="string">"local identity not available"</span>))<span class="question-mark">?
-            </span>.clone();
-        <span class="kw">let </span>quote_policy = identity
-            .quote_policy()
-            .ok_or(<span class="macro">anyhow!</span>(<span class="string">"quote policy not available"</span>))<span class="question-mark">?</span>;
-        <span class="kw">let </span>enclave_rpc = RpcClient::new_runtime(
-            session::Builder::default()
-                .use_endorsement(<span class="bool-val">true</span>)
-                .quote_policy(<span class="prelude-val">Some</span>(quote_policy))
-                .local_identity(identity)
-                .remote_enclaves(<span class="prelude-val">Some</span>(enclaves)),
-            <span class="self">self</span>.state.host.clone(),
-            ENCLAVE_RPC_ENDPOINT_RONL,
-            <span class="macro">vec!</span>[],
-        );
+        <span class="kw">let </span>enclaves = HashSet::from_iter(tee.enclaves().clone());
+        <span class="kw">let </span>quote_policy = tee.policy();
+        <span class="self">self</span>.rpc.update_enclaves(<span class="prelude-val">Some</span>(enclaves)).<span class="kw">await</span>;
+        <span class="self">self</span>.rpc.update_quote_policy(quote_policy).<span class="kw">await</span>;
 
-        <span class="kw">let </span>response: Vec&lt;u8&gt; = enclave_rpc
+        <span class="kw">let </span>response: Vec&lt;u8&gt; = <span class="self">self
+            </span>.rpc
             .secure_call(
                 METHOD_QUERY,
                 QueryRequest {
@@ -823,6 +819,7 @@
                     method: method.to_string(),
                     args: cbor::to_vec(args),
                 },
+                <span class="macro">vec!</span>[],
             )
             .<span class="kw">await
             </span>.into_result()<span class="question-mark">?</span>;
@@ -868,6 +865,7 @@
             state: <span class="self">self</span>.state.clone(),
             cmdq: <span class="self">self</span>.cmdq.clone(),
             latest_round: <span class="self">self</span>.latest_round.clone(),
+            rpc: <span class="self">self</span>.rpc.clone(),
         }
     }
 }

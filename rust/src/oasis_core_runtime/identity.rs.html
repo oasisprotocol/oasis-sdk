@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/18da8bc/runtime/src/identity.rs`."><title>identity.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-b85a3d4915ce3795/3b1fc77/runtime/src/identity.rs`."><title>identity.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-46f98efaafac5295.ttf.woff2,FiraSans-Regular-018c141bf0843ffd.woff2,FiraSans-Medium-8f9a781e4970d388.woff2,SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2,SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-dd39b87e5fcfba68.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.81.0-nightly (35b658fb1 2024-07-08)" data-channel="nightly" data-search-js="search-d234aafac6c221dd.js" data-settings-js="settings-4313503d2e1961c2.js" ><script src="../../static.files/storage-118b08c4c78b968e.js"></script><script defer src="../../static.files/src-script-e66d777a5a92e9b2.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-20a3ad099b048cf2.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-df360f571f6edeae.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-422f7d1d52889060.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-2c020d218678b618.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="example-wrap"><div data-nosnippet><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -443,6 +443,42 @@
 <a href="#443" id="443">443</a>
 <a href="#444" id="444">444</a>
 <a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
+<a href="#479" id="479">479</a>
+<a href="#480" id="480">480</a>
+<a href="#481" id="481">481</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Runtime attestation key handling.
 </span><span class="kw">use </span>std::{
     collections::VecDeque,
@@ -452,7 +488,7 @@
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>rand::{rngs::OsRng, Rng};
-<span class="kw">use </span>sgx_isa::{Report, Targetinfo};
+<span class="kw">use </span>sgx_isa::Targetinfo;
 <span class="kw">use </span>thiserror::Error;
 <span class="kw">use </span>tiny_keccak::{Hasher, TupleHash};
 
@@ -468,6 +504,7 @@
         time::insecure_posix_time,
     },
     consensus::registry::EndorsedCapabilityTEE,
+    TeeType, BUILD_INFO,
 };
 
 <span class="doccomment">/// Context used for computing the RAK digest.
@@ -476,10 +513,8 @@
 </span><span class="kw">const </span>QUOTE_NONCE_CONTEXT: <span class="kw-2">&amp;</span>[u8] = <span class="string">b"oasis-core/node: TEE quote nonce"</span>;
 
 <span class="doccomment">/// A dummy RAK seed for use in non-SGX tests where integrity is not needed.
-</span><span class="attr">#[cfg(not(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>)))]
 </span><span class="kw">const </span>INSECURE_RAK_SEED: <span class="kw-2">&amp;</span>str = <span class="string">"ekiden test key manager RAK seed"</span>;
 <span class="doccomment">/// A dummy REK seed for use in non-SGX tests where confidentiality is not needed.
-</span><span class="attr">#[cfg(not(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>)))]
 </span><span class="kw">const </span>INSECURE_REK_SEED: <span class="kw-2">&amp;</span>str = <span class="string">"ekiden test key manager REK seed"</span>;
 
 <span class="doccomment">/// Identity-related error.
@@ -494,6 +529,8 @@
 <span class="doccomment">/// Quote-related errors.
 </span><span class="attr">#[derive(Error, Debug)]
 </span><span class="kw">enum </span>QuoteError {
+    <span class="attr">#[error(<span class="string">"target info not set"</span>)]
+    </span>TargetInfoNotSet,
     <span class="attr">#[error(<span class="string">"malformed target_info"</span>)]
     </span>MalformedTargetInfo,
     <span class="attr">#[error(<span class="string">"MRENCLAVE mismatch"</span>)]
@@ -504,8 +541,6 @@
     </span>NonceMismatch,
     <span class="attr">#[error(<span class="string">"quote policy not set"</span>)]
     </span>QuotePolicyNotSet,
-    <span class="attr">#[error(<span class="string">"quote policy already set"</span>)]
-    </span>QuotePolicyAlreadySet,
     <span class="attr">#[error(<span class="string">"node identity not set"</span>)]
     </span>NodeIdentityNotSet,
     <span class="attr">#[error(<span class="string">"endorsed quote mismatch"</span>)]
@@ -548,15 +583,24 @@
 <span class="kw">impl </span>Identity {
     <span class="doccomment">/// Create an uninitialized runtime identity.
     </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
-        <span class="attr">#[cfg(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>))]
-        </span><span class="kw">let </span>rak = signature::PrivateKey::generate();
-        <span class="attr">#[cfg(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>))]
-        </span><span class="kw">let </span>rek = x25519::PrivateKey::generate();
+        <span class="kw">let </span>(rak, rek) = <span class="kw">match </span>BUILD_INFO.tee_type {
+            TeeType::None =&gt; {
+                <span class="comment">// Use insecure mock keys for insecure non-TEE builds.
+                </span><span class="macro">assert!</span>(!BUILD_INFO.is_secure);
 
-        <span class="attr">#[cfg(not(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>)))]
-        </span><span class="kw">let </span>rak = signature::PrivateKey::from_test_seed(INSECURE_RAK_SEED.to_string());
-        <span class="attr">#[cfg(not(any(target_env = <span class="string">"sgx"</span>, feature = <span class="string">"debug-mock-sgx"</span>)))]
-        </span><span class="kw">let </span>rek = x25519::PrivateKey::from_test_seed(INSECURE_REK_SEED.to_string());
+                (
+                    signature::PrivateKey::from_test_seed(INSECURE_RAK_SEED.to_string()),
+                    x25519::PrivateKey::from_test_seed(INSECURE_REK_SEED.to_string()),
+                )
+            }
+            <span class="kw">_ </span>=&gt; {
+                <span class="comment">// Generate ephemeral RAK and REK.
+                </span>(
+                    signature::PrivateKey::generate(),
+                    x25519::PrivateKey::generate(),
+                )
+            }
+        };
 
         <span class="self">Self </span>{
             inner: RwLock::new(Inner {
@@ -603,50 +647,82 @@
 
     <span class="doccomment">/// Initialize the SGX target info.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init_target_info(<span class="kw-2">&amp;</span><span class="self">self</span>, target_info: Vec&lt;u8&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.write().unwrap();
+        <span class="kw">match </span>BUILD_INFO.tee_type {
+            TeeType::Sgx =&gt; {
+                <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.write().unwrap();
 
-        <span class="comment">// Set the Quoting Enclave target_info first, as unlike key generation
-        // it can fail.
-        </span><span class="kw">let </span>target_info = <span class="kw">match </span>Targetinfo::try_copy_from(<span class="kw-2">&amp;</span>target_info) {
-            <span class="prelude-val">Some</span>(target_info) =&gt; target_info,
-            <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(QuoteError::MalformedTargetInfo.into()),
-        };
-        inner.target_info = <span class="prelude-val">Some</span>(target_info);
+                <span class="comment">// Set the Quoting Enclave target_info first, as unlike key generation
+                // it can fail.
+                </span><span class="kw">let </span>target_info = <span class="kw">match </span>Targetinfo::try_copy_from(<span class="kw-2">&amp;</span>target_info) {
+                    <span class="prelude-val">Some</span>(target_info) =&gt; target_info,
+                    <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(QuoteError::MalformedTargetInfo.into()),
+                };
+                inner.target_info = <span class="prelude-val">Some</span>(target_info);
 
-        <span class="prelude-val">Ok</span>(())
+                <span class="prelude-val">Ok</span>(())
+            }
+            TeeType::Tdx =&gt; {
+                <span class="comment">// Target info configuration is not needed on TDX and MUST be empty.
+                </span><span class="kw">if </span>!target_info.is_empty() {
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(QuoteError::MalformedTargetInfo.into());
+                }
+
+                <span class="prelude-val">Ok</span>(())
+            }
+            TeeType::None =&gt; <span class="prelude-val">Ok</span>(()),
+        }
     }
 
     <span class="doccomment">/// Initialize the attestation report.
-    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init_report(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (signature::PublicKey, x25519::PublicKey, Report, String) {
+    </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>init_report(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;(signature::PublicKey, x25519::PublicKey, Vec&lt;u8&gt;, String)&gt; {
         <span class="kw">let </span>rak_pub = <span class="self">self</span>.public_rak();
         <span class="kw">let </span>rek_pub = <span class="self">self</span>.public_rek();
-        <span class="kw">let </span>target_info = <span class="self">self
-            </span>.get_sgx_target_info()
-            .expect(<span class="string">"target_info must be configured"</span>);
 
         <span class="comment">// Generate a new anti-replay nonce.
         </span><span class="kw">let </span>nonce = <span class="self">Self</span>::generate_nonce();
-        <span class="comment">// The derived nonce is only used in case IAS-based attestation is used
-        // as it is included in the outer AVR envelope. But given that the body
-        // also includes the nonce in our specific case, this is not relevant.
-        </span><span class="kw">let </span>quote_nonce = BASE64_STANDARD.encode(<span class="kw-2">&amp;</span>nonce[..<span class="number">24</span>]);
-
         <span class="comment">// Generate report body.
         </span><span class="kw">let </span>report_body = <span class="self">Self</span>::report_body_for_rak(<span class="kw-2">&amp;</span>rak_pub);
         <span class="kw">let </span><span class="kw-2">mut </span>report_data = [<span class="number">0</span>; <span class="number">64</span>];
         report_data[<span class="number">0</span>..<span class="number">32</span>].copy_from_slice(report_body.as_ref());
         report_data[<span class="number">32</span>..<span class="number">64</span>].copy_from_slice(nonce.as_ref());
 
-        <span class="kw">let </span>report = sgx::report_for(<span class="kw-2">&amp;</span>target_info, <span class="kw-2">&amp;</span>report_data);
+        <span class="kw">let </span>result = <span class="kw">match </span>BUILD_INFO.tee_type {
+            TeeType::Sgx =&gt; {
+                <span class="kw">let </span>target_info = <span class="self">self
+                    </span>.get_sgx_target_info()
+                    .ok_or(QuoteError::TargetInfoNotSet)<span class="question-mark">?</span>;
 
-        <span class="comment">// This used to reset the quote, but that is now done in the external
-        // accessor combined with a freshness check.
+                <span class="comment">// The derived nonce is only used in case IAS-based attestation is used
+                // as it is included in the outer AVR envelope. But given that the body
+                // also includes the nonce in our specific case, this is not relevant.
+                </span><span class="kw">let </span>quote_nonce = BASE64_STANDARD.encode(<span class="kw-2">&amp;</span>nonce[..<span class="number">24</span>]);
 
-        // Cache the nonce, the report was generated.
+                <span class="kw">let </span>report = sgx::report_for(<span class="kw-2">&amp;</span>target_info, <span class="kw-2">&amp;</span>report_data);
+                <span class="kw">let </span>report: <span class="kw-2">&amp;</span>[u8] = report.as_ref();
+                <span class="kw">let </span>report = report.to_vec();
+
+                <span class="comment">// This used to reset the quote, but that is now done in the external
+                // accessor combined with a freshness check.
+
+                </span>(rak_pub, rek_pub, report, quote_nonce)
+            }
+            <span class="attr">#[cfg(feature = <span class="string">"tdx"</span>)]
+            </span>TeeType::Tdx =&gt; {
+                <span class="comment">// In TDX we can immediately generate a quote. Do it and return it as a "report".
+                </span><span class="kw">let </span>quote = <span class="kw">crate</span>::common::tdx::report::get_quote(<span class="kw-2">&amp;</span>report_data)<span class="question-mark">?</span>;
+
+                (rak_pub, rek_pub, quote, String::new())
+            }
+            <span class="kw">_ </span>=&gt; <span class="macro">panic!</span>(<span class="string">"init_report called outside TEE environment"</span>),
+        };
+
+        <span class="comment">// Cache the nonce, the report was generated.
         </span><span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.write().unwrap();
         inner.nonce = <span class="prelude-val">Some</span>(nonce);
 
-        (rak_pub, rek_pub, report, quote_nonce)
+        <span class="prelude-val">Ok</span>(result)
     }
 
     <span class="doccomment">/// Configure the remote attestation quote for RAK.
@@ -659,8 +735,7 @@
 
         <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.write().unwrap();
 
-        <span class="comment">// If there is no anti-replay nonce set, we aren't in the process
-        // of attesting.
+        <span class="comment">// If there is no anti-replay nonce set, we aren't in the process of attesting.
         </span><span class="kw">let </span>expected_nonce = <span class="kw">match </span><span class="kw-2">&amp;</span>inner.nonce {
             <span class="prelude-val">Some</span>(nonce) =&gt; <span class="kw-2">*</span>nonce,
             <span class="prelude-val">None </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(QuoteError::NonceMismatch.into()),
@@ -732,9 +807,6 @@
     <span class="doccomment">/// Configure the runtime quote policy.
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>set_quote_policy(<span class="kw-2">&amp;</span><span class="self">self</span>, policy: QuotePolicy) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>inner = <span class="self">self</span>.inner.write().unwrap();
-        <span class="kw">if </span>inner.quote_policy.is_some() {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(QuoteError::QuotePolicyAlreadySet.into());
-        }
         inner.quote_policy = <span class="prelude-val">Some</span>(Arc::new(policy));
 
         <span class="prelude-val">Ok</span>(())

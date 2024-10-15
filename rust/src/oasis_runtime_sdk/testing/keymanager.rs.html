@@ -79,6 +79,20 @@
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
 <a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Mock key manager implementation.
 
 </span><span class="kw">use </span>std::{collections::HashMap, sync::Mutex};
@@ -86,7 +100,13 @@
 <span class="kw">pub use </span><span class="kw">crate</span>::keymanager::{
     KeyManagerError, KeyPair, KeyPairId, SignedPublicKey, StateKey, TrustedSigners,
 };
-<span class="kw">use crate</span>::{core::consensus::beacon::EpochTime, keymanager::KeyManager};
+<span class="kw">use crate</span>::{
+    core::{
+        common::{crypto::signature::PublicKey, namespace::Namespace},
+        consensus::beacon::EpochTime,
+    },
+    keymanager::KeyManager,
+};
 
 <span class="attr">#[derive(Default)]
 </span><span class="kw">pub struct </span>MockKeyManagerClient {
@@ -112,6 +132,14 @@
 }
 
 <span class="kw">impl </span>KeyManager <span class="kw">for </span>MockKeyManagerClient {
+    <span class="kw">fn </span>runtime_id(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Namespace&gt; {
+        <span class="prelude-val">None
+    </span>}
+
+    <span class="kw">fn </span>runtime_signing_key(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;PublicKey&gt; {
+        <span class="prelude-val">None
+    </span>}
+
     <span class="kw">fn </span>clear_cache(<span class="kw-2">&amp;</span><span class="self">self</span>) {
         <span class="comment">// Nothing to do here, no cache.
     </span>}
