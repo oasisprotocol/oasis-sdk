@@ -10,7 +10,7 @@ pub use oasis_core_keymanager::{
     policy::TrustedSigners,
 };
 use oasis_core_runtime::{
-    common::namespace::Namespace,
+    common::{crypto::signature::PublicKey, namespace::Namespace},
     consensus::{beacon::EpochTime, verifier::Verifier},
     future::block_on,
     identity::Identity,
@@ -42,20 +42,18 @@ impl KeyManagerClient {
             identity,
             key_cache_sizes,
             signers,
-            vec![],
         ));
 
         // Setup the quote policy update handler.
         let handler_remote_client = remote_client.clone();
         rpc.set_keymanager_quote_policy_update_handler(Some(Box::new(move |policy| {
-            handler_remote_client.set_quote_policy(policy);
+            block_on(handler_remote_client.set_quote_policy(policy));
         })));
 
         // Setup the status update handler.
         let handler_remote_client = remote_client.clone();
         rpc.set_keymanager_status_update_handler(Some(Box::new(move |status| {
-            handler_remote_client
-                .set_status(status)
+            block_on(handler_remote_client.set_status(status))
                 .expect("failed to update km client status");
         })));
 
@@ -74,6 +72,21 @@ impl KeyManagerClient {
     /// Public and private key queries will be allowed.
     pub(crate) fn with_private_context(self: &Arc<Self>) -> Box<dyn KeyManager> {
         Box::new(KeyManagerClientWithContext::new(self.clone(), true)) as Box<dyn KeyManager>
+    }
+
+    /// Key manager runtime identifier this client is connected to. It may be `None` in case the
+    /// identifier is not known yet (e.g. the client has not yet been initialized).
+    ///
+    /// See the oasis-core documentation for details.
+    pub(crate) fn runtime_id(&self) -> Option<Namespace> {
+        self.inner.runtime_id()
+    }
+
+    /// Key manager runtime signing key used to sign messages from the key manager.
+    ///
+    /// See the oasis-core documentation for details.
+    pub(crate) fn runtime_signing_key(&self) -> Option<PublicKey> {
+        self.inner.runtime_signing_key()
     }
 
     /// Clear local key cache.
@@ -141,6 +154,17 @@ where
 
 /// Key manager interface.
 pub trait KeyManager {
+    /// Key manager runtime identifier this client is connected to. It may be `None` in case the
+    /// identifier is not known yet (e.g. the client has not yet been initialized).
+    ///
+    /// See the oasis-core documentation for details.
+    fn runtime_id(&self) -> Option<Namespace>;
+
+    /// Key manager runtime signing key used to sign messages from the key manager.
+    ///
+    /// See the oasis-core documentation for details.
+    fn runtime_signing_key(&self) -> Option<PublicKey>;
+
     /// Clear local key cache.
     ///
     /// See the oasis-core documentation for details.
@@ -263,6 +287,14 @@ impl KeyManagerClientWithContext {
 }
 
 impl KeyManager for KeyManagerClientWithContext {
+    fn runtime_id(&self) -> Option<Namespace> {
+        self.parent.runtime_id()
+    }
+
+    fn runtime_signing_key(&self) -> Option<PublicKey> {
+        self.parent.runtime_signing_key()
+    }
+
     fn clear_cache(&self) {
         self.parent.clear_cache();
     }

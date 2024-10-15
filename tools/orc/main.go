@@ -167,7 +167,7 @@ var (
 			if err != nil {
 				cobra.CheckErr(fmt.Errorf("failed to append signature: %w", err))
 			}
-			err = bnd.Add(sgxSigName, signed)
+			err = bnd.Add(sgxSigName, bundle.NewBytesData(signed))
 			cobra.CheckErr(err)
 
 			switch compId {
@@ -401,11 +401,7 @@ func addComponent(bnd *bundle.Bundle, id component.ID, elfExecutableFn string) {
 		if v.fn == "" {
 			cobra.CheckErr(fmt.Errorf("missing runtime asset '%s'", v.descr))
 		}
-		var b []byte
-		if b, err = os.ReadFile(v.fn); err != nil {
-			cobra.CheckErr(fmt.Errorf("failed to load runtime asset '%s': %w", v.descr, err))
-		}
-		_ = bnd.Add(v.dst, b)
+		_ = bnd.Add(v.dst, bundle.NewFileData(v.fn))
 	}
 
 	bnd.ResetManifest()
@@ -447,7 +443,9 @@ func showComponent(bnd *bundle.Bundle, comp *bundle.Component, legacy bool) {
 	if comp.SGX.Signature != "" {
 		fmt.Printf("%sSGXS signature: %s\n", indent, comp.SGX.Signature)
 
-		sigPk, sigStruct, err := sigstruct.Verify(bnd.Data[comp.SGX.Signature])
+		sigData, err := bundle.ReadAllData(bnd.Data[comp.SGX.Signature])
+		cobra.CheckErr(err)
+		sigPk, sigStruct, err := sigstruct.Verify(sigData)
 		cobra.CheckErr(err) // Already checked during Open so it should never fail.
 
 		var mrSigner sgx.MrSigner

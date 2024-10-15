@@ -2,10 +2,11 @@
 use std::sync::Arc;
 
 use oasis_core_runtime::{
-    common::version,
+    common::{sgx, version},
     config::Config,
     consensus::verifier::TrustRoot,
     dispatcher::{PostInitState, PreInitState},
+    enclave_rpc::session,
     start_runtime,
     types::{FeatureScheduleControl, Features},
 };
@@ -186,6 +187,24 @@ pub trait Runtime {
             );
             // Register EnclaveRPC methods.
             dispatcher.register_enclaverpc(state.rpc_dispatcher);
+            // Make sure we allow a wide amount of valid quotes for EnclaveRPC because our clients
+            // are other runtime components and we should accept them all.
+            let session_builder = session::Builder::default()
+                .local_identity(state.identity.clone())
+                .quote_policy(Some(Arc::new(sgx::QuotePolicy {
+                    ias: Some(sgx::ias::QuotePolicy {
+                        disabled: true, // Disable legacy EPID attestation.
+                        ..Default::default()
+                    }),
+                    pcs: Some(sgx::pcs::QuotePolicy {
+                        // Allow TDX since that is not part of the default policy.
+                        tdx: Some(sgx::pcs::TdxQuotePolicy {
+                            allowed_tdx_modules: vec![],
+                        }),
+                        ..Default::default()
+                    }),
+                })));
+            state.rpc_demux.set_session_builder(session_builder);
 
             PostInitState {
                 txn_dispatcher: Some(Box::new(dispatcher)),

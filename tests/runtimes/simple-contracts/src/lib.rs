@@ -1,9 +1,9 @@
 //! Simple WASM contracts runtime.
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::{
-    self as sdk, config, keymanager::TrustedSigners, modules, types::token::Denomination, Version,
-};
+#[cfg(feature = "debug-mock-sgx")]
+use oasis_runtime_sdk::keymanager::TrustedSigners;
+use oasis_runtime_sdk::{self as sdk, config, modules, types::token::Denomination, Version};
 use oasis_runtime_sdk_contracts as contracts;
 
 pub struct Runtime;
@@ -36,8 +36,9 @@ impl sdk::Runtime for Runtime {
         contracts::Module<Config>,
     );
 
+    #[cfg(feature = "debug-mock-sgx")]
     fn trusted_signers() -> Option<TrustedSigners> {
-        Some(TrustedSigners::default())
+        Some(TrustedSigners::unsafe_mock())
     }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {

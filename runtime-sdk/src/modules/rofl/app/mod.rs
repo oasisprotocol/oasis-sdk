@@ -7,11 +7,12 @@ use tokio::sync::mpsc;
 
 use crate::{
     core::{
+        app,
         common::version,
         config::Config,
         consensus::{roothash, verifier::TrustRoot},
         dispatcher::{PostInitState, PreInitState},
-        rofl, start_runtime,
+        start_runtime,
     },
     crypto,
     types::transaction,
@@ -113,7 +114,7 @@ impl AppWrapper {
 }
 
 #[async_trait]
-impl rofl::App for AppWrapper {
+impl app::App for AppWrapper {
     async fn on_runtime_block(&self, blk: &roothash::AnnotatedBlock) -> Result<()> {
         self.cmdq
             .send(processor::Command::ProcessRuntimeBlock(blk.clone()))

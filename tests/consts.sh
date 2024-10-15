@@ -5,7 +5,7 @@
 #
 
 # Released version from GitHub Releases.
-OASIS_CORE_VERSION='24.2'
+OASIS_CORE_VERSION='24.3'
 
 # Development version from GitHub Actions.
 # e.g. '58512799'
@@ -15,4 +15,4 @@ GITHUB_ARTIFACT_VERSION=''
 
 # Version from Buildkite.
 # e.g. '4759'
-BUILD_NUMBER='13981'
+BUILD_NUMBER='14301'
