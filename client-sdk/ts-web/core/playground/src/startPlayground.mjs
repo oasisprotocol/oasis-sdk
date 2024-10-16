@@ -43,19 +43,19 @@ export async function startPlayground() {
         console.log('chain context', chainContext);
 
         const genesis = await nic.consensusGetGenesisDocument();
-        const ourChainContext = await oasis.genesis.chainContext(genesis);
+        const ourChainContext = oasis.genesis.chainContext(genesis);
         console.log('computed from genesis', ourChainContext);
         if (ourChainContext !== chainContext) throw new Error('computed chain context mismatch');
 
         const nonce = await nic.consensusGetSignerNonce({
-            account_address: await oasis.staking.addressFromPublicKey(src.public()),
+            account_address: oasis.staking.addressFromPublicKey(src.public()),
             height: oasis.consensus.HEIGHT_LATEST,
         });
         console.log('nonce', nonce);
 
         const account = await nic.stakingAccount({
             height: oasis.consensus.HEIGHT_LATEST,
-            owner: await oasis.staking.addressFromPublicKey(src.public()),
+            owner: oasis.staking.addressFromPublicKey(src.public()),
         });
         console.log('account', account);
         if ((account.general?.nonce ?? 0) !== nonce) throw new Error('nonce mismatch');
@@ -64,7 +64,7 @@ export async function startPlayground() {
         tw.setNonce(account.general?.nonce ?? 0);
         tw.setFeeAmount(oasis.quantity.fromBigInt(0n));
         tw.setBody({
-            to: await oasis.staking.addressFromPublicKey(dst.public()),
+            to: oasis.staking.addressFromPublicKey(dst.public()),
             amount: oasis.quantity.fromBigInt(0n),
         });
 
@@ -75,7 +75,7 @@ export async function startPlayground() {
 
         await tw.sign(new oasis.signature.BlindContextSigner(src), chainContext);
         console.log('singed transaction', tw.signedTransaction);
-        console.log('hash', await tw.hash());
+        console.log('hash', tw.hash());
 
         await tw.submit(nic);
         console.log('sent');
@@ -100,9 +100,9 @@ export async function startPlayground() {
                 signedTransaction,
             );
             console.log({
-                hash: await oasis.consensus.hashSignedTransaction(signedTransaction),
+                hash: oasis.consensus.hashSignedTransaction(signedTransaction),
                 from: oasis.staking.addressToBech32(
-                    await oasis.staking.addressFromPublicKey(
+                    oasis.staking.addressFromPublicKey(
                         signedTransaction.signature.public_key,
                     ),
                 ),

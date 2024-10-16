@@ -111,7 +111,7 @@ export const playground = (async function () {
         console.log('signature', signature);
         console.log(
             'valid',
-            await oasisRT.signatureSecp256k1.verify('test context', message, signature, publicKey),
+            oasisRT.signatureSecp256k1.verify('test context', message, signature, publicKey),
         );
     }
 
@@ -120,7 +120,7 @@ export const playground = (async function () {
         const runtimeID = oasis.misc.fromHex(
             '8000000000000000000000000000000000000000000000000000000000000000',
         );
-        const chainContext = await oasisRT.transaction.deriveChainContext(
+        const chainContext = oasisRT.transaction.deriveChainContext(
             runtimeID,
             '643fb06848be7e970af3b5b2d772eb8cfb30499c8162bc18ac03df2f5e22520e',
         );
@@ -146,12 +146,12 @@ export const playground = (async function () {
     }
 
     const alice = oasis.signature.NaclSigner.fromSeed(
-        await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
+        oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
         'this key is not important',
     );
     const csAlice = new oasis.signature.BlindContextSigner(alice);
     const bob = oasis.signature.NaclSigner.fromSeed(
-        await oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: bob')),
+        oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: bob')),
         'this key is not important',
     );
     const csBob = new oasis.signature.BlindContextSigner(bob);
@@ -203,7 +203,7 @@ export const playground = (async function () {
         const nonce1 = await accountsWrapper
             .queryNonce()
             .setArgs({
-                address: await oasis.staking.addressFromPublicKey(alice.public()),
+                address: oasis.staking.addressFromPublicKey(alice.public()),
             })
             .query(nic);
         const siAlice1 = /** @type {oasisRT.types.SignerInfo} */ ({
@@ -253,7 +253,7 @@ export const playground = (async function () {
         const nonce2 = await accountsWrapper
             .queryNonce()
             .setArgs({
-                address: await oasis.staking.addressFromPublicKey(alice.public()),
+                address: oasis.staking.addressFromPublicKey(alice.public()),
             })
             .query(nic);
         const siAlice2 = /** @type {oasisRT.types.SignerInfo} */ ({
@@ -347,7 +347,7 @@ export const playground = (async function () {
             ],
             threshold: 2,
         });
-        const addr = await oasisRT.address.fromMultisigConfig(msConfig);
+        const addr = oasisRT.address.fromMultisigConfig(msConfig);
         const addrBech32 = oasis.staking.addressToBech32(addr);
         const refBech32 = 'oasis1qpcprk8jxpsjxw9fadxvzrv9ln7td69yus8rmtux';
         console.log('address for sample config', addrBech32, 'reference', refBech32);

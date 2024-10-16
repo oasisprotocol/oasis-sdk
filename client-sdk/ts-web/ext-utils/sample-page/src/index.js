@@ -44,7 +44,7 @@ export const playground = (async function () {
     console.log('public key base64', oasis.misc.toBase64(publicKey));
     console.log(
         'address bech32',
-        oasis.staking.addressToBech32(await oasis.staking.addressFromPublicKey(publicKey)),
+        oasis.staking.addressToBech32(oasis.staking.addressFromPublicKey(publicKey)),
     );
 
     const dst = oasis.signature.NaclSigner.fromRandom('this key is not important');
@@ -54,7 +54,7 @@ export const playground = (async function () {
         .setFeeAmount(oasis.quantity.fromBigInt(102n))
         .setFeeGas(103n)
         .setBody({
-            to: await oasis.staking.addressFromPublicKey(dst.public()),
+            to: oasis.staking.addressFromPublicKey(dst.public()),
             amount: oasis.quantity.fromBigInt(104n),
         });
     console.log('requesting signature');
@@ -65,7 +65,7 @@ export const playground = (async function () {
     const rtw = new oasisRT.accounts.Wrapper(oasis.misc.fromString('fake-runtime-id-for-testing'))
         .callTransfer()
         .setBody({
-            to: await oasis.staking.addressFromPublicKey(dst.public()),
+            to: oasis.staking.addressFromPublicKey(dst.public()),
             amount: [oasis.quantity.fromBigInt(105n), oasis.misc.fromString('TEST')],
         })
         .setSignerInfo([
