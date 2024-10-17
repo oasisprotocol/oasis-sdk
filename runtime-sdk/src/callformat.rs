@@ -347,3 +347,52 @@ pub fn decode_result<C: Context>(
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use digest::Digest;
+    use oasis_core_keymanager::crypto::{InputKeyPair, KeyPair};
+    use oasis_core_runtime::common::crypto::x25519;
+    use crate::{callformat, crypto, module, testing, types};
+
+    #[test]
+    fn test_interop() {
+        let _guard = crypto::signature::context::test_using_chain_context();
+        crypto::signature::context::set_chain_context(Default::default(), "test");
+
+        let runtime_sk = x25519::PrivateKey::from(<[u8; x25519::PRIVATE_KEY_LENGTH]>::from(sha2::Sha512_256::digest("callformat test runtime")));
+        let runtime_pk = runtime_sk.public_key();
+
+        let mut mock = testing::mock::Mock::default();
+        let our_key_pair_id = callformat::get_key_pair_id(mock.epoch);
+        let our_key_pair = KeyPair {
+            input_keypair: InputKeyPair {
+                pk: runtime_pk,
+                sk: runtime_sk,
+            },
+            ..Default::default()
+        };
+        let ephemeral_keys = std::collections::HashMap::from([
+            (our_key_pair_id, our_key_pair),
+        ]);
+        let key_manager = testing::keymanager::MockKeyManagerClient {
+            ephemeral_keys: ephemeral_keys.into(),
+            ..Default::default()
+        };
+        let ctx = mock.create_ctx_with_key_manager(Box::new(key_manager));
+
+        let call = cbor::from_slice::<types::transaction::Call>(hex::decode("a264626f6479f6666d6574686f64646d6f636b").unwrap().as_slice()).unwrap();
+        let call_enc = cbor::from_slice::<types::transaction::Call>(hex::decode("a264626f6479a462706b5820eedc75d3c500fc1b2d321757c383e276ab705c5a02013b3f1966e9caf73cdb0264646174615823c4635f2f9496a033a578e3f1e007be5d6cfa9631fb2fe2c8c76d26b322b6afb2fa5cdf6565706f636801656e6f6e63654f00000000000000000000000000000066666f726d617401").unwrap().as_slice()).unwrap();
+
+        let (call_ours, metadata) = callformat::decode_call(&ctx, call_enc, 0).unwrap().unwrap();
+        assert_eq!(cbor::to_vec(call_ours), cbor::to_vec(call));
+
+        let result_m_g = || module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue));
+        let result = types::transaction::CallResult::from(result_m_g());
+        let result_enc = callformat::encode_result(&ctx, result_m_g(), metadata);
+
+        // If these change, update client-sdk/go/callformat/callformat_test.go too.
+        assert_eq!(hex::encode(cbor::to_vec(result)), "a1626f6bf6");
+        assert_eq!(hex::encode(cbor::to_vec(result_enc)), "a167756e6b6e6f776ea264646174615528d1c5eedc5e54e1ef140ba905e84e0bea8daf60af656e6f6e63654f000000000000000000000000000000");
+    }
+}
