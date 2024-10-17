@@ -27,6 +27,29 @@ type metaEncryptedX25519DeoxysII struct {
 	pk *x25519.PublicKey
 }
 
+func encodeCallEncryptedX25519DeoxysII(call *types.Call, pk *x25519.PublicKey, sk *x25519.PrivateKey, nonce [deoxysii.NonceSize]byte, cfg *EncodeConfig) (*types.Call, *metaEncryptedX25519DeoxysII) {
+	// Seal serialized plain call.
+	rawCall := cbor.Marshal(call)
+	sealedCall := mraeDeoxysii.Box.Seal(nil, nonce[:], rawCall, nil, &cfg.PublicKey.PublicKey, sk)
+
+	encoded := &types.Call{
+		Format: types.CallFormatEncryptedX25519DeoxysII,
+		Method: "",
+		Body: cbor.Marshal(&types.CallEnvelopeX25519DeoxysII{
+			Pk:    *pk,
+			Nonce: nonce,
+			Epoch: cfg.Epoch,
+			Data:  sealedCall,
+		}),
+		ReadOnly: call.ReadOnly,
+	}
+	meta := &metaEncryptedX25519DeoxysII{
+		sk: sk,
+		pk: &cfg.PublicKey.PublicKey,
+	}
+	return encoded, meta
+}
+
 // EncodeCall encodes a call based on its configured call format.
 //
 // It returns the encoded call and any metadata needed to successfully decode the result.
@@ -52,25 +75,7 @@ func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*type
 			return nil, nil, fmt.Errorf("callformat: failed to generate random nonce: %w", err)
 		}
 
-		// Seal serialized plain call.
-		rawCall := cbor.Marshal(call)
-		sealedCall := mraeDeoxysii.Box.Seal(nil, nonce[:], rawCall, nil, &cfg.PublicKey.PublicKey, sk)
-
-		encoded := &types.Call{
-			Format: types.CallFormatEncryptedX25519DeoxysII,
-			Method: "",
-			Body: cbor.Marshal(&types.CallEnvelopeX25519DeoxysII{
-				Pk:    *pk,
-				Nonce: nonce,
-				Epoch: cfg.Epoch,
-				Data:  sealedCall,
-			}),
-			ReadOnly: call.ReadOnly,
-		}
-		meta := &metaEncryptedX25519DeoxysII{
-			sk: sk,
-			pk: &cfg.PublicKey.PublicKey,
-		}
+		encoded, meta := encodeCallEncryptedX25519DeoxysII(call, pk, sk, nonce, cfg)
 		return encoded, meta, nil
 	default:
 		return nil, nil, fmt.Errorf("callformat: unsupported call format: %s", cf)
