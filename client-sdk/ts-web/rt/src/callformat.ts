@@ -1,6 +1,5 @@
 import * as oasis from '@oasisprotocol/client';
 import * as deoxysii from '@oasisprotocol/deoxysii';
-import * as nacl from 'tweetnacl';
 
 import * as mraeDeoxysii from './mrae/deoxysii';
 import * as transaction from './transaction';
@@ -24,7 +23,7 @@ export interface EncodeConfig {
 }
 
 export interface MetaEncryptedX25519DeoxysII {
-    sk: Uint8Array;
+    sk: CryptoKey;
     pk: Uint8Array;
 }
 
@@ -34,8 +33,7 @@ export interface MetaEncryptedX25519DeoxysII {
  */
 export async function encodeCallWithNonceAndKeys(
     nonce: Uint8Array,
-    sk: Uint8Array,
-    pk: Uint8Array,
+    clientKP: CryptoKeyPair,
     call: types.Call,
     format: types.CallFormat,
     config?: EncodeConfig,
@@ -47,9 +45,11 @@ export async function encodeCallWithNonceAndKeys(
             if (config?.publicKey === undefined) {
                 throw new Error('callformat: runtime call data public key not set');
             }
+            const pk = await mraeDeoxysii.publicKeyFromKeyPair(clientKP);
+            const sk = clientKP.privateKey;
             const rawCall = oasis.misc.toCBOR(call);
             const zeroBuffer = new Uint8Array(0);
-            const sealedCall = mraeDeoxysii.boxSeal(
+            const sealedCall = await mraeDeoxysii.boxSeal(
                 nonce,
                 rawCall,
                 zeroBuffer,
@@ -87,15 +87,8 @@ export async function encodeCall(
 ): Promise<[types.Call, unknown]> {
     const nonce = new Uint8Array(deoxysii.NonceSize);
     crypto.getRandomValues(nonce);
-    const keyPair = nacl.box.keyPair();
-    return await encodeCallWithNonceAndKeys(
-        nonce,
-        keyPair.secretKey,
-        keyPair.publicKey,
-        call,
-        format,
-        config,
-    );
+    const clientKP = await mraeDeoxysii.generateKeyPair(true);
+    return await encodeCallWithNonceAndKeys(nonce, clientKP, call, format, config);
 }
 
 /**
@@ -117,7 +110,7 @@ export async function decodeResult(
                         result.unknown,
                     ) as types.ResultEnvelopeX25519DeoxysII;
                     const zeroBuffer = new Uint8Array(0);
-                    const pt = mraeDeoxysii.boxOpen(
+                    const pt = await mraeDeoxysii.boxOpen(
                         envelop?.nonce,
                         envelop?.data,
                         zeroBuffer,
