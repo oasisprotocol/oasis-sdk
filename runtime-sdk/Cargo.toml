@@ -50,6 +50,8 @@ blake3 = { version = "1.5.1", features = ["traits-preview"] }
 default = ["oasis-runtime-sdk-macros"]
 unsafe-allow-debug = []
 test = []
+# TDX build.
+tdx = ["oasis-core-runtime/tdx"]
 # Enables debug-level logging in release builds.
 debug-logging = [
 	"oasis-core-runtime/debug-logging",

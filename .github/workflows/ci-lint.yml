@@ -34,6 +34,13 @@ jobs:
       - name: Lint Rust code
         uses: ./.github/actions/lint-rust
         with:
+          features: debug-logging,debug-mock-sgx,test,unsafe-allow-debug
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint Rust code (TDX)
+        uses: ./.github/actions/lint-rust
+        with:
+          features: tdx
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Hello contract code
