@@ -97,7 +97,7 @@ export async function encodeCall(
 export async function decodeResult(
     result: types.CallResult,
     format: types.CallFormat,
-    meta?: MetaEncryptedX25519DeoxysII,
+    meta?: unknown,
 ): Promise<types.CallResult> {
     switch (format) {
         case transaction.CALLFORMAT_PLAIN:
@@ -106,6 +106,7 @@ export async function decodeResult(
         case transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII:
             if (result.unknown) {
                 if (meta) {
+                    const metaEncryptedX25519DeoxysII = meta as MetaEncryptedX25519DeoxysII;
                     const envelop = oasis.misc.fromCBOR(
                         result.unknown,
                     ) as types.ResultEnvelopeX25519DeoxysII;
@@ -114,8 +115,8 @@ export async function decodeResult(
                         envelop?.nonce,
                         envelop?.data,
                         zeroBuffer,
-                        meta.pk,
-                        meta.sk,
+                        metaEncryptedX25519DeoxysII.pk,
+                        metaEncryptedX25519DeoxysII.sk,
                     );
                     return oasis.misc.fromCBOR(pt) as types.CallResult;
                 } else {
