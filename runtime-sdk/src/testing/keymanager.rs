@@ -15,8 +15,8 @@ use crate::{
 
 #[derive(Default)]
 pub struct MockKeyManagerClient {
-    keys: Mutex<HashMap<KeyPairId, KeyPair>>,
-    ephemeral_keys: Mutex<HashMap<KeyPairId, KeyPair>>,
+    pub keys: Mutex<HashMap<KeyPairId, KeyPair>>,
+    pub ephemeral_keys: Mutex<HashMap<KeyPairId, KeyPair>>,
 }
 
 impl Clone for MockKeyManagerClient {
