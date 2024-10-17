@@ -7,8 +7,8 @@ license = "Apache-2.0"
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.3" }
-oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "v24.3" }
+oasis-core-runtime = { git = "https://github.com/oasisprotocol/oasis-core", tag = "runtime/v24.3-rt1" }
+oasis-core-keymanager = { git = "https://github.com/oasisprotocol/oasis-core", tag = "runtime/v24.3-rt1" }
 oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 
 # Third party.
@@ -50,6 +50,8 @@ blake3 = { version = "1.5.1", features = ["traits-preview"] }
 default = ["oasis-runtime-sdk-macros"]
 unsafe-allow-debug = []
 test = []
+# TDX build.
+tdx = ["oasis-core-runtime/tdx"]
 # Enables debug-level logging in release builds.
 debug-logging = [
 	"oasis-core-runtime/debug-logging",

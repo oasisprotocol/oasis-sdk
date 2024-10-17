@@ -426,12 +426,26 @@ func showComponent(bnd *bundle.Bundle, comp *bundle.Component, legacy bool) {
 	fmt.Println()
 	indent := "  "
 
-	fmt.Printf("%sExecutable:     %s\n", indent, comp.Executable)
+	if comp.Executable != "" {
+		fmt.Printf("%sExecutable:     %s\n", indent, comp.Executable)
+	}
 
-	// SGX components.
+	fmt.Printf("%sTEE kind:       %s\n", indent, comp.TEEKind())
+
+	switch {
+	case comp.SGX != nil:
+		showSgxComponent(indent, bnd, comp)
+	case comp.TDX != nil:
+		showTdxComponent(indent, bnd, comp)
+	default:
+	}
+}
+
+func showSgxComponent(indent string, bnd *bundle.Bundle, comp *bundle.Component) {
 	if comp.SGX == nil {
 		return
 	}
+
 	fmt.Printf("%sSGXS:           %s\n", indent, comp.SGX.Executable)
 
 	mrEnclave, err := bnd.MrEnclave(comp.ID())
@@ -484,6 +498,36 @@ func showComponent(bnd *bundle.Bundle, comp *bundle.Component, legacy bool) {
 	}
 }
 
+func showTdxComponent(indent string, bnd *bundle.Bundle, comp *bundle.Component) {
+	if comp.TDX == nil {
+		return
+	}
+
+	fmt.Printf("%sFirmware:       %s\n", indent, comp.TDX.Firmware)
+	if comp.TDX.HasKernel() {
+		fmt.Printf("%sKernel:         %s\n", indent, comp.TDX.Kernel)
+
+		if comp.TDX.HasInitRD() {
+			fmt.Printf("%sInitRD:         %s\n", indent, comp.TDX.InitRD)
+		}
+
+		if len(comp.TDX.ExtraKernelOptions) > 0 {
+			fmt.Printf("%sExtra kernel options:\n", indent)
+			for _, v := range comp.TDX.ExtraKernelOptions {
+				fmt.Printf("%s  %s\n", indent, v)
+			}
+		}
+	}
+
+	if comp.TDX.HasStage2() {
+		fmt.Printf("%sStage 2:        %s\n", indent, comp.TDX.Stage2Image)
+	}
+
+	fmt.Printf("%sResources:\n", indent)
+	fmt.Printf("%s  CPUs:    %d\n", indent, comp.TDX.Resources.CPUCount)
+	fmt.Printf("%s  Memory:  %d MiB\n", indent, comp.TDX.Resources.Memory)
+}
+
 func main() {
 	_ = rootCmd.Execute()
 }
@@ -509,7 +553,7 @@ func init() {
 	compFlags := flag.NewFlagSet("", flag.ContinueOnError)
 	compFlags.StringVar(&componentId, "component", "ronl", "component kind.name (default: ronl)")
 
-	// SGX singing cmds.
+	// SGX signing cmds.
 	signFlags := flag.NewFlagSet("", flag.ContinueOnError)
 	signFlags.StringVar(&dateStr, "date", "", "Sets the SIGSTRUCT DATE field in YYYYMMDD format (default: today)")
 	signFlags.Uint32VarP(&swdefined, "swdefined", "s", 0, "Sets the SIGSTRUCT SWDEFINED field")

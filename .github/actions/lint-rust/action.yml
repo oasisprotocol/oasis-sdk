@@ -8,6 +8,9 @@ inputs:
   token:
     description: GitHub secret token used by clippy-check action
     required: true
+  features:
+    description: Features to enable, separated by comma
+    required: false
 runs:
   using: composite
   steps:
@@ -15,9 +18,16 @@ runs:
       shell: bash
       env:
         MANIFEST_PATH: ${{ inputs.manifest_path }}
+        FEATURES: ${{ inputs.features }}
       run: |
+        if [[ -z "$FEATURES" ]]; then
+          FEATURES_ARG=("--all-features")
+        else
+          FEATURES_ARG=("--features" "$FEATURES")
+        fi
+
         cargo clippy \
-          --all-features \
+          ${FEATURES_ARG[@]} \
           --locked \
           --manifest-path "$MANIFEST_PATH" \
           -- \
