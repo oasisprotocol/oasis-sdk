@@ -30,7 +30,8 @@ func TestInterop(t *testing.T) {
 	}
 	callEnc, metadata := encodeCallEncryptedX25519DeoxysII(&call, clientPK, &clientSK, nonce, &cfg)
 
-	// If these change, update runtime-sdk/src/callformat.rs too.
+	// If these change, update runtime-sdk/src/callformat.rs and
+	// client-sdk/ts-web/rt/test/callformat.test.ts too.
 	require.Equal(t, "a264626f6479f6666d6574686f64646d6f636b", hex.EncodeToString(cbor.Marshal(call)))
 	require.Equal(t, "a264626f6479a462706b5820eedc75d3c500fc1b2d321757c383e276ab705c5a02013b3f1966e9caf73cdb0264646174615823c4635f2f9496a033a578e3f1e007be5d6cfa9631fb2fe2c8c76d26b322b6afb2fa5cdf6565706f636801656e6f6e63654f00000000000000000000000000000066666f726d617401", hex.EncodeToString(cbor.Marshal(callEnc)))
 

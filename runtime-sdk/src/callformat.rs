@@ -391,7 +391,8 @@ mod test {
         let result = types::transaction::CallResult::from(result_m_g());
         let result_enc = callformat::encode_result(&ctx, result_m_g(), metadata);
 
-        // If these change, update client-sdk/go/callformat/callformat_test.go too.
+        // If these change, update client-sdk/go/callformat/callformat_test.go
+        // and client-sdk/ts-web/rt/test/callformat.test.ts too.
         assert_eq!(hex::encode(cbor::to_vec(result)), "a1626f6bf6");
         assert_eq!(hex::encode(cbor::to_vec(result_enc)), "a167756e6b6e6f776ea264646174615528d1c5eedc5e54e1ef140ba905e84e0bea8daf60af656e6f6e63654f000000000000000000000000000000");
     }
