@@ -2,8 +2,10 @@
 
 As a first step we need to decide which ParaTime the ROFL app will authenticate
 to. This can be any ParaTime which has the ROFL module installed. For the rest
-of this section we will be using [Sapphire Testnet] which has all of the
-required functionality.
+of this section we will be using [Sapphire Testnet][sapphire-testnet] which has
+all of the required functionality.
+
+[sapphire-testnet]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/sapphire/network.mdx
 
 ## Define the Root of Trust
 
