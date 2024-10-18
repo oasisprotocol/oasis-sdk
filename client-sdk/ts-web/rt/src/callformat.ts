@@ -113,13 +113,11 @@ export async function decodeResult(
             if (result.unknown) {
                 if (meta) {
                     const metaEncryptedX25519DeoxysII = meta as MetaEncryptedX25519DeoxysII;
-                    const envelop = oasis.misc.fromCBOR(
-                        result.unknown,
-                    ) as types.ResultEnvelopeX25519DeoxysII;
+                    const envelope = result.unknown as types.ResultEnvelopeX25519DeoxysII;
                     const zeroBuffer = new Uint8Array(0);
                     const pt = await mraeDeoxysii.boxOpen(
-                        envelop?.nonce,
-                        envelop?.data,
+                        envelope?.nonce,
+                        envelope?.data,
                         zeroBuffer,
                         metaEncryptedX25519DeoxysII.pk,
                         metaEncryptedX25519DeoxysII.sk,

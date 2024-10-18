@@ -252,7 +252,7 @@ export interface Call {
 export interface CallResult {
     ok?: unknown;
     fail?: FailedCallResult;
-    unknown?: Uint8Array;
+    unknown?: unknown;
 }
 
 export interface FailedCallResult {
