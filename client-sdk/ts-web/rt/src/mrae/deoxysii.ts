@@ -68,13 +68,13 @@ export async function deriveSymmetricKey(
 export async function boxSeal(
     nonce: Uint8Array,
     plainText: Uint8Array,
-    associateData: Uint8Array,
+    associatedData: Uint8Array,
     publicKey: Uint8Array,
     privateCK: CryptoKey,
 ): Promise<Uint8Array> {
     const sharedKey = await deriveSymmetricKey(publicKey, privateCK);
     const aead = new deoxysii.AEAD(sharedKey);
-    return aead.encrypt(nonce, plainText, associateData);
+    return aead.encrypt(nonce, plainText, associatedData);
 }
 
 /**
@@ -85,11 +85,11 @@ export async function boxSeal(
 export async function boxOpen(
     nonce: Uint8Array,
     ciperText: Uint8Array,
-    associateData: Uint8Array,
+    associatedData: Uint8Array,
     publicKey: Uint8Array,
     privateCK: CryptoKey,
 ): Promise<Uint8Array> {
     const sharedKey = await deriveSymmetricKey(publicKey, privateCK);
     const aead = new deoxysii.AEAD(sharedKey);
-    return aead.decrypt(nonce, ciperText, associateData);
+    return aead.decrypt(nonce, ciperText, associatedData);
 }
