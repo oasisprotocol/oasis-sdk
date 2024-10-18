@@ -63,6 +63,7 @@ describe('callformat', () => {
         const nonce = new Uint8Array(deoxysii.NonceSize);
         const config = {
             publicKey: {key: runtimePK},
+            epoch: 1,
         } as oasisRT.callformat.EncodeConfig;
         const [callEnc, meta] = await oasisRT.callformat.encodeCallWithNonceAndKeys(
             nonce,

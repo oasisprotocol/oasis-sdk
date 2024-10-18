@@ -20,6 +20,10 @@ export interface EncodeConfig {
      * publicKey is an optional runtime's call data public key to use for encrypted call formats.
      */
     publicKey?: types.KeyManagerSignedPublicKey;
+    /**
+     * epoch is the epoch of the ephemeral runtime key (when publicKey is set).
+     */
+    epoch?: oasis.types.longnum;
 }
 
 export interface MetaEncryptedX25519DeoxysII {
@@ -61,6 +65,9 @@ export async function encodeCallWithNonceAndKeys(
                 nonce: nonce,
                 data: sealedCall,
             };
+            if (config.epoch) {
+                envelope.epoch = config.epoch;
+            }
             const encoded: types.Call = {
                 format: transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
                 method: '',

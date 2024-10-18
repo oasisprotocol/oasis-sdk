@@ -466,6 +466,7 @@ export interface EVMLogEvent {
 export interface CallEnvelopeX25519DeoxysII {
     pk: Uint8Array;
     nonce: Uint8Array;
+    epoch?: oasis.types.longnum;
     data: Uint8Array;
 }
 
