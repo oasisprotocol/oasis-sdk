@@ -61,7 +61,8 @@ export class LedgerContextSigner implements oasis.signature.ContextSigner {
 
     static async fromTransport(transport: Transport, keyNumber: number) {
         const app = new OasisApp(transport);
-        // Specification forthcoming. See https://github.com/oasisprotocol/oasis-core/pull/3656.
+        // Ledger clients use the "legacy" derivation path by default.
+        // https://github.com/oasisprotocol/cli/blob/v0.1.0/wallet/ledger/common.go#L15
         const path = [44, 474, 0, 0, keyNumber];
         const publicKeyResponse = successOrThrow(await app.publicKey(path), 'ledger public key');
         return new LedgerContextSigner(app, path, u8FromBuf(publicKeyResponse.pk as Buffer));

@@ -82,6 +82,12 @@ export function fromBase64(base64: string) {
     return u8;
 }
 
+export function fromBase64url(base64url: string) {
+    const padding = ['', '', '==', '='][base64url.length % 4];
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/') + padding;
+    return fromBase64(base64);
+}
+
 export function toStringUTF8(u8: Uint8Array) {
     return new TextDecoder().decode(u8);
 }
