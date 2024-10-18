@@ -101,6 +101,20 @@ impl Mock {
         )
     }
 
+    /// Create a new mock dispatch context.
+    pub fn create_ctx_with_key_manager(&mut self, key_manager: Box<dyn KeyManager>) -> RuntimeBatchContext<'_, EmptyRuntime> {
+        RuntimeBatchContext::new(
+            &self.host_info,
+            Some(key_manager),
+            &self.runtime_header,
+            &self.runtime_round_results,
+            &self.consensus_state,
+            &self.history,
+            self.epoch,
+            self.max_messages,
+        )
+    }
+
     /// Create an instance with the given local configuration.
     pub fn with_local_config(local_config: BTreeMap<String, cbor::Value>) -> Self {
         // Ensure a current state is always available during tests. Note that one can always use a
