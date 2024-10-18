@@ -70,7 +70,7 @@ export async function encodeCallWithNonceAndKeys(
             }
             const encoded: types.Call = {
                 format: transaction.CALLFORMAT_ENCRYPTED_X25519DEOXYSII,
-                body: oasis.misc.toCBOR(envelope),
+                body: envelope,
             };
             const meta: MetaEncryptedX25519DeoxysII = {
                 sk: sk,
