@@ -241,7 +241,7 @@ export type CallFormat = number;
  */
 export interface Call {
     format?: CallFormat;
-    method: string;
+    method?: string;
     body: unknown;
     ro?: boolean;
 }
@@ -252,7 +252,7 @@ export interface Call {
 export interface CallResult {
     ok?: unknown;
     fail?: FailedCallResult;
-    unknown?: Uint8Array;
+    unknown?: unknown;
 }
 
 export interface FailedCallResult {
@@ -466,6 +466,7 @@ export interface EVMLogEvent {
 export interface CallEnvelopeX25519DeoxysII {
     pk: Uint8Array;
     nonce: Uint8Array;
+    epoch?: oasis.types.longnum;
     data: Uint8Array;
 }
 

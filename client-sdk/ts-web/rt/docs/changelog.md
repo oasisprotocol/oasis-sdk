@@ -2,16 +2,28 @@
 
 ## Unreleased changes
 
+Breaking changes:
+
+- `callformat.encodeCallWithNonceAndKeys` now takes a client `CryptoKeyPair`
+  instead of `sk` and `pk` `Uint8Array`s.
+  You can generate one with `mraeDeoxysii.generateKeyPair` and export its
+  public key with `mraeDeoxysii.publicKeyFromKeyPair`.
+- `mraeDeoxysii` functions `deriveSymmetricKey`, `boxSeal`, and `boxOpen` are
+  now async.
+
 New features:
 
 - Functions that internally need to compute a hash, such as
   `address.fromSigspec`, are declared as synchronous now.
 - secp256k1 verification is declared as synchronous now.
+- `callformat.decodeResult`'s `meta` parameter now takes `unknown`, matching
+  what you get from `callformat.encodeCall`.
 
 Little things:
 
 - We're switching lots of cryptography dependencies to noble cryptography
   libraries.
+- X25519 key exchange now uses the Web Crypto API.
 
 ## v1.1.0
 
