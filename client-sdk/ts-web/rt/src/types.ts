@@ -241,7 +241,7 @@ export type CallFormat = number;
  */
 export interface Call {
     format?: CallFormat;
-    method: string;
+    method?: string;
     body: unknown;
     ro?: boolean;
 }

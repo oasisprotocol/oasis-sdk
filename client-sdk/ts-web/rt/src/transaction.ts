@@ -164,8 +164,8 @@ export type CallHandler<BODY> = (body: BODY) => void;
 export type CallHandlers = {[method: string]: CallHandler<never>};
 
 export function visitCall(handlers: CallHandlers, call: types.Call) {
-    if (handlers[call.method]) {
-        handlers[call.method](call.body as never);
+    if (handlers[call.method!]) {
+        handlers[call.method!](call.body as never);
         return true;
     }
     return false;
