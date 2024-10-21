@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_chain_context_for","set_chain_context","test_using_chain_context"]};
+window.SIDEBAR_ITEMS = {"fn":["get_chain_context_for","set_chain_context"]};
