@@ -114,7 +114,7 @@ the ROFL app. To do this, create `src/main.rs` with the following content:
 
 ## Testing it on Sapphire Localnet
 
-The simplest way to test and debug your ROFL is locally.
+The simplest way to test and debug your ROFL is with a local stack.
 
 1. Disable trust root verification in [`src/main.rs`]. Replace:
 
@@ -145,7 +145,10 @@ The simplest way to test and debug your ROFL is locally.
    ```
 
 In a few moments, the Sapphire Localnet will spin up and automatically launch
-your ROFL inside the compute node.
+your ROFL inside the compute node. See [localnet][localnet] for more
+information.
+
+[localnet]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/tools/localnet.mdx
 
 ```
 sapphire-localnet 2024-09-19-git2332dba (oasis-core: 24.2, sapphire-paratime: 0.8.2, oasis-web3-gateway: 5.1.0)
