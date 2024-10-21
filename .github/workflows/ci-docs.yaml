@@ -30,9 +30,13 @@ jobs:
       - name: Build docs
         run: |
           cargo doc \
-            --no-deps --all-features \
+            --no-deps \
             --package oasis-core-runtime \
-            --package oasis-runtime-sdk \
+            --package oasis-runtime-sdk
+
+          cargo doc \
+            --no-deps \
+            --all-features \
             --package oasis-runtime-sdk-macros \
             --package oasis-runtime-sdk-contracts \
             --package oasis-contract-sdk \
