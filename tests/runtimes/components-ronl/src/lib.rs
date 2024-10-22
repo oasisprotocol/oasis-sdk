@@ -4,7 +4,10 @@ use std::collections::BTreeMap;
 use once_cell::sync::Lazy;
 
 use oasis_runtime_sdk::{
-    self as sdk, config, modules, modules::rofl::app_id::AppId, types::token::Denomination, Version,
+    self as sdk, config, modules,
+    modules::rofl::app_id::AppId,
+    types::token::{BaseUnits, Denomination},
+    Version,
 };
 
 pub mod oracle;
@@ -20,7 +23,10 @@ pub static EXAMPLE_APP_ID: Lazy<AppId> = Lazy::new(|| AppId::from_global_name("e
 
 impl modules::core::Config for Config {}
 
-impl modules::rofl::Config for Config {}
+impl modules::rofl::Config for Config {
+    /// Stake for creating a ROFL application.
+    const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+}
 
 impl oracle::Config for Config {
     type Rofl = modules::rofl::Module<Config>;

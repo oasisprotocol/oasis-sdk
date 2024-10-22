@@ -109,3 +109,10 @@ pub struct AppInstanceQuery {
     /// Runtime Attestation Key.
     pub rak: PublicKey,
 }
+
+/// Stake thresholds for managing ROFL.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct StakeThresholds {
+    /// Required stake for creating new ROFL application.
+    pub app_create: token::BaseUnits,
+}
