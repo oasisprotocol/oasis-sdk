@@ -9,11 +9,11 @@ license = "Apache-2.0"
 der = { version = "0.7.9", default-features = false, features = ["pem", "std"] }
 rustls = { version = "0.23.11", default-features = false, features = ["logging", "std", "tls12"] }
 rustls-mbedcrypto-provider = { version = "0.1.0" }
-rustls-mbedpki-provider = { version = "0.1.0" }
+rustls-mbedpki-provider = { version = "0.2.0" }
 rustls-pki-types = { version = "1.7.0", default-features = false, features = ["std"] }
 # TODO: Change to released version once 3.x is published.
 ureq = { git = "https://github.com/algesten/ureq", rev = "e4e7e4e51209d8a14c741ad46991cd83e1a18379", default-features = false, features = ["gzip", "brotli", "charset", "json"] }
 webpki-root-certs = "0.26.4"
 
 [dev-dependencies]
-mockito = "0.31.0"
+mockito = "1.5.0"
