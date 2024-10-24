@@ -427,6 +427,8 @@ pub trait Config: 'static {
     const GAS_COST_CALL_CALLDATA_PUBLIC_KEY: u64 = 20;
     /// The gas cost of the internal call to retrieve the current epoch.
     const GAS_COST_CALL_CURRENT_EPOCH: u64 = 10;
+    /// The gas cost of the internal call to retrieve the current long-term public key
+    const GAS_COST_CALL_PUBLIC_KEY: u64 = 20;
 }
 
 pub struct Module<Cfg: Config> {
@@ -846,6 +848,24 @@ impl<Cfg: Config> Module<Cfg> {
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
     }
 
+    fn keymanager_public_key_common<C: Context>(
+        ctx: &C,
+    ) -> Result<types::KeyManagerPublicKeyQueryResponse, Error> {
+        let key_manager = ctx
+            .key_manager()
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
+        let public_key = key_manager.runtime_signing_key()
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("cannot get runtime signing key")))?;
+        let epoch = ctx.epoch();
+        let runtime_id = *ctx.runtime_id();
+        let key_pair_id = callformat::get_key_pair_id(epoch);
+        Ok(types::KeyManagerPublicKeyQueryResponse {
+            runtime_id,
+            key_pair_id,
+            public_key,
+        })
+    }
+
     fn calldata_public_key_common<C: Context>(
         ctx: &C,
     ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
@@ -863,6 +883,25 @@ impl<Cfg: Config> Module<Cfg> {
             })?;
 
         Ok(types::CallDataPublicKeyQueryResponse { public_key, epoch })
+    }
+
+    /// Retrieve the public key for encrypting call data.
+    #[handler(query = "core.KeyManagerPublicKey")]
+    fn query_keymanager_public_key<C: Context>(
+        ctx: &C,
+        _args: (),
+    ) -> Result<types::KeyManagerPublicKeyQueryResponse, Error> {
+        Self::keymanager_public_key_common(ctx)
+    }
+
+    /// Retrieve the public key for encrypting call data (internally exposed call).
+    #[handler(call = "core.KeyManagerPublicKey", internal)]
+    fn internal_keymanager_public_key<C: Context>(
+        ctx: &C,
+        _args: (),
+    ) -> Result<types::KeyManagerPublicKeyQueryResponse, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_CALLDATA_PUBLIC_KEY)?;
+        Self::keymanager_public_key_common(ctx)
     }
 
     /// Retrieve the public key for encrypting call data.
