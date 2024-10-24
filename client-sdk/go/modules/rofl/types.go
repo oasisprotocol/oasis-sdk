@@ -136,3 +136,8 @@ type Event struct {
 	AppUpdated *AppUpdatedEvent
 	AppRemoved *AppRemovedEvent
 }
+
+// StakeThresholds contains staking thresholds for managing ROFL.
+type StakeThresholds struct {
+	AppCreate *types.BaseUnits `json:"app_create"`
+}

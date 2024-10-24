@@ -492,6 +492,29 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_instances(args.id)
     }
 
+    /// Returns the minimum stake thresholds for managing ROFL.
+    #[handler(query = "rofl.StakeThresholds")]
+    fn query_stake_thresholds<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<types::StakeThresholds, Error> {
+        Ok(types::StakeThresholds {
+            app_create: Cfg::STAKE_APP_CREATE,
+        })
+    }
+
+    /// Returns the minimum stake thresholds for managing ROFL.
+    #[handler(call = "rofl.StakeThresholds", internal)]
+    fn internal_query_stake_thresholds<C: Context>(
+        ctx: &C,
+        _args: (),
+    ) -> Result<types::StakeThresholds, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_STAKE_THRESHOLDS)?;
+        Ok(types::StakeThresholds {
+            app_create: Cfg::STAKE_APP_CREATE,
+        })
+    }
+
     fn resolve_payer_from_tx<C: Context>(
         ctx: &C,
         tx: &Transaction,

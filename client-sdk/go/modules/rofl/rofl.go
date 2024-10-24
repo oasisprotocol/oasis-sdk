@@ -18,10 +18,11 @@ var (
 	methodRegister = types.NewMethodName("rofl.Register", Register{})
 
 	// Queries.
-	methodApp          = types.NewMethodName("rofl.App", AppQuery{})
-	methodAppInstance  = types.NewMethodName("rofl.AppInstance", AppInstanceQuery{})
-	methodAppInstances = types.NewMethodName("rofl.AppInstances", AppQuery{})
-	methodParameters   = types.NewMethodName("rofl.Parameters", nil)
+	methodApp             = types.NewMethodName("rofl.App", AppQuery{})
+	methodAppInstance     = types.NewMethodName("rofl.AppInstance", AppInstanceQuery{})
+	methodAppInstances    = types.NewMethodName("rofl.AppInstances", AppQuery{})
+	methodParameters      = types.NewMethodName("rofl.Parameters", nil)
+	methodStakeThresholds = types.NewMethodName("rofl.StakeThresholds", nil)
 )
 
 // V1 is the v1 rofl module interface.
@@ -45,6 +46,9 @@ type V1 interface {
 
 	// AppInstances queries the registered instances of the given application.
 	AppInstances(ctx context.Context, round uint64, id AppID) ([]*Registration, error)
+
+	// StakeThresholds queries the stake information for managing ROFL.
+	StakeThresholds(ctx context.Context, round uint64) (*StakeThresholds, error)
 
 	// Parameters queries the module parameters.
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
@@ -108,6 +112,16 @@ func (a *v1) AppInstances(ctx context.Context, round uint64, id AppID) ([]*Regis
 		return nil, err
 	}
 	return instances, nil
+}
+
+// Implements V1.
+func (a *v1) StakeThresholds(ctx context.Context, round uint64) (*StakeThresholds, error) {
+	var thresholds StakeThresholds
+	err := a.rc.Query(ctx, round, methodStakeThresholds, nil, &thresholds)
+	if err != nil {
+		return nil, err
+	}
+	return &thresholds, nil
 }
 
 // Implements V1.

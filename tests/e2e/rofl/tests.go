@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/accounts"
@@ -104,6 +106,19 @@ func CreateUpdateRemoveTest(ctx context.Context, env *scenario.Env) error {
 // QueryTest tests that queries work correctly.
 func QueryTest(ctx context.Context, env *scenario.Env) error {
 	rf := rofl.NewV1(env.Client)
+
+	// Query for stake thresholds.
+	s, err := rf.StakeThresholds(ctx, client.RoundLatest)
+	if err != nil {
+		return err
+	}
+	expected := types.BaseUnits{
+		Amount:       *quantity.NewFromUint64(1_000),
+		Denomination: types.NativeDenomination,
+	}
+	if s.AppCreate.String() != expected.String() {
+		return fmt.Errorf("expected stake threshold app create '%s', got '%s'", expected, s.AppCreate)
+	}
 
 	// Derive the AppID for the example oracle ROFL application that is registered in genesis.
 	exampleAppID := rofl.NewAppIDGlobalName("example")
