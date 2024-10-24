@@ -109,6 +109,13 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     core::{
         common::crypto::{signature, x25519},
@@ -219,5 +226,12 @@
     </span><span class="kw">pub </span>app: AppId,
     <span class="doccomment">/// Runtime Attestation Key.
     </span><span class="kw">pub </span>rak: PublicKey,
+}
+
+<span class="doccomment">/// Stake thresholds for managing ROFL.
+</span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+</span><span class="kw">pub struct </span>StakeThresholds {
+    <span class="doccomment">/// Required stake for creating new ROFL application.
+    </span><span class="kw">pub </span>app_create: token::BaseUnits,
 }
 </code></pre></div></section></main></body></html>
