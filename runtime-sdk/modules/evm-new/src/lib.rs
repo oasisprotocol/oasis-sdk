@@ -11,7 +11,7 @@ pub mod types;
 
 use base64::prelude::*;
 use revm::{
-    primitives::{ExecutionResult, Output, TxKind},
+    primitives::{ExecutionResult, TxEnv, TxKind},
     Evm,
 };
 
@@ -370,28 +370,19 @@ impl<Cfg: Config> API for Module<Cfg> {
     }
 }
 
-// TODO: Most of evm_create and evm_call is the same, group the common code into one method as in the old implementation.
 impl<Cfg: Config> Module<Cfg> {
-    fn evm_create<C: Context>(
+    fn evm_execute<C: Context, F: FnOnce(&mut TxEnv)>(
         ctx: &C,
-        caller: H160,
-        value: U256,
-        init_code: Vec<u8>,
         estimate_gas: bool,
+        f: F,
     ) -> Result<Vec<u8>, Error> {
+        // TODO: precompiles
+
+        let is_query = CurrentState::with_env(|env| !env.is_execute());
+
         let mut db = db::OasisDB::<'_, C, Cfg>::new(ctx);
-
-        let mut evm = Evm::builder()
-            .with_db(db)
-            .modify_tx_env(|tx| {
-                tx.transact_to = TxKind::Create;
-                tx.caller = caller.0.into();
-                tx.value = revm::primitives::U256::from_be_bytes(value.into()); // XXX: is BE ok?
-                tx.data = init_code.into();
-            })
-            .build();
-
-        let tx = evm.transact().unwrap(); // XXX: transact_commit? + err checking
+        let mut evm = Evm::builder().with_db(db).modify_tx_env(f).build();
+        let tx = evm.transact().unwrap(); // XXX: err checking
 
         let ret = match tx.result {
             ExecutionResult::Success {
@@ -400,18 +391,84 @@ impl<Cfg: Config> Module<Cfg> {
                 gas_refunded,
                 logs,
                 output,
-            } => Ok(output.into_data().to_vec()),
+            } => {
+                // Clamp data based on maximum allowed result size.
+                let data = output.into_data();
+                let data = if !is_query && data.len() > Cfg::MAX_RESULT_SIZE {
+                    data[..Cfg::MAX_RESULT_SIZE].to_vec()
+                } else {
+                    data.to_vec()
+                };
+
+                // Use gas and refund unused gas.
+                // XXX: check
+                <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+                <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
+
+                // Emit logs as events.
+                CurrentState::with(|state| {
+                    for log in logs {
+                        state.emit_event(crate::Event::Log {
+                            address: H160::from_slice(&log.address.into_array()),
+                            topics: log
+                                .topics()
+                                .iter()
+                                .map(|&topic| H256::from_slice(&topic.as_slice()))
+                                .collect(),
+                            data: log.data.data.to_vec(),
+                        });
+                    }
+                });
+
+                Ok(data)
+            }
             ExecutionResult::Revert { gas_used, output } => {
-                Err(Error::Reverted(BASE64_STANDARD.encode(output.to_vec()))) // XXX: to_vec maybe not needed (check encoding)
+                // Clamp data based on maximum allowed result size.
+                // XXX: to_vec maybe not needed (check encoding)
+                let data = if !is_query && output.len() > Cfg::MAX_RESULT_SIZE {
+                    output[..Cfg::MAX_RESULT_SIZE].to_vec()
+                } else {
+                    output.to_vec()
+                };
+
+                // Use gas and refund unused gas.
+                // XXX: check
+                <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+                <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
+
+                Err(Error::Reverted(BASE64_STANDARD.encode(data)))
             }
             ExecutionResult::Halt { reason, gas_used } => {
+                // Use gas and refund unused gas.
+                // XXX: check
+                <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+                <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
+
                 Err(crate::Error::ExecutionFailed(format!("{:?}", reason)))
             }
         };
-        // TODO: logs? also clamp data.
-        // TODO: gas...
 
         ret
+    }
+
+    fn evm_create<C: Context>(
+        ctx: &C,
+        caller: H160,
+        value: U256,
+        init_code: Vec<u8>,
+        estimate_gas: bool,
+    ) -> Result<Vec<u8>, Error> {
+        Self::evm_execute(ctx, estimate_gas, |tx| {
+            tx.gas_limit = <C::Runtime as Runtime>::Core::remaining_tx_gas();
+            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price())
+                .try_into()
+                .unwrap(); // XXX: err checking
+
+            tx.caller = caller.0.into();
+            tx.transact_to = TxKind::Create;
+            tx.value = revm::primitives::U256::from_be_bytes(value.into()); // XXX: is BE ok?
+            tx.data = init_code.into();
+        })
     }
 
     fn evm_call<C: Context>(
@@ -422,39 +479,17 @@ impl<Cfg: Config> Module<Cfg> {
         data: Vec<u8>,
         estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
-        let mut db = db::OasisDB::<'_, C, Cfg>::new(ctx);
+        Self::evm_execute(ctx, estimate_gas, |tx| {
+            tx.gas_limit = <C::Runtime as Runtime>::Core::remaining_tx_gas();
+            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price())
+                .try_into()
+                .unwrap(); // XXX: err checking
 
-        let mut evm = Evm::builder()
-            .with_db(db)
-            .modify_tx_env(|tx| {
-                tx.transact_to = TxKind::Call(address.0.into());
-                tx.caller = caller.0.into();
-                tx.value = revm::primitives::U256::from_be_bytes(value.into()); // XXX: is BE ok?
-                tx.data = data.into();
-            })
-            .build();
-
-        let tx = evm.transact().unwrap(); // XXX: transact_commit? + err checking
-
-        let ret = match tx.result {
-            ExecutionResult::Success {
-                reason,
-                gas_used,
-                gas_refunded,
-                logs,
-                output,
-            } => Ok(output.into_data().to_vec()),
-            ExecutionResult::Revert { gas_used, output } => {
-                Err(Error::Reverted(BASE64_STANDARD.encode(output.to_vec()))) // XXX: to_vec maybe not needed (check encoding)
-            }
-            ExecutionResult::Halt { reason, gas_used } => {
-                Err(crate::Error::ExecutionFailed(format!("{:?}", reason)))
-            }
-        };
-        // TODO: logs? also clamp data.
-        // TODO: gas...
-
-        ret
+            tx.caller = caller.0.into();
+            tx.transact_to = TxKind::Call(address.0.into());
+            tx.value = revm::primitives::U256::from_be_bytes(value.into()); // XXX: is BE ok?
+            tx.data = data.into();
+        })
     }
 
     fn derive_caller() -> Result<H160, Error> {
