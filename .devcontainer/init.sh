@@ -1,4 +1,4 @@
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 rustup show
 rustup target add x86_64-unknown-linux-musl
 sudo apt update #missing from docs
