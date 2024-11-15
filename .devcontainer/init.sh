@@ -1,9 +1,9 @@
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 rustup show
 rustup target add x86_64-unknown-linux-musl
-sudo apt update
+sudo apt update #missing from docs
 sudo apt install musl-tools gcc-multilib clang
-sudo apt install pkg-config protobuf-compiler cmake
+sudo apt install pkg-config protobuf-compiler cmake #missing from docs
 cargo install fortanix-sgx-tools
 cargo install sgxs-tools
 
