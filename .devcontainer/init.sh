@@ -1,4 +1,9 @@
+#!/bin/bash
+set -euo pipefail
+set -x
+
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+. "$HOME/.cargo/env" 
 rustup show
 rustup target add x86_64-unknown-linux-musl
 sudo apt update #missing from docs
