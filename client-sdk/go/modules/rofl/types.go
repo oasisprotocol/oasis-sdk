@@ -1,6 +1,10 @@
 package rofl
 
 import (
+	"context"
+	"fmt"
+	"io"
+
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
@@ -140,4 +144,17 @@ type Event struct {
 // StakeThresholds contains staking thresholds for managing ROFL.
 type StakeThresholds struct {
 	AppCreate *types.BaseUnits `json:"app_create"`
+}
+
+// PrettyPrint writes a pretty-printed representation of the stake thresholds to the given writer.
+func (st *StakeThresholds) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	fmt.Fprintf(w, "%sStake thresholds:\n", prefix)
+	fmt.Fprintf(w, "%s  App create: ", prefix)
+	st.AppCreate.PrettyPrint(ctx, "", w)
+	fmt.Fprint(w, "\n")
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (st *StakeThresholds) PrettyType() (interface{}, error) {
+	return st, nil
 }

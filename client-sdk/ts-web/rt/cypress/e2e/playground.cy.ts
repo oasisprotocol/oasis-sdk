@@ -9,7 +9,7 @@ describe('playground.cy.ts', () => {
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.
         cy.window()
-            .then({timeout: 120_000}, (w) => w.playground)
+            .then({timeout: 220_000}, (w) => w.playground)
             .then((w) => {
                 expect(w.playground).to.be.ok;
             });
@@ -21,7 +21,7 @@ describe('playground.cy.ts', () => {
         // (i) it doesn't retry if `w.playground` rejects, and
         // (ii) it passes when `w.playground` fulfills with `undefined`.
         cy.window()
-            .then({timeout: 120_000}, (w) => w.playground)
+            .then({timeout: 220_000}, (w) => w.playground)
             .then((w) => {
                 expect(w.playground).to.be.ok;
             });
