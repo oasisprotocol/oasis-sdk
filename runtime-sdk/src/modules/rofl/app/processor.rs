@@ -16,7 +16,7 @@ use crate::{
 };
 use rand::rngs::OsRng;
 
-use super::{notifier, registration, App, Environment};
+use super::{init, notifier, registration, App, Environment};
 
 /// Size of the processor command queue.
 const CMDQ_BACKLOG: usize = 32;
@@ -174,12 +174,13 @@ where
     }
 
     async fn cmd_initial_registration_completed(&self) -> Result<()> {
-        slog::info!(
-            self.logger,
-            "initial registration completed, starting application"
-        );
+        slog::info!(self.logger, "initial registration completed");
+
+        // Perform post-registration initialization.
+        init::post_registration_init();
 
         // Start application after first registration.
+        slog::info!(self.logger, "starting application");
         tokio::spawn(self.state.app.clone().run(self.env.clone()));
 
         // Notify notifier task.
