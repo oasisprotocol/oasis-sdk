@@ -41,4 +41,6 @@ mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 "$TEST_NET_RUNNER" \
     --fixture.file "$FIXTURE_FILE" \
     --basedir /tmp/oasis-net-runner-sdk-rt \
-    --basedir.no_temp_dir
+    --basedir.no_temp_dir \
+    --log.format json \
+    --log.level debug
