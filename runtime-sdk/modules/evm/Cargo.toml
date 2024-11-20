@@ -56,6 +56,7 @@ test = ["serde", "serde_json"]
 [[bench]]
 name = "criterion_benchmark"
 harness = false
+required-features = ["test"]
 
 [[bin]]
 name = "fuzz-precompile"

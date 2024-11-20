@@ -44,6 +44,7 @@ static KEYPAIR_GENERATE_BASE_COST: Lazy<HashMap<SignatureType, u64>> = Lazy::new
         (SignatureType::Secp256k1_PrehashedSha256, 1_500),
         (SignatureType::Secp256r1_PrehashedSha256, 4_000),
         (SignatureType::Secp384r1_PrehashedSha384, 18_000),
+        (SignatureType::Sr25519_Pure, 1_000),
     ])
 });
 
@@ -58,6 +59,7 @@ static SIGN_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new(|
         (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
         (SignatureType::Secp256r1_PrehashedSha256, (9_000, 0)),
         (SignatureType::Secp384r1_PrehashedSha384, (43_200, 0)),
+        (SignatureType::Sr25519_Pure, (1_500, 8)),
     ])
 });
 
@@ -72,6 +74,7 @@ static VERIFY_MESSAGE_COST: Lazy<HashMap<SignatureType, (u64, u64)>> = Lazy::new
         (SignatureType::Secp256k1_PrehashedSha256, (3_000, 0)),
         (SignatureType::Secp256r1_PrehashedSha256, (7_900, 0)),
         (SignatureType::Secp384r1_PrehashedSha384, (37_920, 0)),
+        (SignatureType::Sr25519_Pure, (2_000, 8)),
     ])
 });
 
@@ -680,21 +683,6 @@ mod test {
         .expect("call should return something")
         .expect_err("call should fail");
 
-        // Unsupported method.
-        let params = ethabi::encode(&[
-            Token::Uint(6.into()), // sr25519 is not yet supported.
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ]);
-        call_contract(
-            H160([
-                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
-            ]),
-            &params,
-            10_000_000,
-        )
-        .expect("call should return something")
-        .expect_err("call should fail");
-
         // Working test.
         let params = ethabi::encode(&[
             Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
@@ -773,13 +761,18 @@ mod test {
         bench_keypair_generate(b, SignatureType::Secp384r1_PrehashedSha384);
     }
 
+    #[bench]
+    fn bench_keypair_generate_sr25519(b: &mut Bencher) {
+        bench_keypair_generate(b, SignatureType::Sr25519_Pure);
+    }
+
     #[test]
     fn test_basic_roundtrip() {
         let seed = b"01234567890123456789012345678901";
         let context = b"test context";
         let message = b"test message";
 
-        for method in 0u8..6u8 {
+        for method in 0u8..=6u8 {
             let sig_type: SignatureType = method.try_into().unwrap();
             if sig_type.is_prehashed() {
                 // Tested in test_basic_roundtrip_prehashed below.
@@ -999,11 +992,6 @@ mod test {
             .expect("call should return something")
             .expect_err("call should fail");
 
-        // Unsupported method.
-        push_all_and_test(Some(6), None, None, None) // sr25519 is not yet supported.
-            .expect("call should return something")
-            .expect_err("call should fail");
-
         // All ok, with context.
         push_all_and_test(None, None, None, None)
             .expect("call should return something")
@@ -1110,6 +1098,26 @@ mod test {
         bench_signer(b, SignatureType::Secp384r1_PrehashedSha384, false, false);
     }
 
+    #[bench]
+    fn bench_sign_sr25519_shortctx_shortmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Sr25519_Pure, false, false);
+    }
+
+    #[bench]
+    fn bench_sign_sr25519_shortctx_longmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Sr25519_Pure, false, true);
+    }
+
+    #[bench]
+    fn bench_sign_sr25519_longctx_shortmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Sr25519_Pure, true, false);
+    }
+
+    #[bench]
+    fn bench_sign_sr25519_longctx_longmsg(b: &mut Bencher) {
+        bench_signer(b, SignatureType::Sr25519_Pure, true, true);
+    }
+
     #[test]
     fn test_verification_params() {
         fn push_all_and_test(
@@ -1153,11 +1161,6 @@ mod test {
 
         // Bogus method.
         push_all_and_test(Some(55), None, None, None, None)
-            .expect("call should return something")
-            .expect_err("call should fail");
-
-        // Unsupported method.
-        push_all_and_test(Some(6), None, None, None, None) // sr25519 is not yet supported.
             .expect("call should return something")
             .expect_err("call should fail");
 
@@ -1306,5 +1309,25 @@ mod test {
     #[bench]
     fn bench_verify_secp384r1_prehashed_sha384(b: &mut Bencher) {
         bench_verification(b, SignatureType::Secp384r1_PrehashedSha384, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_sr25519_shortctx_shortmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Sr25519_Pure, false, false);
+    }
+
+    #[bench]
+    fn bench_verify_sr25519_shortctx_longmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Sr25519_Pure, false, true);
+    }
+
+    #[bench]
+    fn bench_verify_sr25519_longctx_shortmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Sr25519_Pure, true, false);
+    }
+
+    #[bench]
+    fn bench_verify_sr25519_longctx_longmsg(b: &mut Bencher) {
+        bench_verification(b, SignatureType::Sr25519_Pure, true, true);
     }
 }
