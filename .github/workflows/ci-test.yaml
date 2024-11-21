@@ -348,7 +348,7 @@ jobs:
 
       - name: 'testnet: Wait for node socket'
         run: |
-          while [ ! -e /tmp/oasis-net-runner-sdk-rt/net-runner/network/client-0/internal.sock ]; do
+          while [[ ! -e /tmp/oasis-net-runner-sdk-rt/net-runner/network/client-0/internal.sock || ! -e /tmp/cfg_ready ]]; do
             sleep 1
           done
 
@@ -370,6 +370,10 @@ jobs:
           name: e2e-ts-web-rt-logs
           path: |
             /tmp/oasis-net-runner-sdk-rt/**/*.log
+            /tmp/oasis-net-runner-sdk-rt/**/*.json
+            /tmp/oasis-net-runner-sdk-rt/**/*.yaml
+            /tmp/genesis.json
+            /tmp/fixture.json
 
   e2e-rt:
     # NOTE: This name appears in GitHub's Checks API.
