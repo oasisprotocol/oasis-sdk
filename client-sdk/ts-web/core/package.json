@@ -25,7 +25,7 @@
         "test-e2e-node": "node --experimental-global-webcrypto playground/e2e-test-nodejs.js"
     },
     "dependencies": {
-        "@noble/hashes": "^1.5.0",
+        "@noble/hashes": "^1.6.1",
         "bech32": "^2.0.0",
         "bip39": "^3.1.0",
         "cborg": "^2.0.3",
