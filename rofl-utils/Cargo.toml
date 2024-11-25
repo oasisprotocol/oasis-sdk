@@ -7,7 +7,7 @@ license = "Apache-2.0"
 
 [dependencies]
 der = { version = "0.7.9", default-features = false, features = ["pem", "std"] }
-rustls = { version = "0.23.11", default-features = false, features = ["logging", "std", "tls12"] }
+rustls = { version = "0.23.18", default-features = false, features = ["logging", "std", "tls12"] }
 rustls-mbedcrypto-provider = { version = "0.1.0" }
 rustls-mbedpki-provider = { version = "0.1.0" }
 rustls-pki-types = { version = "1.7.0", default-features = false, features = ["std"] }
