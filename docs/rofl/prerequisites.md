@@ -10,7 +10,7 @@ steps you will be able to start building your first ROFL app!
 
 If you already have everything set up, feel free to skip to the [next chapter].
 
-[next chapter]: app.md
+[next chapter]: app.mdx
 
 :::info
 
