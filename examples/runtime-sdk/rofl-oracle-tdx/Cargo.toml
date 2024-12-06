@@ -1,0 +1,17 @@
+[package]
+name = "rofl-oracle-tdx"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+oasis-runtime-sdk = { path = "../../../runtime-sdk", features = ["tdx"] }
+module-evm = { path = "../../../runtime-sdk/modules/evm", package = "oasis-runtime-sdk-evm" }
+
+# Third-party dependencies.
+anyhow = "1.0"
+async-trait = "0.1.77"
+ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
+tokio = { version = "1.38", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+serde_json = "1.0"

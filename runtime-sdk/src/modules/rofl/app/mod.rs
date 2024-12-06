@@ -20,6 +20,7 @@ use crate::{
 
 mod client;
 mod env;
+mod init;
 mod notifier;
 pub mod prelude;
 mod processor;

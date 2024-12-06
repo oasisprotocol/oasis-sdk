@@ -9,4 +9,6 @@ mkdir -p /tmp/oasis-net-runner-sdk-core
     --fixture.default.node.binary "$TEST_NODE_BINARY" \
     --fixture.default.setup_runtimes=false \
     --basedir /tmp/oasis-net-runner-sdk-core \
-    --basedir.no_temp_dir
+    --basedir.no_temp_dir \
+    --log.format json \
+    --log.level debug
