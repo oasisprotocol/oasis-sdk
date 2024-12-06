@@ -10,7 +10,28 @@ steps you will be able to start building your first ROFL app!
 
 If you already have everything set up, feel free to skip to the [next chapter].
 
-[next chapter]: app.md
+[next chapter]: app.mdx
+
+:::info
+
+Docker images are available to help you set up a development
+environment. If you don't want to install everything locally (or **in
+particular if you use macOS** as your development system), you can use
+the `ghcr.io/oasisprotocol/rofl-dev` image, which contains all the tools
+needed to compile a ROFL app.
+
+To use it, bind the directory with your app source to the container's
+`/src` directory with a command like the following, then continue with
+the next section of this guide:
+
+```bash
+docker run --platform linux/amd64 --volume ./rofl-oracle:/src -it ghcr.io/oasisprotocol/rofl-dev
+```
+
+Note that on macOS you **must** use the `--platform linux/amd64`
+parameter, no matter which processor your computer has.
+
+:::
 
 ## Environment Setup
 
@@ -77,20 +98,18 @@ nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain
 rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 ```
 
-For testing ROFL binaries on Sapphire Localnet, the binaries should be compiled
-for [MUSL C standard library]. You will need to add the following target to your
-rust environment:
+Make sure you have the correct target for rust to compile for:
 
 ```shell
-rustup target add x86_64-unknown-linux-musl
+rustup target add x86_64-unknown-linux-gnu
 ```
 
-Additionally, you will need the MUSL wrapper for gcc, the multilib package and
-clang for compiling the `mbedtls-sys-auto` dependency. On Ubuntu/Debian systems,
-you can install those by running:
+In addition, you will need gcc's multilib support package, the protobuf
+compiler, clang, and cmake for compiling the `mbedtls-sys-auto`
+dependency. On Ubuntu/Debian systems, you can install those by running:
 
 ```shell
-sudo apt install musl-tools gcc-multilib clang
+sudo apt install gcc-multilib clang protobuf-compiler cmake pkg-config
 ```
 
 <!-- markdownlint-disable line-length -->
@@ -100,7 +119,6 @@ sudo apt install musl-tools gcc-multilib clang
 [Rust]: https://www.rust-lang.org/
 [`rust-toolchain.toml`]: https://github.com/oasisprotocol/oasis-sdk/tree/main/rust-toolchain.toml
 [rust-toolchain-precedence]: https://github.com/rust-lang/rustup/blob/master/README.md#override-precedence
-[MUSL C standard library]: https://musl.libc.org/
 <!-- markdownlint-enable line-length -->
 
 ## SGXS Utilities

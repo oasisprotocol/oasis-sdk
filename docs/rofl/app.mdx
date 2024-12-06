@@ -1,3 +1,6 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Application
 
 This chapter will show you how to quickly create, build and test a minimal
@@ -131,11 +134,23 @@ The simplest way to test and debug your ROFL is with a local stack.
     }
    ```
 
-2. Compile ROFL in the _unsafe_ mode:
+2. Compile ROFL in the _unsafe_ mode. If you're using the `rofl-dev`
+   docker image (e.g. because you're developing on macOS), you can run the
+   container, build the app, and stop the container in just a single
+   command.
 
-   ```shell
-   oasis rofl build sgx --mode unsafe
-   ```
+   <Tabs>
+      <TabItem value="local" label="Local">
+         ```shell
+         oasis rofl build sgx --mode unsafe
+         ```
+      </TabItem>
+      <TabItem value="rofl-dev" label="Container">
+         ```shell
+         docker run --platform linux/amd64 --volume ./rofl-oracle:/src -it ghcr.io/oasisprotocol/rofl-dev oasis rofl build sgx --mode unsafe
+         ```
+      </TabItem>
+   </Tabs>
 
 3. Spin up the Sapphire Localnet docker container and mount your `rofl-oracle`
    folder to `/rofls` inside the docker image:
