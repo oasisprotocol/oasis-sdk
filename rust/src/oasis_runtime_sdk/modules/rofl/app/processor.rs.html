@@ -191,6 +191,7 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -209,7 +210,7 @@
 };
 <span class="kw">use </span>rand::rngs::OsRng;
 
-<span class="kw">use super</span>::{notifier, registration, App, Environment};
+<span class="kw">use super</span>::{init, notifier, registration, App, Environment};
 
 <span class="doccomment">/// Size of the processor command queue.
 </span><span class="kw">const </span>CMDQ_BACKLOG: usize = <span class="number">32</span>;
@@ -367,13 +368,14 @@
     }
 
     <span class="kw">async fn </span>cmd_initial_registration_completed(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="macro">slog::info!</span>(
-            <span class="self">self</span>.logger,
-            <span class="string">"initial registration completed, starting application"
-        </span>);
+        <span class="macro">slog::info!</span>(<span class="self">self</span>.logger, <span class="string">"initial registration completed"</span>);
+
+        <span class="comment">// Perform post-registration initialization.
+        </span>init::post_registration_init();
 
         <span class="comment">// Start application after first registration.
-        </span>tokio::spawn(<span class="self">self</span>.state.app.clone().run(<span class="self">self</span>.env.clone()));
+        </span><span class="macro">slog::info!</span>(<span class="self">self</span>.logger, <span class="string">"starting application"</span>);
+        tokio::spawn(<span class="self">self</span>.state.app.clone().run(<span class="self">self</span>.env.clone()));
 
         <span class="comment">// Notify notifier task.
         </span><span class="self">self</span>.tasks
