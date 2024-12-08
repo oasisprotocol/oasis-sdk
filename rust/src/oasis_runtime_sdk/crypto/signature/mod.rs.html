@@ -793,11 +793,34 @@
 <a href="#793" id="793">793</a>
 <a href="#794" id="794">794</a>
 <a href="#795" id="795">795</a>
+<a href="#796" id="796">796</a>
+<a href="#797" id="797">797</a>
+<a href="#798" id="798">798</a>
+<a href="#799" id="799">799</a>
+<a href="#800" id="800">800</a>
+<a href="#801" id="801">801</a>
+<a href="#802" id="802">802</a>
+<a href="#803" id="803">803</a>
+<a href="#804" id="804">804</a>
+<a href="#805" id="805">805</a>
+<a href="#806" id="806">806</a>
+<a href="#807" id="807">807</a>
+<a href="#808" id="808">808</a>
+<a href="#809" id="809">809</a>
+<a href="#810" id="810">810</a>
+<a href="#811" id="811">811</a>
+<a href="#812" id="812">812</a>
+<a href="#813" id="813">813</a>
+<a href="#814" id="814">814</a>
+<a href="#815" id="815">815</a>
+<a href="#816" id="816">816</a>
+<a href="#817" id="817">817</a>
+<a href="#818" id="818">818</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Cryptographic signatures.
 </span><span class="kw">use </span>std::convert::TryFrom;
 
 <span class="kw">use </span>digest::{typenum::Unsigned <span class="kw">as _</span>, Digest <span class="kw">as _</span>};
-<span class="kw">use </span>rand_core::RngCore;
+<span class="kw">use </span>rand_core::{CryptoRng, RngCore};
 <span class="kw">use </span>thiserror::Error;
 
 <span class="kw">use </span><span class="kw">crate</span>::core::common::crypto::signature::{PublicKey <span class="kw">as </span>CorePublicKey, Signer <span class="kw">as </span>CoreSigner};
@@ -826,8 +849,8 @@
     </span>Secp256k1_PrehashedKeccak256,
     <span class="attr">#[cbor(rename = <span class="string">"secp256k1_prehashed_sha256"</span>)]
     </span>Secp256k1_PrehashedSha256,
-    <span class="attr">#[cbor(rename = <span class="string">"sr25519"</span>)]
-    </span>Sr25519,
+    <span class="attr">#[cbor(rename = <span class="string">"sr25519_pure"</span>)]
+    </span>Sr25519_Pure,
     <span class="attr">#[cbor(rename = <span class="string">"secp256r1_prehashed_sha256"</span>)]
     </span>Secp256r1_PrehashedSha256,
     <span class="attr">#[cbor(rename = <span class="string">"secp384r1_prehashed_sha384"</span>)]
@@ -843,7 +866,7 @@
             <span class="self">Self</span>::Secp256k1_Oasis =&gt; <span class="number">3</span>,
             <span class="self">Self</span>::Secp256k1_PrehashedKeccak256 =&gt; <span class="number">4</span>,
             <span class="self">Self</span>::Secp256k1_PrehashedSha256 =&gt; <span class="number">5</span>,
-            <span class="self">Self</span>::Sr25519 =&gt; <span class="number">6</span>,
+            <span class="self">Self</span>::Sr25519_Pure =&gt; <span class="number">6</span>,
             <span class="self">Self</span>::Secp256r1_PrehashedSha256 =&gt; <span class="number">7</span>,
             <span class="self">Self</span>::Secp384r1_PrehashedSha384 =&gt; <span class="number">8</span>,
         }
@@ -883,6 +906,10 @@
     <span class="kw">pub fn </span>is_secp384r1_variant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
         <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Secp384r1_PrehashedSha384)
     }
+
+    <span class="kw">pub fn </span>is_sr25519_variant(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Sr25519_Pure)
+    }
 }
 
 <span class="kw">impl </span>TryFrom&lt;u8&gt; <span class="kw">for </span>SignatureType {
@@ -896,7 +923,7 @@
             <span class="number">3 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256k1_Oasis),
             <span class="number">4 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256k1_PrehashedKeccak256),
             <span class="number">5 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256k1_PrehashedSha256),
-            <span class="number">6 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519),
+            <span class="number">6 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519_Pure),
             <span class="number">7 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1_PrehashedSha256),
             <span class="number">8 </span>=&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1_PrehashedSha384),
             <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
@@ -984,7 +1011,9 @@
             SignatureType::Secp384r1_PrehashedSha384 =&gt; {
                 <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>))
             }
-            SignatureType::Sr25519 =&gt; <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519(sr25519::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>)),
+            SignatureType::Sr25519_Pure =&gt; {
+                <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519(sr25519::PublicKey::from_bytes(bytes)<span class="question-mark">?</span>))
+            }
         }
     }
 
@@ -1093,7 +1122,10 @@
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
             },
-            <span class="self">Self</span>::Sr25519(<span class="kw">_</span>) =&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            <span class="self">Self</span>::Sr25519(pk) =&gt; <span class="kw">match </span>signature_type {
+                SignatureType::Sr25519_Pure =&gt; pk.verify_raw(context_or_hash, message, signature),
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            },
         }
     }
 
@@ -1174,7 +1206,7 @@
 <span class="doccomment">/// Common trait for memory signers.
 </span><span class="kw">pub trait </span>Signer: Send + Sync {
     <span class="doccomment">/// Create a new random signer.
-    </span><span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    </span><span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span>(<span class="kw">impl </span>RngCore + CryptoRng)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized;
 
@@ -1202,7 +1234,7 @@
 }
 
 <span class="kw">impl</span>&lt;T: Signer + <span class="question-mark">?</span>Sized&gt; Signer <span class="kw">for </span>std::sync::Arc&lt;T&gt; {
-    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span>(<span class="kw">impl </span>RngCore + CryptoRng)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
@@ -1241,7 +1273,7 @@
 }
 
 <span class="kw">impl</span>&lt;T: CoreSigner&gt; Signer <span class="kw">for </span><span class="kw-2">&amp;</span>T {
-    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span>(<span class="kw">impl </span>RngCore + CryptoRng)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
@@ -1281,7 +1313,7 @@
 }
 
 <span class="kw">impl </span>Signer <span class="kw">for </span><span class="kw">crate</span>::core::identity::Identity {
-    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
+    <span class="kw">fn </span>random(_rng: <span class="kw-2">&amp;mut </span>(<span class="kw">impl </span>RngCore + CryptoRng)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt;
     <span class="kw">where
         </span><span class="self">Self</span>: Sized,
     {
@@ -1326,6 +1358,7 @@
     Secp256k1(secp256k1::MemorySigner),
     Secp256r1(secp256r1::MemorySigner),
     Secp384r1(secp384r1::MemorySigner),
+    Sr25519(sr25519::MemorySigner),
 }
 
 <span class="kw">impl </span>MemorySigner {
@@ -1345,6 +1378,8 @@
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::MemorySigner::new_from_seed(
                 seed,
             )<span class="question-mark">?</span>))
+        } <span class="kw">else if </span>sig_type.is_sr25519_variant() {
+            <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519(sr25519::MemorySigner::new_from_seed(seed)<span class="question-mark">?</span>))
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(Error::InvalidArgument)
         }
@@ -1369,6 +1404,8 @@
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp256r1(secp256r1::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
         } <span class="kw">else if </span>sig_type.is_secp384r1_variant() {
             <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Secp384r1(secp384r1::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
+        } <span class="kw">else if </span>sig_type.is_sr25519_variant() {
+            <span class="prelude-val">Ok</span>(<span class="self">Self</span>::Sr25519(sr25519::MemorySigner::from_bytes(bytes)<span class="question-mark">?</span>))
         } <span class="kw">else </span>{
             <span class="prelude-val">Err</span>(Error::InvalidArgument)
         }
@@ -1381,6 +1418,7 @@
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.to_bytes(),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.to_bytes(),
             <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.to_bytes(),
+            <span class="self">Self</span>::Sr25519(signer) =&gt; signer.to_bytes(),
         }
     }
 
@@ -1391,6 +1429,7 @@
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.public_key(),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.public_key(),
             <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.public_key(),
+            <span class="self">Self</span>::Sr25519(signer) =&gt; signer.public_key(),
         }
     }
 
@@ -1401,6 +1440,7 @@
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.sign(context, message),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.sign(context, message),
             <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.sign(context, message),
+            <span class="self">Self</span>::Sr25519(signer) =&gt; signer.sign(context, message),
         }
     }
 
@@ -1411,6 +1451,7 @@
             <span class="self">Self</span>::Secp256k1(signer) =&gt; signer.sign_raw(message),
             <span class="self">Self</span>::Secp256r1(signer) =&gt; signer.sign_raw(message),
             <span class="self">Self</span>::Secp384r1(signer) =&gt; signer.sign_raw(message),
+            <span class="self">Self</span>::Sr25519(signer) =&gt; signer.sign_raw(message),
         }
     }
 
@@ -1490,6 +1531,10 @@
                 }
                 <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
             },
+            <span class="self">Self</span>::Sr25519(signer) =&gt; <span class="kw">match </span>signature_type {
+                SignatureType::Sr25519_Pure =&gt; signer.sign(context_or_hash, message),
+                <span class="kw">_ </span>=&gt; <span class="prelude-val">Err</span>(Error::InvalidArgument),
+            },
         }
     }
 }
@@ -1520,6 +1565,7 @@
             SignatureType::Ed25519_Oasis,
             SignatureType::Ed25519_Pure,
             SignatureType::Secp256k1_Oasis,
+            SignatureType::Sr25519_Pure,
         ] {
             <span class="kw">let </span>signer = MemorySigner::new_test(sig_type, <span class="string">"memory signer test"</span>);
             <span class="kw">let </span>pk = signer.public_key();

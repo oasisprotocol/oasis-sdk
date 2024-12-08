@@ -155,7 +155,7 @@
         signature::{DigestSigner <span class="kw">as _</span>, DigestVerifier, Signer <span class="kw">as _</span>, Verifier <span class="kw">as _</span>},
     },
 };
-<span class="kw">use </span>rand_core::RngCore;
+<span class="kw">use </span>rand_core::{CryptoRng, RngCore};
 
 <span class="kw">use </span><span class="kw">crate</span>::crypto::signature::{Error, Signature};
 
@@ -254,7 +254,7 @@
 }
 
 <span class="kw">impl </span><span class="kw">super</span>::Signer <span class="kw">for </span>MemorySigner {
-    <span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span><span class="kw">impl </span>RngCore) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
+    <span class="kw">fn </span>random(rng: <span class="kw-2">&amp;mut </span>(<span class="kw">impl </span>RngCore + CryptoRng)) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>, Error&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>seed = [<span class="number">0u8</span>; <span class="number">48</span>];
         rng.fill_bytes(<span class="kw-2">&amp;mut </span>seed);
         <span class="self">Self</span>::new_from_seed(<span class="kw-2">&amp;</span>seed)

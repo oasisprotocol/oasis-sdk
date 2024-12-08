@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["PublicKey"]};
+window.SIDEBAR_ITEMS = {"struct":["MemorySigner","PublicKey"]};
