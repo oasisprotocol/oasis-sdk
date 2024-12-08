@@ -9,7 +9,7 @@ use p256::{
         signature::{DigestSigner as _, DigestVerifier, Signer as _, Verifier as _},
     },
 };
-use rand_core::RngCore;
+use rand_core::{CryptoRng, RngCore};
 
 use crate::crypto::signature::{Error, Signature};
 
@@ -108,7 +108,7 @@ impl MemorySigner {
 }
 
 impl super::Signer for MemorySigner {
-    fn random(rng: &mut impl RngCore) -> Result<Self, Error> {
+    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error> {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
         Self::new_from_seed(&seed)

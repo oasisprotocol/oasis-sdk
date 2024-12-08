@@ -2,7 +2,7 @@
 use std::convert::TryFrom;
 
 use digest::{typenum::Unsigned as _, Digest as _};
-use rand_core::RngCore;
+use rand_core::{CryptoRng, RngCore};
 use thiserror::Error;
 
 use crate::core::common::crypto::signature::{PublicKey as CorePublicKey, Signer as CoreSigner};
@@ -31,8 +31,8 @@ pub enum SignatureType {
     Secp256k1_PrehashedKeccak256,
     #[cbor(rename = "secp256k1_prehashed_sha256")]
     Secp256k1_PrehashedSha256,
-    #[cbor(rename = "sr25519")]
-    Sr25519,
+    #[cbor(rename = "sr25519_pure")]
+    Sr25519_Pure,
     #[cbor(rename = "secp256r1_prehashed_sha256")]
     Secp256r1_PrehashedSha256,
     #[cbor(rename = "secp384r1_prehashed_sha384")]
@@ -48,7 +48,7 @@ impl SignatureType {
             Self::Secp256k1_Oasis => 3,
             Self::Secp256k1_PrehashedKeccak256 => 4,
             Self::Secp256k1_PrehashedSha256 => 5,
-            Self::Sr25519 => 6,
+            Self::Sr25519_Pure => 6,
             Self::Secp256r1_PrehashedSha256 => 7,
             Self::Secp384r1_PrehashedSha384 => 8,
         }
@@ -88,6 +88,10 @@ impl SignatureType {
     pub fn is_secp384r1_variant(&self) -> bool {
         matches!(self, Self::Secp384r1_PrehashedSha384)
     }
+
+    pub fn is_sr25519_variant(&self) -> bool {
+        matches!(self, Self::Sr25519_Pure)
+    }
 }
 
 impl TryFrom<u8> for SignatureType {
@@ -101,7 +105,7 @@ impl TryFrom<u8> for SignatureType {
             3 => Ok(Self::Secp256k1_Oasis),
             4 => Ok(Self::Secp256k1_PrehashedKeccak256),
             5 => Ok(Self::Secp256k1_PrehashedSha256),
-            6 => Ok(Self::Sr25519),
+            6 => Ok(Self::Sr25519_Pure),
             7 => Ok(Self::Secp256r1_PrehashedSha256),
             8 => Ok(Self::Secp384r1_PrehashedSha384),
             _ => Err(Error::InvalidArgument),
@@ -189,7 +193,9 @@ impl PublicKey {
             SignatureType::Secp384r1_PrehashedSha384 => {
                 Ok(Self::Secp384r1(secp384r1::PublicKey::from_bytes(bytes)?))
             }
-            SignatureType::Sr25519 => Ok(Self::Sr25519(sr25519::PublicKey::from_bytes(bytes)?)),
+            SignatureType::Sr25519_Pure => {
+                Ok(Self::Sr25519(sr25519::PublicKey::from_bytes(bytes)?))
+            }
         }
     }
 
@@ -298,7 +304,10 @@ impl PublicKey {
                 }
                 _ => Err(Error::InvalidArgument),
             },
-            Self::Sr25519(_) => Err(Error::InvalidArgument),
+            Self::Sr25519(pk) => match signature_type {
+                SignatureType::Sr25519_Pure => pk.verify_raw(context_or_hash, message, signature),
+                _ => Err(Error::InvalidArgument),
+            },
         }
     }
 
@@ -379,7 +388,7 @@ impl From<Signature> for Vec<u8> {
 /// Common trait for memory signers.
 pub trait Signer: Send + Sync {
     /// Create a new random signer.
-    fn random(rng: &mut impl RngCore) -> Result<Self, Error>
+    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
     where
         Self: Sized;
 
@@ -407,7 +416,7 @@ pub trait Signer: Send + Sync {
 }
 
 impl<T: Signer + ?Sized> Signer for std::sync::Arc<T> {
-    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -446,7 +455,7 @@ impl<T: Signer + ?Sized> Signer for std::sync::Arc<T> {
 }
 
 impl<T: CoreSigner> Signer for &T {
-    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -486,7 +495,7 @@ impl<T: CoreSigner> Signer for &T {
 }
 
 impl Signer for crate::core::identity::Identity {
-    fn random(_rng: &mut impl RngCore) -> Result<Self, Error>
+    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -531,6 +540,7 @@ pub enum MemorySigner {
     Secp256k1(secp256k1::MemorySigner),
     Secp256r1(secp256r1::MemorySigner),
     Secp384r1(secp384r1::MemorySigner),
+    Sr25519(sr25519::MemorySigner),
 }
 
 impl MemorySigner {
@@ -550,6 +560,8 @@ impl MemorySigner {
             Ok(Self::Secp384r1(secp384r1::MemorySigner::new_from_seed(
                 seed,
             )?))
+        } else if sig_type.is_sr25519_variant() {
+            Ok(Self::Sr25519(sr25519::MemorySigner::new_from_seed(seed)?))
         } else {
             Err(Error::InvalidArgument)
         }
@@ -574,6 +586,8 @@ impl MemorySigner {
             Ok(Self::Secp256r1(secp256r1::MemorySigner::from_bytes(bytes)?))
         } else if sig_type.is_secp384r1_variant() {
             Ok(Self::Secp384r1(secp384r1::MemorySigner::from_bytes(bytes)?))
+        } else if sig_type.is_sr25519_variant() {
+            Ok(Self::Sr25519(sr25519::MemorySigner::from_bytes(bytes)?))
         } else {
             Err(Error::InvalidArgument)
         }
@@ -586,6 +600,7 @@ impl MemorySigner {
             Self::Secp256k1(signer) => signer.to_bytes(),
             Self::Secp256r1(signer) => signer.to_bytes(),
             Self::Secp384r1(signer) => signer.to_bytes(),
+            Self::Sr25519(signer) => signer.to_bytes(),
         }
     }
 
@@ -596,6 +611,7 @@ impl MemorySigner {
             Self::Secp256k1(signer) => signer.public_key(),
             Self::Secp256r1(signer) => signer.public_key(),
             Self::Secp384r1(signer) => signer.public_key(),
+            Self::Sr25519(signer) => signer.public_key(),
         }
     }
 
@@ -606,6 +622,7 @@ impl MemorySigner {
             Self::Secp256k1(signer) => signer.sign(context, message),
             Self::Secp256r1(signer) => signer.sign(context, message),
             Self::Secp384r1(signer) => signer.sign(context, message),
+            Self::Sr25519(signer) => signer.sign(context, message),
         }
     }
 
@@ -616,6 +633,7 @@ impl MemorySigner {
             Self::Secp256k1(signer) => signer.sign_raw(message),
             Self::Secp256r1(signer) => signer.sign_raw(message),
             Self::Secp384r1(signer) => signer.sign_raw(message),
+            Self::Sr25519(signer) => signer.sign_raw(message),
         }
     }
 
@@ -695,6 +713,10 @@ impl MemorySigner {
                 }
                 _ => Err(Error::InvalidArgument),
             },
+            Self::Sr25519(signer) => match signature_type {
+                SignatureType::Sr25519_Pure => signer.sign(context_or_hash, message),
+                _ => Err(Error::InvalidArgument),
+            },
         }
     }
 }
@@ -725,6 +747,7 @@ mod test {
             SignatureType::Ed25519_Oasis,
             SignatureType::Ed25519_Pure,
             SignatureType::Secp256k1_Oasis,
+            SignatureType::Sr25519_Pure,
         ] {
             let signer = MemorySigner::new_test(sig_type, "memory signer test");
             let pk = signer.public_key();

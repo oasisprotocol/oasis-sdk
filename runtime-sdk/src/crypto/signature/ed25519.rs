@@ -4,7 +4,7 @@ use std::convert::TryInto;
 use base64::prelude::*;
 use curve25519_dalek::{digest::consts::U64, edwards::CompressedEdwardsY};
 use ed25519_dalek::Signer as _;
-use rand_core::RngCore;
+use rand_core::{CryptoRng, RngCore};
 use sha2::{Digest as _, Sha512, Sha512_256};
 
 use oasis_core_runtime::common::crypto::signature::{
@@ -217,7 +217,7 @@ impl MemorySigner {
 }
 
 impl Signer for MemorySigner {
-    fn random(rng: &mut impl RngCore) -> Result<Self, Error> {
+    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error> {
         let mut seed = [0u8; 32];
         rng.fill_bytes(&mut seed);
         Self::new_from_seed(&seed)
