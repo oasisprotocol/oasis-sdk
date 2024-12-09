@@ -1,0 +1,83 @@
+# NOTE: This name appears in GitHub's Checks API and in workflow's status badge.
+name: rofl-dev-image
+
+on:
+  push:
+    # XXX: ideally on main branches we would build the image only if there are changes in the
+    # 'docker/' directory (as we do in pull_requests). However, this doesn't work when pushing a new
+    # 'stable/*' branch - the build on a new branch does not trigger unless there are changes
+    # compared to main on the filtered path.
+    # If this is ever fixed, or per branch filters are possible, bring back the path filter to only
+    # build the image when there are changes within 'docker/' directory.
+    branches:
+      - main
+      - stable/*
+  # Or when a pull request event occurs for a pull request against one of the matched branches and at least
+  # one modified file matches the configured paths.
+  #
+  # NOTE: We use this to be able to easily test Docker image changes.
+  pull_request:
+    branches:
+      - main
+      - stable/*
+    paths:
+      - docker/rofl-dev/**
+  # Or every day at 04:00 UTC (for the default/main branch).
+  schedule:
+    - cron: "0 4 * * *"
+
+# Cancel in-progress jobs on same branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build-rofl-dev:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: build-rofl-dev
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Check out pull request's HEAD commit instead of the merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Determine tag name
+        id: determine-tag
+        uses: ./.github/actions/determine-tag
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Rebuild oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}"
+        uses: docker/build-push-action@v5
+        with:
+          context: docker/rofl-dev
+          file: docker/rofl-dev/Dockerfile
+          tags: ghcr.io/oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}
+          pull: true
+          push: true
+          labels: |
+            org.opencontainers.image.source=${{ github.event.repository.html_url }}
+            org.opencontainers.image.created=${{ steps.determine-tag.outputs.created }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Prune old ghcr.io/oasisprotocol/rofl-dev images
+        uses: vlaurin/action-ghcr-prune@v0.6.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          organization: oasisprotocol
+          container: rofl-dev
+          keep-younger-than: 7 # days
+          keep-last: 2
+          prune-untagged: true
+          prune-tags-regexes: ^pr-
