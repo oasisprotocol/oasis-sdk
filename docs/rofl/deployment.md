@@ -102,7 +102,7 @@ part can be anything from a [WASM-based smart contract] to a dedicated
 [runtime module].
 
 [EVM-based smart contracts]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/sapphire/README.mdx
-[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/cipher/README.mdx
+[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/tools/other-paratimes/cipher/README.mdx
 [runtime module]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/runtime/modules.md
 
 :::
