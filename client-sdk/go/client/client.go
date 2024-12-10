@@ -344,9 +344,10 @@ func (rc *runtimeClient) GetTransactionsWithResults(ctx context.Context, round u
 		_ = cbor.Unmarshal(raw.Tx, &tx.Tx) // Ignore errors as there can be invalid transactions.
 		_ = cbor.Unmarshal(raw.Result, &tx.Result)
 
+		txHash := tx.Tx.Hash()
 		for _, rawEv := range raw.Events {
 			var ev types.Event
-			if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, nil); err != nil {
+			if err := ev.UnmarshalRaw(rawEv.Key, rawEv.Value, &txHash); err != nil {
 				continue
 			}
 
