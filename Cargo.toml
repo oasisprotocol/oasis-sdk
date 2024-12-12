@@ -17,6 +17,7 @@ members = [
 
     # ROFL.
     "rofl-utils",
+    "rofl-containers",
 
     # Test runtimes.
     "tests/runtimes/benchmarking",
