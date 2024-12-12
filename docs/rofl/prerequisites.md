@@ -108,10 +108,20 @@ sudo apt install musl-tools gcc-multilib clang
 In order to generate binaries suitable for use with Intel SGX, you also need to
 install the relevant utilities. You can do so as follows:
 
+Start with adding OpenSSL development package and the Protobuf compiler:
+
+```shell
+sudo apt-get install pkg-config libssl-dev protobuf-compiler
+```
+
+You can find more details looking at [Fortanix docs].
+
 ```
 cargo install fortanix-sgx-tools
 cargo install sgxs-tools
 ```
+
+[Fortanix docs]: https://edp.fortanix.com/docs/installation/guide/#tab-3-1
 
 ## Oasis CLI Installation
 

@@ -131,7 +131,8 @@ The simplest way to test and debug your ROFL is with a local stack.
     }
    ```
 
-2. Compile ROFL in the _unsafe_ mode:
+2. Navigate to `examples/runtime-sdk/rofl-oracle` and compile
+ROFL in the _unsafe_ mode:
 
    ```shell
    oasis rofl build sgx --mode unsafe
@@ -141,7 +142,10 @@ The simplest way to test and debug your ROFL is with a local stack.
    folder to `/rofls` inside the docker image:
 
    ```shell
-   docker run -it -p8545:8545 -p8546:8546 -v rofl-oracle:/rofls ghcr.io/oasisprotocol/sapphire-localnet
+   # Make sure to use the latest Sapphire Localnet docker image
+   docker pull ghcr.io/oasisprotocol/sapphire-localnet:latest
+   # Assuming you are running this command from the `rofl-oracle` directory
+   docker run -it -p8544-8548:8544-8548 -v .:/rofls ghcr.io/oasisprotocol/sapphire-localnet:latest
    ```
 
 In a few moments, the Sapphire Localnet will spin up and automatically launch
