@@ -849,10 +849,12 @@ impl<Cfg: Config> Module<Cfg> {
     fn calldata_public_key_common<C: Context>(
         ctx: &C,
     ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
+        println!("IM HERE: calldata_public_key_common");
         let key_manager = ctx
             .key_manager()
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
         let epoch = ctx.epoch();
+        println!("IM HERE: calldata_public_key_common, EPOCH IS: {}", epoch);
         let public_key = key_manager
             .get_public_ephemeral_key(callformat::get_key_pair_id(epoch), epoch)
             .map_err(|err| match err {
