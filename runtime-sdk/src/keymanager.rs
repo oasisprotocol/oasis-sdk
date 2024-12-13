@@ -135,6 +135,10 @@ impl KeyManagerClient {
         key_pair_id: KeyPairId,
         epoch: EpochTime,
     ) -> Result<SignedPublicKey, KeyManagerError> {
+        println!(
+            "IM HERE: before retryable get_public_ephemeral_key, key_pair_id: {:?}, epoch: {:?}",
+            key_pair_id, epoch
+        );
         retryable(|| self.inner.get_public_ephemeral_key(key_pair_id, epoch)).await
     }
 }
