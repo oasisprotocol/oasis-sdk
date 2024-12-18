@@ -111,8 +111,15 @@ We have prepared a simple oracle contract for this example. You can find it by
 checking out the [prepared example project] from the Oasis SDK repository. It
 contains a simple [Oracle.sol] contract which collects observations from
 authenticated ROFL app instances, performs trivial aggregation and stores the
-final aggregated result. See the [Sapphire quickstart] chapter for more details
-on building and deploying Sapphire smart contracts.
+final aggregated result. Read the [Sapphire quickstart] chapter to learn how to
+build and deploy Sapphire smart contracts, but to get you up and running for
+this part, simply copy the example project from above, install dependencies and
+compile the smart contract by executing:
+
+```shell
+npm install
+npx hardhat compile
+```
 
 Configure the `PRIVATE_KEY` of the deployment account and the ROFL app
 identifier (be sure to use the identifier that you received during
