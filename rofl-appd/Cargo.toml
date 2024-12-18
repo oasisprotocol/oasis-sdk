@@ -1,12 +1,11 @@
 [package]
-name = "rofl-containers"
+name = "rofl-appd"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 # Oasis SDK.
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
-rofl-appd = { path = "../rofl-appd" }
 
 # Third party.
-base64 = "0.22.1"
+rocket = { git = "https://github.com/rwf2/Rocket", rev = "28891e8072136f4641a33fb8c3f2aafce9d88d5b", features = ["json"] }
