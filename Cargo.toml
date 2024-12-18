@@ -17,6 +17,7 @@ members = [
 
     # ROFL.
     "rofl-utils",
+    "rofl-appd",
     "rofl-containers",
 
     # Test runtimes.

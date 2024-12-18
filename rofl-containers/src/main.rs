@@ -3,6 +3,9 @@ use std::env;
 use base64::prelude::*;
 use oasis_runtime_sdk::{cbor, modules::rofl::app::prelude::*};
 
+/// UNIX socket address where the REST API server will listen on.
+const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
+
 /// A generic container-based ROFL application.
 struct ContainersApp;
 
@@ -30,8 +33,9 @@ impl App for ContainersApp {
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
     }
 
-    async fn run(self: Arc<Self>, _env: Environment<Self>) {
-        // TODO: Start the REST API server.
+    async fn run(self: Arc<Self>, env: Environment<Self>) {
+        // Start the REST API server.
+        let _ = rofl_appd::start(ROFL_APPD_ADDRESS, env).await;
     }
 }
 
