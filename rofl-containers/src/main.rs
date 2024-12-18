@@ -1,9 +1,21 @@
+//! The rofl-containers runtime is a generic ROFL app that is used when building all TDX
+//! container-based ROFL apps (e.g. using the Oasis CLI).
+//!
+//! It expects `ROFL_APP_ID` and `ROFL_CONSENSUS_TRUST_ROOT` to be passed via environment variables.
+//! Usually these would be set in the kernel command-line so that they are part of the runtime
+//! measurements.
+//!
+//! It currently just starts a REST API server (rofl-appd) that exposes information about the
+//! application together with a simple KMS interface. In the future it will also manage secrets and
+//! expose other interfaces.
 use std::env;
 
 use base64::prelude::*;
 use oasis_runtime_sdk::{cbor, modules::rofl::app::prelude::*};
 
-/// A generic container-based ROFL application.
+/// UNIX socket address where the REST API server will listen on.
+const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
+
 struct ContainersApp;
 
 #[async_trait]
@@ -30,8 +42,9 @@ impl App for ContainersApp {
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
     }
 
-    async fn run(self: Arc<Self>, _env: Environment<Self>) {
-        // TODO: Start the REST API server.
+    async fn run(self: Arc<Self>, env: Environment<Self>) {
+        // Start the REST API server.
+        let _ = rofl_appd::start(ROFL_APPD_ADDRESS, env).await;
     }
 }
 

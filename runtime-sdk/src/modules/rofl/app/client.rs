@@ -66,8 +66,20 @@ impl Default for SubmitTxOpts {
     }
 }
 
+/// App-specific key derivation request.
+#[derive(Clone, Debug, Default)]
+pub struct DeriveKeyRequest {
+    /// Key kind.
+    pub kind: modules::rofl::types::KeyKind,
+    /// Key generation.
+    pub generation: u64,
+    /// Key identifier.
+    pub key_id: Vec<u8>,
+}
+
 /// A runtime client meant for use within runtimes.
 pub struct Client<A: App> {
+    state: Arc<processor::State<A>>,
     imp: ClientImpl<A>,
     submission_mgr: Arc<SubmissionManager<A>>,
 }
@@ -81,11 +93,12 @@ where
         state: Arc<processor::State<A>>,
         cmdq: mpsc::WeakSender<processor::Command>,
     ) -> Self {
-        let imp = ClientImpl::new(state, cmdq);
+        let imp = ClientImpl::new(state.clone(), cmdq);
         let mut submission_mgr = SubmissionManager::new(imp.clone());
         submission_mgr.start();
 
         Self {
+            state,
             imp,
             submission_mgr: Arc::new(submission_mgr),
         }
@@ -168,6 +181,25 @@ where
     pub async fn store_for_round(&self, round: u64) -> Result<HostStore> {
         self.imp.store_for_round(round).await
     }
+
+    /// Derive an application-specific key.
+    pub async fn derive_key(
+        &self,
+        signer: Arc<dyn Signer>,
+        request: DeriveKeyRequest,
+    ) -> Result<modules::rofl::types::DeriveKeyResponse> {
+        let tx = self.state.app.new_transaction(
+            "rofl.DeriveKey",
+            modules::rofl::types::DeriveKey {
+                app: A::id(),
+                kind: request.kind,
+                generation: request.generation,
+                key_id: request.key_id,
+            },
+        );
+        let response = self.sign_and_submit_tx(signer, tx).await?;
+        Ok(cbor::from_value(response.ok()?)?)
+    }
 }
 
 impl<A> Clone for Client<A>
@@ -176,6 +208,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            state: self.state.clone(),
             imp: self.imp.clone(),
             submission_mgr: self.submission_mgr.clone(),
         }

@@ -9,6 +9,7 @@ use super::{client, processor, App};
 
 /// Application environment.
 pub struct Environment<A: App> {
+    app: Arc<A>,
     client: client::Client<A>,
     signer: Arc<dyn Signer>,
     cmdq: mpsc::WeakSender<processor::Command>,
@@ -24,10 +25,16 @@ where
         cmdq: mpsc::WeakSender<processor::Command>,
     ) -> Self {
         Self {
+            app: state.app.clone(),
             signer: state.signer.clone(),
             client: client::Client::new(state, cmdq.clone()),
             cmdq,
         }
+    }
+
+    /// Application instance.
+    pub fn app(&self) -> Arc<A> {
+        self.app.clone()
     }
 
     /// Runtime client.
@@ -57,6 +64,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
+            app: self.app.clone(),
             signer: self.signer.clone(),
             client: self.client.clone(),
             cmdq: self.cmdq.clone(),
