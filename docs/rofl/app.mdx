@@ -1,3 +1,6 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Application
 
 This chapter will show you how to quickly create, build and test a minimal
@@ -71,6 +74,14 @@ configure Cargo to always build with specific target CPU platform features
 (namely AES-NI and SSE3) by creating a `.cargo/config.toml` file with the
 following content:
 
+:::info
+
+You do not need this additional configuration if you're building with the
+[`rofl-dev`][rofl-dev] container, since that already has the relevant environment
+variables set appropriately.
+
+:::
+
 ```toml title=".cargo/config.toml"
 [build]
 rustflags = ["-C", "target-feature=+aes,+ssse3"]
@@ -132,11 +143,23 @@ The simplest way to test and debug your ROFL is with a local stack.
    ```
 
 2. Navigate to `examples/runtime-sdk/rofl-oracle` and compile
-ROFL in the _unsafe_ mode:
+   ROFL in the _unsafe_ mode. If you're using the [`rofl-dev`][rofl-dev]
+   docker image (e.g. because you're developing on macOS), you can run the
+   container, build the app, and stop the container in just a single
+   command.
 
-   ```shell
-   oasis rofl build sgx --mode unsafe
-   ```
+   <Tabs>
+      <TabItem value="local" label="Local">
+         ```shell
+         oasis rofl build sgx --mode unsafe
+         ```
+      </TabItem>
+      <TabItem value="rofl-dev" label="Container">
+         ```shell
+         docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev oasis rofl build sgx --mode unsafe
+         ```
+      </TabItem>
+   </Tabs>
 
 3. Spin up the Sapphire Localnet docker container and mount your `rofl-oracle`
    folder to `/rofls` inside the docker image:
@@ -153,6 +176,8 @@ your ROFL inside the compute node. See [localnet][localnet] for more
 information.
 
 [localnet]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/tools/localnet.mdx
+
+[rofl-dev]: https://github.com/oasisprotocol/oasis-sdk/pkgs/container/rofl-dev
 
 ```
 sapphire-localnet 2024-09-19-git2332dba (oasis-core: 24.2, sapphire-paratime: 0.8.2, oasis-web3-gateway: 5.1.0)

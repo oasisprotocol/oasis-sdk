@@ -20,7 +20,7 @@ This way, your ROFL client will sync more quickly and not want to start on any
 other network or ParaTime. Read the [Consensus Trust Root] chapter to learn more
 about obtaining a correct block for the root of trust.
 
-[`src/main.rs`]: app.md#app-definition
+[`src/main.rs`]: app.mdx#app-definition
 [Consensus Trust Root]: trust-root.md
 
 ## Register the App
