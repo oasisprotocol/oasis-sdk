@@ -8,10 +8,12 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     core::{
+        common::crypto::mrae::deoxysii,
         consensus::{
             registry::{SGXConstraints, TEEHardware},
             state::{
@@ -23,12 +25,16 @@ use crate::{
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
-    modules::{accounts::types::NonceQuery, core::types::EstimateGasQuery},
+    modules::{
+        self,
+        accounts::types::NonceQuery,
+        core::types::{CallDataPublicKeyQueryResponse, EstimateGasQuery},
+    },
     state::CurrentState,
     storage::HostStore,
     types::{
         address::{Address, SignatureAddressSpec},
-        token,
+        callformat, token,
         transaction::{self, CallerAddress},
     },
 };
@@ -47,12 +53,15 @@ pub struct SubmitTxOpts {
     /// Optional timeout when submitting a transaction. Setting this to `None` means that the host
     /// node timeout will be used.
     pub timeout: Option<Duration>,
+    /// Whether the call data should be encrypted (true by default).
+    pub encrypt: bool,
 }
 
 impl Default for SubmitTxOpts {
     fn default() -> Self {
         Self {
             timeout: Some(Duration::from_millis(15_000)), // 15 seconds.
+            encrypt: true,
         }
     }
 }
@@ -232,6 +241,12 @@ where
         mgp.get(denom)
             .ok_or(anyhow!("denomination not supported"))
             .copied()
+    }
+
+    /// Retrieve the calldata encryption public key.
+    async fn call_data_public_key(&self) -> Result<CallDataPublicKeyQueryResponse> {
+        let round = self.latest_round().await?;
+        self.query(round, "core.CallDataPublicKey", ()).await
     }
 
     /// Securely query the on-chain runtime component.
@@ -500,10 +515,64 @@ where
 
             // The estimate may be off due to current limitations in confidential gas estimation.
             // Inflate the estimated gas by 20%.
-            let gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
+            let mut gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
+
+            // When encrypting transactions, also add the cost of calldata encryption.
+            if opts.encrypt {
+                let envelope_size_estimate = cbor::to_vec(callformat::CallEnvelopeX25519DeoxysII {
+                    epoch: u64::MAX,
+                    ..Default::default()
+                })
+                .len()
+                .try_into()
+                .unwrap();
+
+                let params: modules::core::Parameters =
+                    client.query(round, "core.Parameters", ()).await?;
+                gas = gas.saturating_add(params.gas_costs.callformat_x25519_deoxysii);
+                gas = gas.saturating_add(
+                    params
+                        .gas_costs
+                        .tx_byte
+                        .saturating_mul(envelope_size_estimate),
+                );
+            }
 
             tx.set_fee_gas(gas);
         }
+
+        // Optionally perform calldata encryption.
+        let meta = if opts.encrypt {
+            // Obtain runtime's current ephemeral public key.
+            let runtime_pk = client.call_data_public_key().await?;
+            // Generate local key pair and nonce.
+            let client_kp = deoxysii::generate_key_pair();
+            let mut nonce = [0u8; deoxysii::NONCE_SIZE];
+            OsRng.fill(&mut nonce);
+            // Encrypt and encode call.
+            let call = transaction::Call {
+                format: transaction::CallFormat::EncryptedX25519DeoxysII,
+                method: "".to_string(),
+                body: cbor::to_value(callformat::CallEnvelopeX25519DeoxysII {
+                    pk: client_kp.0.into(),
+                    nonce,
+                    epoch: runtime_pk.epoch,
+                    data: deoxysii::box_seal(
+                        &nonce,
+                        cbor::to_vec(std::mem::take(&mut tx.call)),
+                        vec![],
+                        &runtime_pk.public_key.key.0,
+                        &client_kp.1,
+                    )?,
+                }),
+                ..Default::default()
+            };
+            tx.call = call;
+
+            Some((runtime_pk, client_kp))
+        } else {
+            None
+        };
 
         // Determine gas price. Currently we always use the native denomination.
         let mgp = client
@@ -539,6 +608,26 @@ where
             .latest_round
             .fetch_max(result.round, Ordering::SeqCst);
 
-        cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))
+        // Decrypt result if it is encrypted.
+        let result: transaction::CallResult =
+            cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))?;
+        match result {
+            transaction::CallResult::Unknown(raw) => {
+                let meta = meta.ok_or(anyhow!("unknown result but calldata was not encrypted"))?;
+                let envelope: callformat::ResultEnvelopeX25519DeoxysII =
+                    cbor::from_value(raw).map_err(|_| anyhow!("malformed encrypted result"))?;
+                let data = deoxysii::box_open(
+                    &envelope.nonce,
+                    envelope.data,
+                    vec![],
+                    &meta.0.public_key.key.0,
+                    &meta.1 .1,
+                )
+                .map_err(|_| anyhow!("malformed encrypted result"))?;
+
+                cbor::from_slice(&data).map_err(|_| anyhow!("malformed encrypted result"))
+            }
+            _ => Ok(result),
+        }
     }
 }

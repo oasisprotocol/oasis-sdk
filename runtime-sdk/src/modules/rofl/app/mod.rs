@@ -19,7 +19,7 @@ use crate::{
     types::transaction,
 };
 
-mod client;
+pub mod client;
 mod env;
 mod init;
 mod notifier;

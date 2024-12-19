@@ -3,6 +3,8 @@ use std::collections::BTreeMap;
 
 use once_cell::sync::Lazy;
 
+#[cfg(feature = "debug-mock-sgx")]
+use oasis_runtime_sdk::keymanager::TrustedSigners;
 use oasis_runtime_sdk::{
     self as sdk, config, modules,
     modules::rofl::app_id::AppId,
@@ -58,6 +60,11 @@ impl sdk::Runtime for Runtime {
         modules::rofl::Module<Config>,
         oracle::Module<Config>,
     );
+
+    #[cfg(feature = "debug-mock-sgx")]
+    fn trusted_signers() -> Option<TrustedSigners> {
+        Some(TrustedSigners::unsafe_mock())
+    }
 
     fn genesis_state() -> <Self::Modules as sdk::module::MigrationHandler>::Genesis {
         use modules::rofl::policy::*;
