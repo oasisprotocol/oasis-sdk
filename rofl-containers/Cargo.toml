@@ -1,0 +1,12 @@
+[package]
+name = "rofl-containers"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
+rofl-appd = { path = "../rofl-appd" }
+
+# Third party.
+base64 = "0.22.1"

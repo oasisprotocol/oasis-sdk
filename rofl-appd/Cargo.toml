@@ -1,0 +1,12 @@
+[package]
+name = "rofl-appd"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
+
+# Third party.
+rocket = { version = "0.5.1", features = ["json"] }
+
