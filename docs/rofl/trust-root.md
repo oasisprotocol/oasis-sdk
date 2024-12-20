@@ -5,7 +5,7 @@ _consensus trust root_. The preconfigured trust root is valid for the current
 deployment of Sapphire Testnet. This chapter briefly describes what the trust
 root is, how it can be securely derived and configured in your ROFL app.
 
-[ROFL app example]: app.md
+[ROFL app example]: app.mdx
 
 ## The Root of Trust
 

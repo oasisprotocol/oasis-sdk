@@ -37,5 +37,5 @@ npx hardhat oracle-query 0x5FbDB2315678afecb367f032d93F642f64180aa3 --network sa
 
 For more information check out the [ROFL tutorial].
 
-[ROFL tutorial]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/rofl/app.md
+[ROFL tutorial]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/rofl/app.mdx
 
