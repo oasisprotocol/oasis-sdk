@@ -13,7 +13,7 @@ use crate::{
     modules::rofl::types::Register,
 };
 
-use super::{processor, App, Environment};
+use super::{client::SubmitTxOpts, processor, App, Environment};
 
 /// Registration task.
 pub(super) struct Task<A: App> {
@@ -124,7 +124,14 @@ where
         let result = self
             .env
             .client()
-            .multi_sign_and_submit_tx(&[self.state.identity.clone(), self.env.signer()], tx)
+            .multi_sign_and_submit_tx_opts(
+                &[self.state.identity.clone(), self.env.signer()],
+                tx,
+                SubmitTxOpts {
+                    encrypt: false, // Needed for initial fee payments.
+                    ..Default::default()
+                },
+            )
             .await?
             .ok()?;
 
