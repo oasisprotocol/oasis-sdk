@@ -10,8 +10,8 @@ oasis-runtime-sdk = { path = "../../../runtime-sdk" }
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 
 # Third party.
-anyhow = "1.0.86"
-thiserror = "1.0"
+anyhow = "1.0.95"
+thiserror = "2.0"
 futures = "0.3.18"
 
 [features]
