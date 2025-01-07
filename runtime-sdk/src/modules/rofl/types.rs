@@ -4,6 +4,7 @@ use crate::{
         consensus::{beacon::EpochTime, registry},
     },
     crypto::signature::PublicKey,
+    keymanager,
     types::{address::Address, token},
 };
 
@@ -72,6 +73,34 @@ pub struct Register {
     ///
     /// All of these keys need to co-sign the registration transaction to prove ownership.
     pub extra_keys: Vec<PublicKey>,
+}
+
+/// Kind of key for derivation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+#[repr(u8)]
+pub enum KeyKind {
+    #[default]
+    EntropyV0 = 0,
+}
+
+/// Derive key call.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DeriveKey {
+    /// ROFL application identifier.
+    pub app: AppId,
+    /// Key kind.
+    pub kind: KeyKind,
+    /// Key generation.
+    pub generation: u64,
+    /// Key identifier.
+    pub key_id: Vec<u8>,
+}
+
+/// Response from the derive key call.
+#[derive(Clone, Default, cbor::Encode, cbor::Decode)]
+pub struct DeriveKeyResponse {
+    /// Derived key.
+    pub key: keymanager::StateKey,
 }
 
 /// ROFL registration descriptor.

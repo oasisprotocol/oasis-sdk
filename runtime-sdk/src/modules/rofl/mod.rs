@@ -13,7 +13,7 @@ use crate::{
         },
     },
     crypto::signature::PublicKey,
-    handler, migration,
+    dispatcher, handler, keymanager, migration,
     module::{self, Module as _, Parameters as _},
     modules::{self, accounts::API as _, core::API as _},
     sdk_derive,
@@ -106,6 +106,9 @@ pub trait API {
 /// oasis1qza6sddnalgzexk3ct30gqfvntgth5m4hsyywmff
 pub static ADDRESS_APP_STAKE_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "app-stake-pool"));
+
+/// Key derivation context.
+static ROFL_DERIVE_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/rofl: derive key v1";
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
@@ -359,6 +362,59 @@ impl<Cfg: Config> Module<Cfg> {
         state::update_registration(registration)?;
 
         Ok(())
+    }
+
+    /// Derive a ROFL application-specific key.
+    #[handler(call = "rofl.DeriveKey")]
+    fn tx_derive_key<C: Context>(
+        ctx: &C,
+        body: types::DeriveKey,
+    ) -> Result<types::DeriveKeyResponse, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_DERIVE_KEY)?;
+
+        // Ensure call is encrypted to avoid leaking any keys by accident.
+        let call_format = CurrentState::with_env(|env| env.tx_call_format());
+        if !call_format.is_encrypted() {
+            return Err(Error::PlainCallFormatNotAllowed);
+        }
+
+        // Currently only simple keys are supported.
+        if body.kind != types::KeyKind::EntropyV0 || body.generation != 0 {
+            return Err(Error::InvalidArgument);
+        }
+
+        // Ensure key identifier is not too long.
+        if body.key_id.len() > Cfg::DERIVE_KEY_MAX_KEY_ID_LENGTH {
+            return Err(Error::InvalidArgument);
+        }
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(Default::default());
+        }
+
+        // Ensure caller is an authorized instance of the given application.
+        if !Self::is_authorized_origin(body.app) {
+            return Err(Error::Forbidden);
+        }
+
+        // Derive application key.
+        let key_id = keymanager::get_key_pair_id([
+            ROFL_DERIVE_KEY_CONTEXT,
+            body.app.as_ref(),
+            &[body.kind as u8],
+            &body.key_id,
+        ]);
+        let km = ctx
+            .key_manager()
+            .ok_or(Error::Abort(dispatcher::Error::KeyManagerFailure(
+                keymanager::KeyManagerError::NotInitialized,
+            )))?;
+        let key = km
+            .get_or_create_keys(key_id)
+            .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
+            .state_key;
+
+        Ok(types::DeriveKeyResponse { key })
     }
 
     /// Verify whether the given endorsement is allowed by the application policy.

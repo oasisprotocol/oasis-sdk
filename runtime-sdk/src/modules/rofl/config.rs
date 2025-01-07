@@ -18,6 +18,8 @@ pub trait Config: 'static {
     const GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY: u64 = 2000;
     /// Gas cost of rofl.StakeThresholds call.
     const GAS_COST_CALL_STAKE_THRESHOLDS: u64 = 10;
+    /// Gas cost of rofl.DeriveKey call.
+    const GAS_COST_CALL_DERIVE_KEY: u64 = 10_000;
 
     /// Amount of stake required for maintaining an application.
     ///
@@ -25,4 +27,7 @@ pub trait Config: 'static {
     /// removed.
     const STAKE_APP_CREATE: token::BaseUnits =
         token::BaseUnits::new(0, token::Denomination::NATIVE);
+
+    /// Maximum key identifier length for rofl.DeriveKey call.
+    const DERIVE_KEY_MAX_KEY_ID_LENGTH: usize = 128;
 }

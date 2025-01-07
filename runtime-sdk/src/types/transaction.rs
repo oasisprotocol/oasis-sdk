@@ -290,6 +290,16 @@ pub enum CallFormat {
     EncryptedX25519DeoxysII = 1,
 }
 
+impl CallFormat {
+    /// Whether this call format is end-to-end encrypted.
+    pub fn is_encrypted(&self) -> bool {
+        match self {
+            Self::Plain => false,
+            Self::EncryptedX25519DeoxysII => true,
+        }
+    }
+}
+
 /// Method call.
 #[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
 pub struct Call {

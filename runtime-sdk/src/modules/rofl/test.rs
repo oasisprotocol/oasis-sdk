@@ -6,7 +6,10 @@ use crate::{
         accounts::{self, API as _},
         core,
     },
-    testing::{keys, mock},
+    testing::{
+        keys,
+        mock::{self, CallOptions},
+    },
     types::{
         address::Address,
         token::{BaseUnits, Denomination},
@@ -14,7 +17,7 @@ use crate::{
     Runtime, Version,
 };
 
-use super::{app_id::AppId, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _};
+use super::{app_id::AppId, state, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _};
 
 type Accounts = accounts::Module;
 type Core = core::Module<Config>;
@@ -230,4 +233,90 @@ fn test_create_scheme() {
         app_id.to_bech32(),
         "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf"
     );
+}
+
+#[test]
+fn test_key_derivation() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    let create = types::Create {
+        policy: Default::default(),
+        scheme: types::IdentifierScheme::CreatorNonce,
+    };
+
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "rofl.Create", create.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+    let app: AppId = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+
+    let derive = types::DeriveKey {
+        app,
+        kind: types::KeyKind::EntropyV0,
+        generation: 0,
+        key_id: b"my test key".into(),
+    };
+
+    // First try with plain calls which should fail.
+    let dispatch_result = signer_alice.call(&ctx, "rofl.DeriveKey", derive.clone());
+    let (err_module, err_code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(&err_module, "rofl");
+    assert_eq!(err_code, 13); // Must use non-plain call format.
+
+    // Use encrypted calls.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        derive.clone(),
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let (err_module, err_code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(&err_module, "rofl");
+    assert_eq!(err_code, 11); // Forbidden (not an authorized key for the given app).
+
+    // Manually create an application with alice being an authorized key.
+    let fake_registration = types::Registration {
+        app,
+        extra_keys: vec![keys::alice::pk()],
+        ..Default::default()
+    };
+    state::update_registration(fake_registration).unwrap();
+
+    // The call should succeed now.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        derive.clone(),
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let dispatch_result = dispatch_result.result.unwrap();
+
+    // In mock mode all the keys are deterministic.
+    let result: types::DeriveKeyResponse = cbor::from_value(dispatch_result).unwrap();
+    assert_eq!(result.key.as_ref(), &[0x33; 32]);
+
+    // Ensure key identifier length limit is respected.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        types::DeriveKey {
+            key_id: vec![0x01; 256],
+            ..derive.clone()
+        },
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let (err_module, err_code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(&err_module, "rofl");
+    assert_eq!(err_code, 1);
 }
