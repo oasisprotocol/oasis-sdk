@@ -11,6 +11,9 @@ inputs:
   features:
     description: Features to enable, separated by comma
     required: false
+  exclude:
+    description: Packages to exclude, separated by comma
+    required: false
 runs:
   using: composite
   steps:
@@ -19,6 +22,7 @@ runs:
       env:
         MANIFEST_PATH: ${{ inputs.manifest_path }}
         FEATURES: ${{ inputs.features }}
+        EXCLUDE: ${{ inputs.exclude }}
       run: |
         if [[ -z "$FEATURES" ]]; then
           FEATURES_ARG=("--all-features")
@@ -26,8 +30,18 @@ runs:
           FEATURES_ARG=("--features" "$FEATURES")
         fi
 
+        if [[ -z "$EXCLUDE" ]]; then
+          EXCLUDE_ARG=("")
+        else
+          EXCLUDE_ARG=("--workspace")
+          for PKG in ${EXCLUDE//,/ }; do
+            EXCLUDE_ARG+=("--exclude" "$PKG")
+          done
+        fi
+
         cargo clippy \
           ${FEATURES_ARG[@]} \
+          ${EXCLUDE_ARG[@]} \
           --locked \
           --manifest-path "$MANIFEST_PATH" \
           -- \
