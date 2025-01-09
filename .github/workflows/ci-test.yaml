@@ -308,6 +308,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Disable AppArmor
+        run: |
+          sudo systemctl stop apparmor.service
+          sudo systemctl disable apparmor.service
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
         with:
@@ -386,6 +392,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Disable AppArmor
+        run: |
+          sudo systemctl stop apparmor.service
+          sudo systemctl disable apparmor.service
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Set up Rust
         run: rustup show
@@ -496,6 +508,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Disable AppArmor
+        run: |
+          sudo systemctl stop apparmor.service
+          sudo systemctl disable apparmor.service
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
       - name: Set up Rust
         run: rustup show
