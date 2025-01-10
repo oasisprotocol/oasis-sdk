@@ -26,6 +26,11 @@
 <a href="#26" id="26">26</a>
 <a href="#27" id="27">27</a>
 <a href="#28" id="28">28</a>
+<a href="#29" id="29">29</a>
+<a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::token;
 
 <span class="doccomment">/// Module configuration.
@@ -46,6 +51,8 @@
     </span><span class="kw">const </span>GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY: u64 = <span class="number">2000</span>;
     <span class="doccomment">/// Gas cost of rofl.StakeThresholds call.
     </span><span class="kw">const </span>GAS_COST_CALL_STAKE_THRESHOLDS: u64 = <span class="number">10</span>;
+    <span class="doccomment">/// Gas cost of rofl.DeriveKey call.
+    </span><span class="kw">const </span>GAS_COST_CALL_DERIVE_KEY: u64 = <span class="number">10_000</span>;
 
     <span class="doccomment">/// Amount of stake required for maintaining an application.
     ///
@@ -53,5 +60,8 @@
     /// removed.
     </span><span class="kw">const </span>STAKE_APP_CREATE: token::BaseUnits =
         token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE);
+
+    <span class="doccomment">/// Maximum key identifier length for rofl.DeriveKey call.
+    </span><span class="kw">const </span>DERIVE_KEY_MAX_KEY_ID_LENGTH: usize = <span class="number">128</span>;
 }
 </code></pre></div></section></main></body></html>

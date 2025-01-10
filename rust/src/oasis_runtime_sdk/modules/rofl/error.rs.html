@@ -61,7 +61,15 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::modules;
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+</pre></div><pre class="rust"><code><span class="kw">use crate</span>::{dispatcher, modules};
 
 <span class="kw">use </span><span class="kw">super</span>::MODULE_NAME;
 
@@ -116,6 +124,10 @@
     #[sdk_error(code = <span class="number">12</span>)]
     </span>UnknownInstance,
 
+    <span class="attr">#[error(<span class="string">"must use non-plain call format"</span>)]
+    #[sdk_error(code = <span class="number">13</span>)]
+    </span>PlainCallFormatNotAllowed,
+
     <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Core(<span class="attr">#[from] </span>modules::core::Error),
@@ -123,5 +135,9 @@
     <span class="attr">#[error(<span class="string">"accounts: {0}"</span>)]
     #[sdk_error(transparent)]
     </span>Accounts(<span class="attr">#[from] </span>modules::accounts::Error),
+
+    <span class="attr">#[error(<span class="string">"{0}"</span>)]
+    #[sdk_error(transparent, abort)]
+    </span>Abort(<span class="attr">#[source] </span>dispatcher::Error),
 }
 </code></pre></div></section></main></body></html>

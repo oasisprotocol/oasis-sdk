@@ -142,6 +142,13 @@
 <a href="#142" id="142">142</a>
 <a href="#143" id="143">143</a>
 <a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -157,7 +164,7 @@
     modules::rofl::types::Register,
 };
 
-<span class="kw">use super</span>::{processor, App, Environment};
+<span class="kw">use super</span>::{client::SubmitTxOpts, processor, App, Environment};
 
 <span class="doccomment">/// Registration task.
 </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">struct </span>Task&lt;A: App&gt; {
@@ -268,7 +275,14 @@
         <span class="kw">let </span>result = <span class="self">self
             </span>.env
             .client()
-            .multi_sign_and_submit_tx(<span class="kw-2">&amp;</span>[<span class="self">self</span>.state.identity.clone(), <span class="self">self</span>.env.signer()], tx)
+            .multi_sign_and_submit_tx_opts(
+                <span class="kw-2">&amp;</span>[<span class="self">self</span>.state.identity.clone(), <span class="self">self</span>.env.signer()],
+                tx,
+                SubmitTxOpts {
+                    encrypt: <span class="bool-val">false</span>, <span class="comment">// Needed for initial fee payments.
+                    </span>..Default::default()
+                },
+            )
             .<span class="kw">await</span><span class="question-mark">?
             </span>.ok()<span class="question-mark">?</span>;
 

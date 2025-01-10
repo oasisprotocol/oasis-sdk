@@ -131,11 +131,31 @@
 <a href="#131" id="131">131</a>
 <a href="#132" id="132">132</a>
 <a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Wrapper to make development of ROFL components easier.
 </span><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>base64::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>tokio::sync::mpsc;
 
 <span class="kw">use crate</span>::{
@@ -151,7 +171,7 @@
     types::transaction,
 };
 
-<span class="kw">mod </span>client;
+<span class="kw">pub mod </span>client;
 <span class="kw">mod </span>env;
 <span class="kw">mod </span>init;
 <span class="kw">mod </span>notifier;
@@ -171,11 +191,29 @@
     </span><span class="kw">const </span>VERSION: version::Version;
 
     <span class="doccomment">/// Identifier of the application (used for registrations).
-    </span><span class="kw">fn </span>id() -&gt; AppId;
+    </span><span class="kw">fn </span>id() -&gt; AppId {
+        <span class="comment">// By default we fetch the application identifier from the build-time environment.
+        </span><span class="attr">#[allow(clippy::option_env_unwrap)]
+        </span>AppId::from_bech32(
+            <span class="macro">option_env!</span>(<span class="string">"ROFL_APP_ID"</span>).expect(<span class="string">"Override App::id or specify ROFL_APP_ID."</span>),
+        )
+        .expect(<span class="string">"Corrupted ROFL_APP_ID (must be Bech32-encoded ROFL app ID)."</span>)
+    }
 
     <span class="doccomment">/// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
     /// verification will not be performed.
-    </span><span class="kw">fn </span>consensus_trust_root() -&gt; <span class="prelude-ty">Option</span>&lt;TrustRoot&gt;;
+    </span><span class="kw">fn </span>consensus_trust_root() -&gt; <span class="prelude-ty">Option</span>&lt;TrustRoot&gt; {
+        <span class="comment">// By default we fetch the trust root from the build-time environment.
+        </span><span class="macro">option_env!</span>(<span class="string">"ROFL_CONSENSUS_TRUST_ROOT"</span>).map(|raw_trust_root| {
+            <span class="comment">// Parse from base64-encoded CBOR.
+            </span>cbor::from_slice(
+                <span class="kw-2">&amp;</span>BASE64_STANDARD
+                    .decode(raw_trust_root)
+                    .expect(<span class="string">"Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR)."</span>),
+            )
+            .expect(<span class="string">"Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR)."</span>)
+        })
+    }
 
     <span class="doccomment">/// Create a new unsigned transaction.
     </span><span class="kw">fn </span>new_transaction&lt;B&gt;(<span class="kw-2">&amp;</span><span class="self">self</span>, method: <span class="kw-2">&amp;</span>str, body: B) -&gt; transaction::Transaction

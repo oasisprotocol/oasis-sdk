@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"mod":["app","app_id","policy","state","types"],"static":["ADDRESS_APP_STAKE_POOL"],"struct":["Genesis","Module","Parameters"],"trait":["API","Config"]};
+window.SIDEBAR_ITEMS = {"enum":["Error","Event","ParameterValidationError"],"mod":["app","app_id","policy","state","types"],"static":["ADDRESS_APP_STAKE_POOL","ROFL_DERIVE_KEY_CONTEXT","ROFL_KEY_ID_SEK"],"struct":["Genesis","Module","Parameters"],"trait":["API","Config"]};

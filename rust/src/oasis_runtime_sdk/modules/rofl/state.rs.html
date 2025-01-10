@@ -343,7 +343,6 @@
 <a href="#343" id="343">343</a>
 <a href="#344" id="344">344</a>
 <a href="#345" id="345">345</a>
-<a href="#346" id="346">346</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     core::{
         common::crypto::{hash::Hash, signature::PublicKey <span class="kw">as </span>CorePublicKey},
@@ -615,9 +614,8 @@
 
         <span class="kw">let </span>cfg = types::AppConfig {
             id: app_id,
-            policy: Default::default(),
             admin: <span class="prelude-val">Some</span>(keys::alice::address()),
-            stake: Default::default(),
+            ..Default::default()
         };
         set_app(cfg.clone());
         <span class="kw">let </span>app = get_app(app_id).expect(<span class="string">"application config should be created"</span>);

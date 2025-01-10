@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["prelude"],"struct":["Client","Environment"],"trait":["App"]};
+window.SIDEBAR_ITEMS = {"mod":["client","prelude"],"struct":["Environment"],"trait":["App"]};

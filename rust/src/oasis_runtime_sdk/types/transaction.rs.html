@@ -637,6 +637,16 @@
 <a href="#637" id="637">637</a>
 <a href="#638" id="638">638</a>
 <a href="#639" id="639">639</a>
+<a href="#640" id="640">640</a>
+<a href="#641" id="641">641</a>
+<a href="#642" id="642">642</a>
+<a href="#643" id="643">643</a>
+<a href="#644" id="644">644</a>
+<a href="#645" id="645">645</a>
+<a href="#646" id="646">646</a>
+<a href="#647" id="647">647</a>
+<a href="#648" id="648">648</a>
+<a href="#649" id="649">649</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction types.
 </span><span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>thiserror::Error;
@@ -927,6 +937,16 @@
     </span>Plain = <span class="number">0</span>,
     <span class="doccomment">/// Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
     </span>EncryptedX25519DeoxysII = <span class="number">1</span>,
+}
+
+<span class="kw">impl </span>CallFormat {
+    <span class="doccomment">/// Whether this call format is end-to-end encrypted.
+    </span><span class="kw">pub fn </span>is_encrypted(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="kw">match </span><span class="self">self </span>{
+            <span class="self">Self</span>::Plain =&gt; <span class="bool-val">false</span>,
+            <span class="self">Self</span>::EncryptedX25519DeoxysII =&gt; <span class="bool-val">true</span>,
+        }
+    }
 }
 
 <span class="doccomment">/// Method call.
