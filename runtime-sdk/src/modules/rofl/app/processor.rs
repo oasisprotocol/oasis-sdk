@@ -176,12 +176,16 @@ where
     async fn cmd_initial_registration_completed(&self) -> Result<()> {
         slog::info!(self.logger, "initial registration completed");
 
-        // Perform post-registration initialization.
-        init::post_registration_init();
-
         // Start application after first registration.
         slog::info!(self.logger, "starting application");
         tokio::spawn(self.state.app.clone().run(self.env.clone()));
+
+        // Perform post-registration initialization.
+        slog::info!(
+            self.logger,
+            "performing additional post-registration initialization"
+        );
+        init::post_registration_init();
 
         // Notify notifier task.
         self.tasks

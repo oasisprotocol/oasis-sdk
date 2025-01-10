@@ -34,7 +34,14 @@ jobs:
       - name: Lint Rust code
         uses: ./.github/actions/lint-rust
         with:
+          features: debug-logging,test,unsafe-allow-debug
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint Rust code (mock TEE)
+        uses: ./.github/actions/lint-rust
+        with:
           features: debug-logging,debug-mock-sgx,test,unsafe-allow-debug
+          exclude: rofl-containers,rofl-appd
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Rust code (TDX)

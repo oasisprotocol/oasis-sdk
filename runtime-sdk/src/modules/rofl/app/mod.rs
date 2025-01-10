@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use base64::prelude::*;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -18,7 +19,7 @@ use crate::{
     types::transaction,
 };
 
-mod client;
+pub mod client;
 mod env;
 mod init;
 mod notifier;
@@ -38,11 +39,29 @@ pub trait App: Send + Sync + 'static {
     const VERSION: version::Version;
 
     /// Identifier of the application (used for registrations).
-    fn id() -> AppId;
+    fn id() -> AppId {
+        // By default we fetch the application identifier from the build-time environment.
+        #[allow(clippy::option_env_unwrap)]
+        AppId::from_bech32(
+            option_env!("ROFL_APP_ID").expect("Override App::id or specify ROFL_APP_ID."),
+        )
+        .expect("Corrupted ROFL_APP_ID (must be Bech32-encoded ROFL app ID).")
+    }
 
     /// Return the consensus layer trust root for this runtime; if `None`, consensus layer integrity
     /// verification will not be performed.
-    fn consensus_trust_root() -> Option<TrustRoot>;
+    fn consensus_trust_root() -> Option<TrustRoot> {
+        // By default we fetch the trust root from the build-time environment.
+        option_env!("ROFL_CONSENSUS_TRUST_ROOT").map(|raw_trust_root| {
+            // Parse from base64-encoded CBOR.
+            cbor::from_slice(
+                &BASE64_STANDARD
+                    .decode(raw_trust_root)
+                    .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR)."),
+            )
+            .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
+        })
+    }
 
     /// Create a new unsigned transaction.
     fn new_transaction<B>(&self, method: &str, body: B) -> transaction::Transaction

@@ -1,4 +1,4 @@
-use crate::modules;
+use crate::{dispatcher, modules};
 
 use super::MODULE_NAME;
 
@@ -53,6 +53,10 @@ pub enum Error {
     #[sdk_error(code = 12)]
     UnknownInstance,
 
+    #[error("must use non-plain call format")]
+    #[sdk_error(code = 13)]
+    PlainCallFormatNotAllowed,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
@@ -60,4 +64,8 @@ pub enum Error {
     #[error("accounts: {0}")]
     #[sdk_error(transparent)]
     Accounts(#[from] modules::accounts::Error),
+
+    #[error("{0}")]
+    #[sdk_error(transparent, abort)]
+    Abort(#[source] dispatcher::Error),
 }

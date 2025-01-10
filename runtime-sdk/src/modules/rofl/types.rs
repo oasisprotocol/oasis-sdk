@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::{
     core::{
         common::crypto::{signature, x25519},
@@ -16,6 +18,9 @@ pub struct Create {
     pub policy: AppAuthPolicy,
     /// Identifier generation scheme.
     pub scheme: IdentifierScheme,
+    /// Metadata (arbitrary key/value pairs).
+    pub metadata: BTreeMap<String, String>,
+    // Note that we cannot pass secrets here as the SEK is not yet available.
 }
 
 /// ROFL application identifier generation scheme.
@@ -36,6 +41,11 @@ pub struct Update {
     pub policy: AppAuthPolicy,
     /// Application administrator address.
     pub admin: Option<Address>,
+
+    /// Metadata (arbitrary key/value pairs).
+    pub metadata: BTreeMap<String, String>,
+    /// Secrets (arbitrary encrypted key/value pairs).
+    pub secrets: BTreeMap<String, Vec<u8>>,
 }
 
 /// Remove an existing ROFL application call.
@@ -46,6 +56,16 @@ pub struct Remove {
 }
 
 /// ROFL application configuration.
+///
+/// # Metadata
+///
+/// Metadata contains arbitrary key-value pairs.
+///
+/// # Secrets
+///
+/// In addition to metadata, the configuration can also contain secrets which are encrypted with a
+/// shared secret derived from the secret encryption key (SEK). Since the SEK is only available once
+/// the application has been registered, the initial create cannot contain secrets.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct AppConfig {
@@ -57,6 +77,14 @@ pub struct AppConfig {
     pub admin: Option<Address>,
     /// Staked amount.
     pub stake: token::BaseUnits,
+
+    /// Metadata (arbitrary key/value pairs).
+    pub metadata: BTreeMap<String, String>,
+    /// Secrets (arbitrary encrypted key/value pairs).
+    pub secrets: BTreeMap<String, Vec<u8>>,
+    /// Secret encryption public key. The key is used to derive a shared secret used for symmetric
+    /// encryption (e.g. using Deoxys-II or similar).
+    pub sek: x25519::PublicKey,
 }
 
 /// Register ROFL call.
@@ -72,6 +100,38 @@ pub struct Register {
     ///
     /// All of these keys need to co-sign the registration transaction to prove ownership.
     pub extra_keys: Vec<PublicKey>,
+}
+
+/// Kind of key for derivation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+#[repr(u8)]
+pub enum KeyKind {
+    /// Raw entropy derivation.
+    #[default]
+    EntropyV0 = 0,
+
+    /// X25519 key pair.
+    X25519 = 1,
+}
+
+/// Derive key call.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct DeriveKey {
+    /// ROFL application identifier.
+    pub app: AppId,
+    /// Key kind.
+    pub kind: KeyKind,
+    /// Key generation.
+    pub generation: u64,
+    /// Key identifier.
+    pub key_id: Vec<u8>,
+}
+
+/// Response from the derive key call.
+#[derive(Clone, Default, cbor::Encode, cbor::Decode)]
+pub struct DeriveKeyResponse {
+    /// Derived key.
+    pub key: Vec<u8>,
 }
 
 /// ROFL registration descriptor.

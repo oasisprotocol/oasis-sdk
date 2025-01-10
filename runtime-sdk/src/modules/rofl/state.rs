@@ -269,9 +269,8 @@ mod test {
 
         let cfg = types::AppConfig {
             id: app_id,
-            policy: Default::default(),
             admin: Some(keys::alice::address()),
-            stake: Default::default(),
+            ..Default::default()
         };
         set_app(cfg.clone());
         let app = get_app(app_id).expect("application config should be created");

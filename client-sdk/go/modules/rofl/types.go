@@ -20,6 +20,8 @@ type Create struct {
 	Policy AppAuthPolicy `json:"policy"`
 	// Scheme is the identifier generation scheme.
 	Scheme IdentifierScheme `json:"scheme"`
+	// Metadata are arbitrary key/value pairs.
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // IdentifierScheme is a ROFL application identifier generation scheme.
@@ -38,6 +40,11 @@ type Update struct {
 	Policy AppAuthPolicy `json:"policy"`
 	// Admin is the application administrator address.
 	Admin *types.Address `json:"admin"`
+
+	// Metadata are arbitrary key/value pairs.
+	Metadata map[string]string `json:"metadata,omitempty"`
+	// Secrets are arbitrary encrypted key/value pairs.
+	Secrets map[string][]byte `json:"secrets,omitempty"`
 }
 
 // Remove an existing ROFL application call.
@@ -84,6 +91,13 @@ type AppConfig struct {
 	Admin *types.Address `json:"admin"`
 	// Stake is the staked amount.
 	Stake types.BaseUnits `json:"stake"`
+
+	// Metadata are arbitrary key/value pairs.
+	Metadata map[string]string `json:"metadata,omitempty"`
+	// Secrets are arbitrary SEK-encrypted key/value pairs.
+	Secrets map[string][]byte `json:"secrets,omitempty"`
+	// SEK is the secrets encryption (public) key.
+	SEK x25519.PublicKey `json:"sek"`
 }
 
 // Registration is a ROFL enclave registration descriptor.
