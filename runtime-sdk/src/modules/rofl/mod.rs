@@ -108,7 +108,9 @@ pub static ADDRESS_APP_STAKE_POOL: Lazy<Address> =
     Lazy::new(|| Address::from_module(MODULE_NAME, "app-stake-pool"));
 
 /// Key derivation context.
-static ROFL_DERIVE_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/rofl: derive key v1";
+pub static ROFL_DERIVE_KEY_CONTEXT: &[u8] = b"oasis-runtime-sdk/rofl: derive key v1";
+/// Secrets encryption key identifier.
+pub static ROFL_KEY_ID_SEK: &[u8] = b"oasis-runtime-sdk/rofl: secrets encryption key v1";
 
 pub struct Module<Cfg: Config> {
     _cfg: std::marker::PhantomData<Cfg>,
@@ -214,12 +216,20 @@ impl<Cfg: Config> Module<Cfg> {
             &Cfg::STAKE_APP_CREATE,
         )?;
 
+        // Generate the secret encryption (public) key.
+        let sek = Self::derive_app_key(ctx, &app_id, types::KeyKind::X25519, ROFL_KEY_ID_SEK)?
+            .input_keypair
+            .pk;
+
         // Register the application.
         let cfg = types::AppConfig {
             id: app_id,
             policy: body.policy,
             admin: Some(creator),
             stake: Cfg::STAKE_APP_CREATE,
+            metadata: body.metadata,
+            sek,
+            ..Default::default()
         };
         state::set_app(cfg);
 
@@ -251,13 +261,17 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(());
         }
 
-        // Return early if nothing has actually changed.
-        if cfg.policy == body.policy && cfg.admin == body.admin {
-            return Ok(());
+        // If there is no SEK defined, regenerate it.
+        if cfg.sek == Default::default() {
+            cfg.sek = Self::derive_app_key(ctx, &body.id, types::KeyKind::X25519, ROFL_KEY_ID_SEK)?
+                .input_keypair
+                .pk;
         }
 
         cfg.policy = body.policy;
         cfg.admin = body.admin;
+        cfg.metadata = body.metadata;
+        cfg.secrets = body.secrets;
         state::set_app(cfg);
 
         CurrentState::with(|state| state.emit_event(Event::AppUpdated { id: body.id }));
@@ -378,8 +392,8 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::PlainCallFormatNotAllowed);
         }
 
-        // Currently only simple keys are supported.
-        if body.kind != types::KeyKind::EntropyV0 || body.generation != 0 {
+        // Currently only generation zero keys are supported.
+        if body.generation != 0 {
             return Err(Error::InvalidArgument);
         }
 
@@ -398,23 +412,35 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Derive application key.
+        let key = Self::derive_app_key(ctx, &body.app, body.kind, &body.key_id)?;
+        let key = match body.kind {
+            types::KeyKind::EntropyV0 => key.state_key.0.into(),
+            types::KeyKind::X25519 => key.input_keypair.sk.as_ref().into(),
+        };
+
+        Ok(types::DeriveKeyResponse { key })
+    }
+
+    fn derive_app_key<C: Context>(
+        ctx: &C,
+        app: &app_id::AppId,
+        kind: types::KeyKind,
+        key_id: &[u8],
+    ) -> Result<keymanager::KeyPair, Error> {
         let key_id = keymanager::get_key_pair_id([
             ROFL_DERIVE_KEY_CONTEXT,
-            body.app.as_ref(),
-            &[body.kind as u8],
-            &body.key_id,
+            app.as_ref(),
+            &[kind as u8],
+            key_id,
         ]);
+
         let km = ctx
             .key_manager()
             .ok_or(Error::Abort(dispatcher::Error::KeyManagerFailure(
                 keymanager::KeyManagerError::NotInitialized,
             )))?;
-        let key = km
-            .get_or_create_keys(key_id)
-            .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))?
-            .state_key;
-
-        Ok(types::DeriveKeyResponse { key })
+        km.get_or_create_keys(key_id)
+            .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))
     }
 
     /// Verify whether the given endorsement is allowed by the application policy.

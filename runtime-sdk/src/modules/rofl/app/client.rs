@@ -133,6 +133,11 @@ where
         self.imp.estimate_gas(req).await
     }
 
+    /// Retrieves application configuration.
+    pub async fn app_cfg(&self) -> Result<modules::rofl::types::AppConfig> {
+        self.imp.app_cfg().await
+    }
+
     /// Sign a given transaction, submit it and wait for block inclusion.
     ///
     /// This method supports multiple transaction signers.
@@ -335,6 +340,17 @@ where
     async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
         let round = self.latest_round().await?;
         self.query(round, "core.EstimateGas", req).await
+    }
+
+    /// Retrieves application configuration.
+    async fn app_cfg(&self) -> Result<modules::rofl::types::AppConfig> {
+        let round = self.latest_round().await?;
+        self.query(
+            round,
+            "rofl.App",
+            modules::rofl::types::AppQuery { id: A::id() },
+        )
+        .await
     }
 
     /// Run a closure inside a `CurrentState` context with store for the given round.

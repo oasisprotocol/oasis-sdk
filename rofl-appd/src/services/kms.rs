@@ -8,7 +8,6 @@ use sp800_185::KMac;
 use oasis_runtime_sdk::{
     core::common::logger::get_logger,
     crypto::signature::{ed25519, secp256k1, Signer},
-    keymanager,
     modules::rofl::app::{client::DeriveKeyRequest, prelude::*},
 };
 
@@ -92,7 +91,7 @@ const OASIS_KMS_ROOT_KEY_ID: &[u8] = b"oasis-runtime-sdk/rofl-appd: root key v1"
 /// A key management service backed by the Oasis runtime.
 pub struct OasisKmsService<A: App> {
     running: AtomicBool,
-    root_key: Arc<Mutex<Option<keymanager::StateKey>>>,
+    root_key: Arc<Mutex<Option<Vec<u8>>>>,
     env: Environment<A>,
     logger: slog::Logger,
 }
