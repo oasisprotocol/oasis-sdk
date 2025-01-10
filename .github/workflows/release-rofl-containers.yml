@@ -1,0 +1,31 @@
+name: release-rofl-containers
+
+on:
+  push:
+    tags:
+      - 'rofl-containers/v[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-rofl-containers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build rofl-containers
+        id: build
+        uses: oasisprotocol/oasis-sdk/.github/actions/hash-rust@main
+        with:
+          image: ghcr.io/oasisprotocol/runtime-builder:main
+          pkg-dirs: rofl-containers
+          binaries: rofl-containers
+          clean: no
+
+      - name: Publish the release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ github.workspace }}/${{ steps.build.outputs.build-path }}/rofl-containers
+          token: ${{ secrets.GITHUB_TOKEN }}
