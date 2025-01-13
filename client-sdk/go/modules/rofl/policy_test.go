@@ -30,6 +30,13 @@ func TestPolicySerialization(t *testing.T) {
 		if tc.ok {
 			require.NoError(err, "yaml.Unmarshal")
 			require.EqualValues(tc.expected, dec)
+
+			var enc []byte
+			enc, err = yaml.Marshal(dec)
+			require.NoError(err, "yaml.Marshal")
+			err = yaml.Unmarshal(enc, &dec)
+			require.NoError(err, "yaml.Unmarshal")
+			require.EqualValues(tc.expected, dec)
 		} else {
 			require.Error(err, "yaml.Unmarshal")
 		}

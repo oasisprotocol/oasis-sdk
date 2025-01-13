@@ -47,6 +47,9 @@ const (
 	FeePolicyInstancePays FeePolicy = 1
 	// FeePolicyEndorsingNodePays is a fee policy where the endorsing node pays the gas fees.
 	FeePolicyEndorsingNodePays FeePolicy = 2
+
+	nameFeePolicyInstancePays      = "instance"
+	nameFeePolicyEndorsingNodePays = "endorsing_node"
 )
 
 // UnmarshalYAML implements yaml.Unmarshaler.
@@ -59,9 +62,9 @@ func (fp *FeePolicy) UnmarshalYAML(value *yaml.Node) error {
 		}
 
 		switch feePolicyStr {
-		case "instance":
+		case nameFeePolicyInstancePays:
 			*fp = FeePolicyInstancePays
-		case "endorsing_node":
+		case nameFeePolicyEndorsingNodePays:
 			*fp = FeePolicyEndorsingNodePays
 		default:
 			return fmt.Errorf("unsupported fee policy: '%s'", feePolicyStr)
@@ -69,5 +72,17 @@ func (fp *FeePolicy) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	default:
 		return fmt.Errorf("unsupported fee policy type")
+	}
+}
+
+// MarshalYAML implements yaml.Marshaler.
+func (fp FeePolicy) MarshalYAML() (interface{}, error) {
+	switch fp {
+	case FeePolicyInstancePays:
+		return nameFeePolicyInstancePays, nil
+	case FeePolicyEndorsingNodePays:
+		return nameFeePolicyEndorsingNodePays, nil
+	default:
+		return nil, fmt.Errorf("unsupported fee policy: %d", fp)
 	}
 }
