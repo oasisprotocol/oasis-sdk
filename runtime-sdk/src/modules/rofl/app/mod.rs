@@ -74,6 +74,18 @@ pub trait App: Send + Sync + 'static {
         tx
     }
 
+    /// Custom post-registration initialization. It runs before any image-specific scripts are
+    /// called by the runtime so it can be used to do things like set up custom storage after
+    /// successful registration.
+    ///
+    /// Until this function completes, no further initialization will happen.
+    async fn post_registration_init(self: Arc<Self>, env: Environment<Self>)
+    where
+        Self: Sized,
+    {
+        // Default implementation does nothing.
+    }
+
     /// Main application processing loop.
     async fn run(self: Arc<Self>, env: Environment<Self>)
     where

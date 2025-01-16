@@ -11,7 +11,15 @@
 use std::env;
 
 use base64::prelude::*;
-use oasis_runtime_sdk::{cbor, modules::rofl::app::prelude::*};
+use oasis_runtime_sdk::{
+    cbor,
+    core::common::{logger::get_logger, process},
+    modules::rofl::app::prelude::*,
+};
+use rofl_appd::services;
+
+mod reaper;
+mod storage;
 
 /// UNIX socket address where the REST API server will listen on.
 const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
@@ -42,12 +50,39 @@ impl App for ContainersApp {
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
     }
 
-    async fn run(self: Arc<Self>, env: Environment<Self>) {
+    async fn post_registration_init(self: Arc<Self>, env: Environment<Self>) {
+        // Temporarily disable the default process reaper as it interferes with scripts.
+        let _guard = reaper::disable_default_reaper();
+        let logger = get_logger("post_registration_init");
+
+        // Start the key management service and wait for it to initialize.
+        let kms: Arc<dyn services::kms::KmsService> =
+            Arc::new(services::kms::OasisKmsService::new(env.clone()));
+        let kms_task = kms.clone();
+        tokio::spawn(async move { kms_task.start().await });
+        let _ = kms.wait_ready().await;
+
+        // Initialize storage when configured in the kernel cmdline.
+        if let Err(err) = storage::init(kms.clone()).await {
+            slog::error!(logger, "failed to initialize stage 2 storage"; "err" => ?err);
+            process::abort();
+        }
+
         // Start the REST API server.
-        let _ = rofl_appd::start(ROFL_APPD_ADDRESS, env).await;
+        let cfg = rofl_appd::Config {
+            address: ROFL_APPD_ADDRESS,
+            kms,
+        };
+        let _ = rofl_appd::start(cfg, env).await;
     }
 }
 
 fn main() {
+    // Configure the binary search path.
+    // SAFETY: This is safe as no other threads are running yet.
+    unsafe {
+        env::set_var("PATH", "/usr/sbin:/usr/bin:/sbin:/bin");
+    }
+
     ContainersApp.start();
 }

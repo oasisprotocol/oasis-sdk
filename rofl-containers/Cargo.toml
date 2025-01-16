@@ -1,6 +1,6 @@
 [package]
 name = "rofl-containers"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -9,4 +9,9 @@ oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
 rofl-appd = { path = "../rofl-appd" }
 
 # Third party.
+anyhow = "1.0.86"
 base64 = "0.22.1"
+cmd_lib = "1.9.5"
+hex = "0.4.3"
+nix = { version = "0.29.0", features = ["signal"] }
+tokio = { version = "1.38", features = ["rt", "rt-multi-thread", "sync", "time", "macros"] }

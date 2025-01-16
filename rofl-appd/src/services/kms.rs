@@ -4,6 +4,7 @@ use std::sync::{
 };
 
 use sp800_185::KMac;
+use tokio::sync::Notify;
 
 use oasis_runtime_sdk::{
     core::common::logger::get_logger,
@@ -16,6 +17,9 @@ use oasis_runtime_sdk::{
 pub trait KmsService: Send + Sync {
     /// Start the KMS service.
     async fn start(&self) -> Result<(), Error>;
+
+    /// Waits for the service to become ready to accept requests.
+    async fn wait_ready(&self) -> Result<(), Error>;
 
     /// Generate a key based on the passed parameters.
     async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error>;
@@ -94,6 +98,7 @@ pub struct OasisKmsService<A: App> {
     root_key: Arc<Mutex<Option<Vec<u8>>>>,
     env: Environment<A>,
     logger: slog::Logger,
+    ready_notify: Notify,
 }
 
 impl<A: App> OasisKmsService<A> {
@@ -103,6 +108,7 @@ impl<A: App> OasisKmsService<A> {
             root_key: Arc::new(Mutex::new(None)),
             env,
             logger: get_logger("appd/services/kms"),
+            ready_notify: Notify::new(),
         }
     }
 }
@@ -146,7 +152,21 @@ impl<A: App> KmsService for OasisKmsService<A> {
         // Store the key in memory.
         *self.root_key.lock().unwrap() = Some(root_key.key);
 
+        self.ready_notify.notify_waiters();
+
         slog::info!(self.logger, "KMS service initialized");
+
+        Ok(())
+    }
+
+    async fn wait_ready(&self) -> Result<(), Error> {
+        let handle = self.ready_notify.notified();
+
+        if self.root_key.lock().unwrap().is_some() {
+            return Ok(());
+        }
+
+        handle.await;
 
         Ok(())
     }
@@ -170,6 +190,10 @@ pub struct MockKmsService;
 #[async_trait]
 impl KmsService for MockKmsService {
     async fn start(&self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn wait_ready(&self) -> Result<(), Error> {
         Ok(())
     }
 
