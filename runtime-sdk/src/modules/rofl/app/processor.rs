@@ -181,11 +181,22 @@ where
         tokio::spawn(self.state.app.clone().run(self.env.clone()));
 
         // Perform post-registration initialization.
-        slog::info!(
-            self.logger,
-            "performing additional post-registration initialization"
-        );
-        init::post_registration_init();
+        let app = self.state.app.clone();
+        let env = self.env.clone();
+        let logger = self.logger.clone();
+        tokio::spawn(async move {
+            slog::info!(
+                logger,
+                "performing app-specific post-registration initialization"
+            );
+            app.post_registration_init(env).await;
+
+            slog::info!(
+                logger,
+                "performing additional post-registration initialization"
+            );
+            init::post_registration_init();
+        });
 
         // Notify notifier task.
         self.tasks
