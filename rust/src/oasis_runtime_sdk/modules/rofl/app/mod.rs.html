@@ -150,6 +150,18 @@
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Wrapper to make development of ROFL components easier.
 </span><span class="kw">use </span>std::sync::Arc;
 
@@ -225,6 +237,18 @@
         </span>tx.set_fee_proxy(<span class="string">"rofl"</span>, <span class="self">Self</span>::id().as_ref());
         tx
     }
+
+    <span class="doccomment">/// Custom post-registration initialization. It runs before any image-specific scripts are
+    /// called by the runtime so it can be used to do things like set up custom storage after
+    /// successful registration.
+    ///
+    /// Until this function completes, no further initialization will happen.
+    </span><span class="kw">async fn </span>post_registration_init(<span class="self">self</span>: Arc&lt;<span class="self">Self</span>&gt;, env: Environment&lt;<span class="self">Self</span>&gt;)
+    <span class="kw">where
+        </span><span class="self">Self</span>: Sized,
+    {
+        <span class="comment">// Default implementation does nothing.
+    </span>}
 
     <span class="doccomment">/// Main application processing loop.
     </span><span class="kw">async fn </span>run(<span class="self">self</span>: Arc&lt;<span class="self">Self</span>&gt;, env: Environment&lt;<span class="self">Self</span>&gt;)
