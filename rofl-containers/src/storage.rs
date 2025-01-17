@@ -55,7 +55,7 @@ pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
 
     // Setup /run and /var.
     run_cmd!(
-        mkdir "/storage/run";
+        mkdir -p "/storage/run";
         mkdir -p "/storage/var/lib";
         mkdir -p "/storage/var/cache";
         mount --bind "/storage/run" "/run";
