@@ -50,6 +50,11 @@ pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
         format_storage(&storage_key)?;
     }
 
+    // Resize filesystem if needed.
+    run_cmd!(
+        sh -c "e2fsck -f -p /dev/mapper/storage || [ $? -le 2 ]";
+        resize2fs "/dev/mapper/storage";
+    )?;
     // Mount filesystem as /storage.
     run_cmd!(mount "/dev/mapper/storage" "/storage")?;
 
