@@ -5,7 +5,7 @@ to. This can be any ParaTime which has the ROFL module installed. For the rest
 of this section we will be using [Sapphire Testnet][sapphire-testnet] which has
 all of the required functionality.
 
-[sapphire-testnet]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/sapphire/network.mdx
+[sapphire-testnet]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
 
 ## Define the Root of Trust
 
@@ -101,8 +101,8 @@ While we are using [EVM-based smart contracts] in this example, the on-chain
 part can be anything from a [WASM-based smart contract] to a dedicated
 [runtime module].
 
-[EVM-based smart contracts]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/sapphire/README.mdx
-[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/dapp/tools/other-paratimes/cipher/README.mdx
+[EVM-based smart contracts]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
+[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/other-paratimes/cipher/README.mdx
 [runtime module]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/runtime/modules.md
 
 :::
