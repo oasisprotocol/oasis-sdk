@@ -58,12 +58,10 @@ pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
     // Mount filesystem as /storage.
     run_cmd!(mount "/dev/mapper/storage" "/storage")?;
 
-    // Setup /run and /var.
+    // Setup /var.
     run_cmd!(
-        mkdir -p "/storage/run";
         mkdir -p "/storage/var/lib";
         mkdir -p "/storage/var/cache";
-        mount --bind "/storage/run" "/run";
         mount --bind "/storage/var" "/var";
     )?;
 
