@@ -7,10 +7,16 @@ use sp800_185::KMac;
 use tokio::sync::Notify;
 
 use oasis_runtime_sdk::{
-    core::common::logger::get_logger,
+    core::common::{
+        crypto::{mrae::deoxysii, x25519},
+        logger::get_logger,
+    },
     crypto::signature::{ed25519, secp256k1, Signer},
+    modules,
     modules::rofl::app::{client::DeriveKeyRequest, prelude::*},
 };
+
+use crate::types::SecretEnvelope;
 
 /// A key management service.
 #[async_trait]
@@ -23,13 +29,25 @@ pub trait KmsService: Send + Sync {
 
     /// Generate a key based on the passed parameters.
     async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error>;
+
+    /// Decrypt and authenticate a secret using the secret encryption key (SEK).
+    async fn open_secret(
+        &self,
+        request: &OpenSecretRequest<'_>,
+    ) -> Result<OpenSecretResponse, Error>;
 }
 
 /// Error returned by the key management service.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("invalid argument")]
+    InvalidArgument,
+
     #[error("not initialized yet")]
     NotInitialized,
+
+    #[error("corrupted secret")]
+    CorruptedSecret,
 
     #[error("internal error")]
     Internal,
@@ -85,6 +103,26 @@ pub struct GenerateResponse {
     pub key: Vec<u8>,
 }
 
+/// Secret decryption and authentication request.
+#[derive(Clone, Debug, Default, serde::Deserialize)]
+pub struct OpenSecretRequest<'r> {
+    /// Plain-text name associated with the secret.
+    pub name: &'r str,
+    /// Encrypted secret value.
+    ///
+    /// It is expected that the value contains a CBOR-encoded `SecretEnvelope`.
+    pub value: &'r [u8],
+}
+
+/// Secret decryption and authentication response.
+#[derive(Clone, Default, serde::Serialize)]
+pub struct OpenSecretResponse {
+    /// Decrypted plain-text name.
+    pub name: Vec<u8>,
+    /// Decrypted plain-text value.
+    pub value: Vec<u8>,
+}
+
 /// Key identifier for the root key from which all per-app keys are derived. The root key is
 /// retrieved from the Oasis runtime key manager on initialization and all subsequent keys are
 /// derived from that key.
@@ -92,23 +130,28 @@ pub struct GenerateResponse {
 /// Changing this identifier will change all generated keys.
 const OASIS_KMS_ROOT_KEY_ID: &[u8] = b"oasis-runtime-sdk/rofl-appd: root key v1";
 
+struct Keys {
+    root: Vec<u8>,
+    sek: x25519::PrivateKey,
+}
+
 /// A key management service backed by the Oasis runtime.
 pub struct OasisKmsService<A: App> {
     running: AtomicBool,
-    root_key: Arc<Mutex<Option<Vec<u8>>>>,
     env: Environment<A>,
     logger: slog::Logger,
     ready_notify: Notify,
+    keys: Arc<Mutex<Option<Keys>>>,
 }
 
 impl<A: App> OasisKmsService<A> {
     pub fn new(env: Environment<A>) -> Self {
         Self {
             running: AtomicBool::new(false),
-            root_key: Arc::new(Mutex::new(None)),
             env,
             logger: get_logger("appd/services/kms"),
             ready_notify: Notify::new(),
+            keys: Arc::new(Mutex::new(None)),
         }
     }
 }
@@ -127,9 +170,11 @@ impl<A: App> KmsService for OasisKmsService<A> {
         slog::info!(self.logger, "starting KMS service");
 
         // Ensure we keep retrying until the root key is derived.
-        let retry_strategy = tokio_retry::strategy::ExponentialBackoff::from_millis(4)
-            .max_delay(std::time::Duration::from_millis(1000))
-            .map(tokio_retry::strategy::jitter);
+        let retry_strategy = || {
+            tokio_retry::strategy::ExponentialBackoff::from_millis(4)
+                .max_delay(std::time::Duration::from_millis(1000))
+                .map(tokio_retry::strategy::jitter)
+        };
 
         slog::info!(
             self.logger,
@@ -138,19 +183,41 @@ impl<A: App> KmsService for OasisKmsService<A> {
 
         // Generate the root key for the application and store it in memory to derive all other
         // requested keys.
-        let root_key = tokio_retry::Retry::spawn(retry_strategy, || {
+        let root_key_task = tokio_retry::Retry::spawn(retry_strategy(), || {
             self.env.client().derive_key(
                 self.env.signer(),
                 DeriveKeyRequest {
                     key_id: OASIS_KMS_ROOT_KEY_ID.to_vec(),
+                    kind: modules::rofl::types::KeyKind::EntropyV0,
                     ..Default::default()
                 },
             )
-        })
-        .await?;
+        });
 
-        // Store the key in memory.
-        *self.root_key.lock().unwrap() = Some(root_key.key);
+        // Generate the secrets encryption key (SEK) and store it in memory.
+        // TODO: Consider caching key in encrypted persistent storage.
+        let sek_task = tokio_retry::Retry::spawn(retry_strategy(), || {
+            self.env.client().derive_key(
+                self.env.identity(),
+                DeriveKeyRequest {
+                    key_id: modules::rofl::ROFL_KEY_ID_SEK.to_vec(),
+                    kind: modules::rofl::types::KeyKind::X25519,
+                    ..Default::default()
+                },
+            )
+        });
+
+        // Perform requests in parallel.
+        let (root_key, sek) = tokio::try_join!(root_key_task, sek_task,)?;
+
+        let sek: [u8; 32] = sek.key.try_into().map_err(|_| Error::Internal)?;
+        let sek = sek.into();
+
+        // Store the keys in memory.
+        *self.keys.lock().unwrap() = Some(Keys {
+            root: root_key.key,
+            sek,
+        });
 
         self.ready_notify.notify_waiters();
 
@@ -162,7 +229,7 @@ impl<A: App> KmsService for OasisKmsService<A> {
     async fn wait_ready(&self) -> Result<(), Error> {
         let handle = self.ready_notify.notified();
 
-        if self.root_key.lock().unwrap().is_some() {
+        if self.keys.lock().unwrap().is_some() {
             return Ok(());
         }
 
@@ -172,12 +239,46 @@ impl<A: App> KmsService for OasisKmsService<A> {
     }
 
     async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error> {
-        let root_key_guard = self.root_key.lock().unwrap();
-        let root_key = root_key_guard.as_ref().ok_or(Error::NotInitialized)?;
+        let keys_guard = self.keys.lock().unwrap();
+        let root_key = &keys_guard.as_ref().ok_or(Error::NotInitialized)?.root;
 
         let key = Kdf::derive_key(root_key.as_ref(), request.kind, request.key_id.as_bytes())?;
 
         Ok(GenerateResponse { key })
+    }
+
+    async fn open_secret(
+        &self,
+        request: &OpenSecretRequest<'_>,
+    ) -> Result<OpenSecretResponse, Error> {
+        let envelope: SecretEnvelope =
+            cbor::from_slice(request.value).map_err(|_| Error::InvalidArgument)?;
+
+        let keys_guard = self.keys.lock().unwrap();
+        let sek = &keys_guard.as_ref().ok_or(Error::NotInitialized)?.sek;
+        let sek = sek.clone().into(); // Fine as the clone will be zeroized on drop.
+
+        // Name.
+        let name = deoxysii::box_open(
+            &envelope.nonce,
+            envelope.name.clone(),
+            b"name".into(), // Prevent mixing name and value.
+            &envelope.pk.0,
+            &sek,
+        )
+        .map_err(|_| Error::CorruptedSecret)?;
+
+        // Value.
+        let value = deoxysii::box_open(
+            &envelope.nonce,
+            envelope.value.clone(),
+            b"value".into(), // Prevent mixing name and value.
+            &envelope.pk.0,
+            &sek,
+        )
+        .map_err(|_| Error::CorruptedSecret)?;
+
+        Ok(OpenSecretResponse { name, value })
     }
 }
 
@@ -205,6 +306,13 @@ impl KmsService for MockKmsService {
         )?;
 
         Ok(GenerateResponse { key })
+    }
+
+    async fn open_secret(
+        &self,
+        _request: &OpenSecretRequest<'_>,
+    ) -> Result<OpenSecretResponse, Error> {
+        Err(Error::NotInitialized)
     }
 }
 

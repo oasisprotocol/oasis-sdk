@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use tokio::sync::mpsc;
 
-use crate::crypto::signature::Signer;
+use crate::{core::identity::Identity, crypto::signature::Signer};
 
 use super::{client, processor, App};
 
@@ -12,6 +12,7 @@ pub struct Environment<A: App> {
     app: Arc<A>,
     client: client::Client<A>,
     signer: Arc<dyn Signer>,
+    identity: Arc<Identity>,
     cmdq: mpsc::WeakSender<processor::Command>,
 }
 
@@ -27,6 +28,7 @@ where
         Self {
             app: state.app.clone(),
             signer: state.signer.clone(),
+            identity: state.identity.clone(),
             client: client::Client::new(state, cmdq.clone()),
             cmdq,
         }
@@ -45,6 +47,11 @@ where
     /// Transaction signer.
     pub fn signer(&self) -> Arc<dyn Signer> {
         self.signer.clone()
+    }
+
+    /// Runtime identity.
+    pub fn identity(&self) -> Arc<Identity> {
+        self.identity.clone()
     }
 
     /// Send a command to the processor.
@@ -66,6 +73,7 @@ where
         Self {
             app: self.app.clone(),
             signer: self.signer.clone(),
+            identity: self.identity.clone(),
             client: self.client.clone(),
             cmdq: self.cmdq.clone(),
         }
