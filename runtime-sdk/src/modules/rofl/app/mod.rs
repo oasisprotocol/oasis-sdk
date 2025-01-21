@@ -21,7 +21,7 @@ use crate::{
 
 pub mod client;
 mod env;
-mod init;
+pub mod init;
 mod notifier;
 pub mod prelude;
 mod processor;
@@ -83,7 +83,8 @@ pub trait App: Send + Sync + 'static {
     where
         Self: Sized,
     {
-        // Default implementation does nothing.
+        // Default implementation just runs the trivial initialization.
+        init::post_registration_init();
     }
 
     /// Main application processing loop.

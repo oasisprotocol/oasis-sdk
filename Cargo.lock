@@ -3960,6 +3960,7 @@ name = "rofl-appd"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "rocket",
  "rustc-hex",
@@ -3973,7 +3974,7 @@ dependencies = [
 
 [[package]]
 name = "rofl-containers"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "base64",

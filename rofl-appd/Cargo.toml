@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 # Oasis SDK.
+cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
 
 # Third party.

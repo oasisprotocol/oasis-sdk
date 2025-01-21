@@ -18,7 +18,9 @@ use oasis_runtime_sdk::{
 };
 use rofl_appd::services;
 
+mod containers;
 mod reaper;
+mod secrets;
 mod storage;
 
 /// UNIX socket address where the REST API server will listen on.
@@ -63,17 +65,42 @@ impl App for ContainersApp {
         let _ = kms.wait_ready().await;
 
         // Initialize storage when configured in the kernel cmdline.
+        slog::info!(logger, "initializing stage 2 storage");
         if let Err(err) = storage::init(kms.clone()).await {
             slog::error!(logger, "failed to initialize stage 2 storage"; "err" => ?err);
             process::abort();
         }
 
         // Start the REST API server.
+        slog::info!(logger, "starting the API server");
         let cfg = rofl_appd::Config {
             address: ROFL_APPD_ADDRESS,
-            kms,
+            kms: kms.clone(),
         };
-        let _ = rofl_appd::start(cfg, env).await;
+        let _ = rofl_appd::start(cfg, env.clone()).await;
+
+        // Initialize containers.
+        slog::info!(logger, "initializing container environment");
+        if let Err(err) = containers::init().await {
+            slog::error!(logger, "failed to initialize container environment"; "err" => ?err);
+            process::abort();
+        }
+
+        // Initialize secrets.
+        slog::info!(logger, "initializing container secrets");
+        if let Err(err) = secrets::init(env.clone(), kms.clone()).await {
+            slog::error!(logger, "failed to initialize container secrets"; "err" => ?err);
+            process::abort();
+        }
+
+        // Start containers.
+        slog::info!(logger, "starting containers");
+        if let Err(err) = containers::start().await {
+            slog::error!(logger, "failed to start containers"; "err" => ?err);
+            process::abort();
+        }
+
+        slog::info!(logger, "everything is up and running");
     }
 }
 
