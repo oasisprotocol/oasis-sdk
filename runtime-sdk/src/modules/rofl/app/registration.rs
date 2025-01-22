@@ -107,6 +107,15 @@ where
             "epoch" => epoch,
         );
 
+        let metadata = match self.state.app.clone().get_metadata(self.env.clone()).await {
+            Ok(metadata) => metadata,
+            Err(err) => {
+                slog::error!(self.logger, "failed to get instance metadata"; "err" => ?err);
+                // Do not prevent registration, just clear metadata.
+                Default::default()
+            }
+        };
+
         // Refresh registration.
         let ect = self
             .state
@@ -118,6 +127,7 @@ where
             ect,
             expiration: epoch + 2,
             extra_keys: vec![self.env.signer().public_key()],
+            metadata,
         };
 
         let tx = self.state.app.new_transaction("rofl.Register", register);

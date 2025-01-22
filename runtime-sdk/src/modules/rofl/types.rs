@@ -100,6 +100,9 @@ pub struct Register {
     ///
     /// All of these keys need to co-sign the registration transaction to prove ownership.
     pub extra_keys: Vec<PublicKey>,
+    /// Arbitrary app-specific metadata.
+    #[cbor(optional)]
+    pub metadata: BTreeMap<String, String>,
 }
 
 /// Kind of key for derivation.
@@ -151,6 +154,9 @@ pub struct Registration {
     pub expiration: EpochTime,
     /// Extra public keys to endorse (e.g. secp256k1 keys).
     pub extra_keys: Vec<PublicKey>,
+    /// Arbitrary app-specific metadata.
+    #[cbor(optional)]
+    pub metadata: BTreeMap<String, String>,
 }
 
 /// Application-related query.
