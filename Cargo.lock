@@ -3974,7 +3974,7 @@ dependencies = [
 
 [[package]]
 name = "rofl-containers"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "base64",
