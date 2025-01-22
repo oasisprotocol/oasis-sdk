@@ -77,7 +77,14 @@ impl App for ContainersApp {
             address: ROFL_APPD_ADDRESS,
             kms: kms.clone(),
         };
-        let _ = rofl_appd::start(cfg, env.clone()).await;
+        let appd_logger = logger.clone();
+        let appd_env = env.clone();
+        tokio::spawn(async move {
+            if let Err(err) = rofl_appd::start(cfg, appd_env).await {
+                slog::error!(appd_logger, "failed to start API server"; "err" => ?err);
+                process::abort();
+            }
+        });
 
         // Initialize containers.
         slog::info!(logger, "initializing container environment");
