@@ -1,5 +1,5 @@
 //! Wrapper to make development of ROFL components easier.
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -72,6 +72,20 @@ pub trait App: Send + Sync + 'static {
         // Make the ROFL module resolve the payer for all of our transactions.
         tx.set_fee_proxy("rofl", Self::id().as_ref());
         tx
+    }
+
+    /// Fetches custom app instance metadata that is included in its on-chain registration.
+    ///
+    /// This method is called before each registration refresh. Returning an error will not block
+    /// registration, rather it will result in the metadata being cleared.
+    async fn get_metadata(
+        self: Arc<Self>,
+        env: Environment<Self>,
+    ) -> Result<BTreeMap<String, String>>
+    where
+        Self: Sized,
+    {
+        Ok(BTreeMap::new())
     }
 
     /// Custom post-registration initialization. It runs before any image-specific scripts are

@@ -1,3 +1,5 @@
+use std::{process::Command, time::SystemTime};
+
 use anyhow::Result;
 use cmd_lib::run_cmd;
 
@@ -45,8 +47,17 @@ pub async fn start() -> Result<()> {
     // Bring containers up.
     run_cmd!(
         cd "/etc/oasis/containers";
-        podman-compose up --detach --remove-orphans --force-recreate;
+        podman-compose --env-file "/run/podman/secrets.env" up --detach --remove-orphans --force-recreate;
     )?;
+
+    // Follow container logs.
+    let now = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)?
+        .as_secs();
+    Command::new("podman-compose")
+        .args(["logs", "--follow", "--since", &format!("{}", now)])
+        .current_dir("/etc/oasis/containers")
+        .spawn()?;
 
     Ok(())
 }

@@ -372,6 +372,7 @@ impl<Cfg: Config> Module<Cfg> {
             rek: body.ect.capability_tee.rek.ok_or(Error::InvalidArgument)?, // REK required.
             expiration: body.expiration,
             extra_keys: body.extra_keys,
+            metadata: body.metadata,
         };
         state::update_registration(registration)?;
 
