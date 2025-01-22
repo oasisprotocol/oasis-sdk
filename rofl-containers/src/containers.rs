@@ -37,6 +37,7 @@ pub async fn init() -> Result<()> {
     run_cmd!(
         podman system migrate;
         podman system prune --external;
+        podman image prune --all --force;
     )?;
 
     Ok(())
