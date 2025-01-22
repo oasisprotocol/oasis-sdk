@@ -149,6 +149,16 @@
 <a href="#149" id="149">149</a>
 <a href="#150" id="150">150</a>
 <a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -258,6 +268,15 @@
             <span class="string">"epoch" </span>=&gt; epoch,
         );
 
+        <span class="kw">let </span>metadata = <span class="kw">match </span><span class="self">self</span>.state.app.clone().get_metadata(<span class="self">self</span>.env.clone()).<span class="kw">await </span>{
+            <span class="prelude-val">Ok</span>(metadata) =&gt; metadata,
+            <span class="prelude-val">Err</span>(err) =&gt; {
+                <span class="macro">slog::error!</span>(<span class="self">self</span>.logger, <span class="string">"failed to get instance metadata"</span>; <span class="string">"err" </span>=&gt; <span class="question-mark">?</span>err);
+                <span class="comment">// Do not prevent registration, just clear metadata.
+                </span>Default::default()
+            }
+        };
+
         <span class="comment">// Refresh registration.
         </span><span class="kw">let </span>ect = <span class="self">self
             </span>.state
@@ -269,6 +288,7 @@
             ect,
             expiration: epoch + <span class="number">2</span>,
             extra_keys: <span class="macro">vec!</span>[<span class="self">self</span>.env.signer().public_key()],
+            metadata,
         };
 
         <span class="kw">let </span>tx = <span class="self">self</span>.state.app.new_transaction(<span class="string">"rofl.Register"</span>, register);
