@@ -3,6 +3,7 @@ use std::sync::{
     Arc, Mutex,
 };
 
+use serde_with::serde_as;
 use sp800_185::KMac;
 use tokio::sync::Notify;
 
@@ -97,9 +98,11 @@ pub struct GenerateRequest<'r> {
 }
 
 /// Key generation response.
+#[serde_as]
 #[derive(Clone, Default, serde::Serialize, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
 pub struct GenerateResponse {
     /// Generated key.
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub key: Vec<u8>,
 }
 
@@ -115,11 +118,14 @@ pub struct OpenSecretRequest<'r> {
 }
 
 /// Secret decryption and authentication response.
+#[serde_as]
 #[derive(Clone, Default, serde::Serialize)]
 pub struct OpenSecretResponse {
     /// Decrypted plain-text name.
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub name: Vec<u8>,
     /// Decrypted plain-text value.
+    #[serde_as(as = "serde_with::hex::Hex")]
     pub value: Vec<u8>,
 }
 
