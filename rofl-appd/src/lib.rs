@@ -29,7 +29,10 @@ where
     let env: Arc<dyn state::Env> = Arc::new(state::EnvImpl::new(env));
 
     // Server configuration.
-    let rocket_cfg = Figment::new().join(("address", cfg.address));
+    let rocket_cfg = Figment::from(rocket::config::Config::default())
+        .select("default")
+        .merge(("address", cfg.address))
+        .merge(("reuse", true));
 
     rocket::custom(rocket_cfg)
         .manage(env)
