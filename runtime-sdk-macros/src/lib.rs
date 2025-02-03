@@ -5,6 +5,7 @@ use proc_macro::TokenStream;
 
 mod error_derive;
 mod event_derive;
+mod evm_derive;
 mod generators;
 mod module_derive;
 #[cfg(test)]
@@ -43,18 +44,35 @@ pub fn error_derive(input: TokenStream) -> TokenStream {
     error_derive::derive_error(input).into()
 }
 
+/// Derives the `EvmEvent` trait on a struct.
+#[proc_macro_derive(EvmEvent, attributes(evm_event))]
+pub fn evm_event_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    evm_derive::derive_evm_event(input).into()
+}
+
+/// Derives the `EvmError` trait on an enum.
+#[proc_macro_derive(EvmError, attributes(evm_error))]
+pub fn evm_error_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    evm_derive::derive_evm_error(input).into()
+}
+
 /// Derives traits from a non-trait `impl` block (rather than from a `struct`).
 ///
-/// Only the `Module` trait is supported. In other words, given an `impl MyModule` block, the macro
-/// derives implementations needed for implementing a module.
-/// See also the `#[handler]` and `#[migration]` attributes.
+/// Only the `Module` and `EvmContract` traits are supported. In other words,
+/// given an `impl MyModule` block, the macro derives implementations needed either
+/// for implementing a module (see also the `#[handler]` and `#[migration]` attributes)
+/// or for implementing an EVM contract (see also the `#[evm_method]` attribute).
 #[proc_macro_attribute]
 pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::ItemImpl);
-    if args.to_string() == "Module" {
-        module_derive::derive_module(input).into()
-    } else {
-        emit_compile_error("#[sdk_derive] only supports #[sdk_derive(Module)]");
+    match args.to_string().as_str() {
+        "Module" => module_derive::derive_module(input).into(),
+        "EvmContract" => evm_derive::derive_evm_contract(input).into(),
+        _ => emit_compile_error(
+            "#[sdk_derive] only supports #[sdk_derive(Module)] and #[sdk_derive(EvmContract)]",
+        ),
     }
 }
 
@@ -100,6 +118,32 @@ pub fn handler(_args: TokenStream, input: TokenStream) -> TokenStream {
 ///    a non-negative integer.
 #[proc_macro_attribute]
 pub fn migration(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks functions that represent contract methods.
+///
+/// The permitted forms are:
+///  - `#[evm_method(signature = "...")]`: The method selector is computed from
+///    a Solidity method signature, and the method takes the precompute handle
+///    and data offset as parameters.
+///  - `#[evm_method(signature = "...", convert)]`: The method selector is
+///    computed from the signature, the arguments are automatically decoded and
+///    passed to the marked method, which must have the appropriate number and
+///    type of arguments.
+#[proc_macro_attribute]
+pub fn evm_method(_args: TokenStream, input: TokenStream) -> TokenStream {
+    input
+}
+
+/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks the function within a contract implementation that returns its address.
+///
+/// The method marked with this attribute should take no arguments and return
+/// an object of type `primitive_types::H160`.
+#[proc_macro_attribute]
+pub fn evm_contract_address(_args: TokenStream, input: TokenStream) -> TokenStream {
     input
 }
 
