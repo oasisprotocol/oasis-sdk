@@ -1,12 +1,14 @@
 //! Tests for the EVM module.
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr as _};
 
+use base64::prelude::*;
 use ethabi::{ParamType, Token};
 use sha3::Digest as _;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
     callformat,
+    core::transaction::tags::Tag,
     crypto::{self, signature::secp256k1},
     error::Error as _,
     module::{self, InvariantHandler as _, TransactionHandler as _},
@@ -22,13 +24,17 @@ use oasis_runtime_sdk::{
         transaction,
         transaction::Fee,
     },
-    Runtime, Version,
+    Context, Runtime, Version,
 };
 
 use crate::{
     derive_caller,
     mock::{decode_reverted, decode_reverted_raw, load_contract_bytecode, EvmSigner, QueryOptions},
-    types::{self, H160},
+    precompile::{
+        self,
+        erc20::{self, AccountToken},
+    },
+    types::{self, H160, H256},
     Config, Genesis, Module as EVMModule,
 };
 
@@ -41,11 +47,15 @@ static FAUCET_CONTRACT_CODE_HEX: &str =
 pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
-    type AdditionalPrecompileSet = ();
+    type AdditionalPrecompileSet = precompile::erc20::Erc20Contract<TestErcToken>;
 
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
+
+    fn additional_precompiles() -> Option<Self::AdditionalPrecompileSet> {
+        Some(precompile::erc20::Erc20Contract::<TestErcToken>::default())
+    }
 }
 
 pub(crate) struct ConfidentialEVMConfig;
@@ -1200,4 +1210,543 @@ fn test_return_value_limits() {
     // Actual payload is ABI-encoded so the raw result starts at offset 64.
     assert_eq!(result[64], 0xFF, "result should be correct");
     assert_eq!(result[1023], 0x42, "result should be correct");
+}
+
+#[derive(Default)]
+pub struct TestErcToken {}
+
+impl AccountToken for TestErcToken {
+    type Accounts = Accounts;
+
+    const GAS_COSTS: precompile::erc20::TokenOperationCosts =
+        precompile::erc20::TokenOperationCosts::default();
+    const ADDRESS: primitive_types::H160 = primitive_types::H160([
+        0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42,
+    ]);
+    const NAME: &str = "Test Token";
+    const SYMBOL: &str = "TTOK";
+    const DECIMALS: u8 = 18;
+
+    fn denomination() -> token::Denomination {
+        token::Denomination::from_str("TestErc").unwrap()
+    }
+
+    fn is_minting_allowed(
+        caller: &primitive_types::H160,
+        address: &primitive_types::H160,
+    ) -> Result<bool, erc20::Error> {
+        let dave = primitive_types::H160::from_slice(
+            derive_caller::from_sigspec(&keys::dave::sigspec())
+                .unwrap()
+                .as_bytes(),
+        );
+        Ok(caller == &dave && address == &dave)
+    }
+
+    fn is_burning_allowed(
+        caller: &primitive_types::H160,
+        address: &primitive_types::H160,
+    ) -> Result<bool, erc20::Error> {
+        let dave = primitive_types::H160::from_slice(
+            derive_caller::from_sigspec(&keys::dave::sigspec())
+                .unwrap()
+                .as_bytes(),
+        );
+        Ok(caller == &dave && address == &dave)
+    }
+}
+
+fn downcast_uint(uint: &ethabi::Uint) -> u128 {
+    if uint.bits() > 128 {
+        panic!("ethabi::uint too large");
+    }
+    uint.as_u128()
+}
+
+#[test]
+fn test_erc20_dispatch() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+
+    let signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    let contract_address = H160::from_slice(TestErcToken::ADDRESS.as_bytes());
+    let dave = primitive_types::H160::from_slice(signer.address().as_bytes());
+    let erin = primitive_types::H160::from_slice(
+        derive_caller::from_sigspec(&keys::erin::sigspec())
+            .unwrap()
+            .as_bytes(),
+    );
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    // Test dispatch.
+    let result = signer
+        .query_evm_call(&ctx, contract_address, "name", &[], &[])
+        .expect("query should succeed");
+    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_string().unwrap();
+    assert_eq!(test, "Test Token", "token name should be correct");
+
+    let result = signer
+        .query_evm_call(&ctx, contract_address, "symbol", &[], &[])
+        .expect("query should succeed");
+    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_string().unwrap();
+    assert_eq!(test, "TTOK", "token symbol should be correct");
+
+    let result = signer
+        .query_evm_call(&ctx, contract_address, "decimals", &[], &[])
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    assert_eq!(downcast_uint(&test), 18, "decimals should be correct");
+
+    let result = signer
+        .query_evm_call(&ctx, contract_address, "totalSupply", &[], &[])
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    assert_eq!(downcast_uint(&test), 0, "total supply should be correct");
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "balanceOf",
+            &[ParamType::Address],
+            &[Token::Address(dave)],
+        )
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    assert_eq!(downcast_uint(&test), 0, "dave's balance should be correct");
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "transfer",
+            &[ParamType::Address, ParamType::Uint(256)],
+            &[Token::Address(erin), Token::Uint(0.into())],
+        )
+        .expect("query should succeed");
+    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_bool().unwrap();
+    assert_eq!(test, true, "transfer from dave to erin should happen");
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "transferFrom",
+            &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
+            &[
+                Token::Address(erin),
+                Token::Address(dave),
+                Token::Uint(0.into()),
+            ],
+        )
+        .expect("query should succeed");
+    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_bool().unwrap();
+    assert_eq!(
+        test, true,
+        "transfer from erin to dave by dave should happen"
+    );
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "approve",
+            &[ParamType::Address, ParamType::Uint(256)],
+            &[Token::Address(erin), Token::Uint(0.into())],
+        )
+        .expect("query should succeed");
+    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_bool().unwrap();
+    assert_eq!(test, true, "dave's approval for erin should succeed");
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "allowance",
+            &[ParamType::Address, ParamType::Address],
+            &[Token::Address(dave), Token::Address(erin)],
+        )
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    assert_eq!(downcast_uint(&test), 0, "allowance should be correct");
+
+    signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "mint",
+            &[ParamType::Address, ParamType::Uint(256)],
+            &[Token::Address(dave), Token::Uint(0.into())],
+        )
+        .expect("query should succeed");
+
+    signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            "burn",
+            &[ParamType::Address, ParamType::Uint(256)],
+            &[Token::Address(dave), Token::Uint(0.into())],
+        )
+        .expect("query should succeed");
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Default, cbor::Decode)]
+struct EvmLog {
+    address: H160,
+    topics: Vec<H256>,
+    data: Vec<u8>,
+}
+
+fn decode_evm_logs(tags: &[Tag]) -> Vec<EvmLog> {
+    tags.iter()
+        .filter_map(|t| {
+            if t.key != b"evm\x00\x00\x00\x01" {
+                return None;
+            }
+            Some(cbor::from_slice::<Vec<EvmLog>>(&t.value).expect("evm log should be decodable"))
+        })
+        .flatten()
+        .collect()
+}
+
+fn get_balance<C: Context>(ctx: &C, signer: &EvmSigner, address: &primitive_types::H160) -> u128 {
+    let contract_address = H160::from_slice(TestErcToken::ADDRESS.as_bytes());
+    let result = signer
+        .query_evm_call(
+            ctx,
+            contract_address,
+            "balanceOf",
+            &[ParamType::Address],
+            &[Token::Address(*address)],
+        )
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    downcast_uint(&test)
+}
+
+fn get_allowance<C: Context>(
+    ctx: &C,
+    signer: &EvmSigner,
+    owner: &primitive_types::H160,
+    spender: &primitive_types::H160,
+) -> u128 {
+    let contract_address = H160::from_slice(TestErcToken::ADDRESS.as_bytes());
+    let result = signer
+        .query_evm_call(
+            ctx,
+            contract_address,
+            "allowance",
+            &[ParamType::Address, ParamType::Address],
+            &[Token::Address(*owner), Token::Address(*spender)],
+        )
+        .expect("query should succeed");
+    let result =
+        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
+    let test = result.first().unwrap().clone().into_uint().unwrap();
+    downcast_uint(&test)
+}
+
+#[test]
+fn test_erc20_minting_burning() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+
+    let mut signer_dave = EvmSigner::new(0, keys::dave::sigspec());
+    let mut signer_erin = EvmSigner::new(0, keys::erin::sigspec());
+
+    let contract_address = H160::from_slice(TestErcToken::ADDRESS.as_bytes());
+    let dave = primitive_types::H160::from_slice(signer_dave.address().as_bytes());
+    let erin = primitive_types::H160::from_slice(signer_erin.address().as_bytes());
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    Accounts::set_balance(
+        Address::from_sigspec(&keys::dave::sigspec()),
+        &token::BaseUnits::new(10, TestErcToken::denomination()),
+    );
+    Accounts::set_balance(
+        Address::from_sigspec(&keys::erin::sigspec()),
+        &token::BaseUnits::new(10, TestErcToken::denomination()),
+    );
+
+    // Dave should be able to mint to and burn tokens from himself.
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &dave),
+        10,
+        "dave's initial balance should be 0"
+    );
+    let result = signer_dave.call_evm(
+        &ctx,
+        contract_address,
+        "mint",
+        &[ParamType::Address, ParamType::Uint(256)],
+        &[Token::Address(dave), Token::Uint(10.into())],
+    );
+    let logs = decode_evm_logs(&result.tags);
+    assert_eq!(logs.len(), 1, "1 evm log should be emitted");
+    assert_eq!(
+        logs[0].address, contract_address,
+        "contract addresses should match"
+    );
+    assert_eq!(
+        logs[0].topics,
+        &[
+            // Keccak-256("Transfer(address,address,uint256)")
+            H256::from_slice(
+                &hex::decode("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
+                    .unwrap()
+            ),
+            // Minting is a transfer from address 0.
+            H256::zero(),
+            // The recipient was dave.
+            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+        ],
+        "transfer event topics should be correct"
+    );
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &dave),
+        20,
+        "dave's minting should add tokens"
+    );
+
+    let result = signer_dave.call_evm(
+        &ctx,
+        contract_address,
+        "burn",
+        &[ParamType::Address, ParamType::Uint(256)],
+        &[Token::Address(dave), Token::Uint(5.into())],
+    );
+    let logs = decode_evm_logs(&result.tags);
+    assert_eq!(logs.len(), 1, "1 evm log should be emitted");
+    assert_eq!(
+        logs[0].address, contract_address,
+        "contract addresses should match"
+    );
+    assert_eq!(
+        logs[0].topics,
+        &[
+            // Keccak-256("Transfer(address,address,uint256)")
+            H256::from_slice(
+                &hex::decode("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
+                    .unwrap()
+            ),
+            // The sender was dave.
+            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            // Burning is a transfer to address 0.
+            H256::zero(),
+        ],
+        "transfer event topics should be correct"
+    );
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &dave),
+        15,
+        "dave's burning should remove tokens"
+    );
+
+    // Dave shouldn't be able to do anything to erin, and erin shouldn't be
+    // able to do anything to anybody.
+    for (s, signer) in [&mut signer_dave, &mut signer_erin].into_iter().enumerate() {
+        for (r, recipient) in [&dave, &erin].into_iter().enumerate() {
+            if s == 0 && r == 0 {
+                continue;
+            }
+            for method in &["mint", "burn"] {
+                let result = signer.call_evm(
+                    &ctx,
+                    contract_address,
+                    method,
+                    &[ParamType::Address, ParamType::Uint(256)],
+                    &[Token::Address(*recipient), Token::Uint(3.into())],
+                );
+                assert_eq!(result.result.is_success(), false, "minting should fail");
+                if let module::CallResult::Failed {
+                    module: _,
+                    code: _,
+                    message,
+                } = result.result
+                {
+                    let message = BASE64_STANDARD.decode(&message[10..]).unwrap();
+                    assert_eq!(message, hex::decode("ee90c468").unwrap()); // Keccak-256("Forbidden()")
+                }
+                let logs = decode_evm_logs(&result.tags);
+                assert_eq!(logs.len(), 0, "no evm logs should be emitted");
+            }
+        }
+    }
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &dave),
+        15,
+        "dave's balance should be correct"
+    );
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &erin),
+        10,
+        "erin's balance should be correct"
+    );
+}
+
+#[test]
+fn test_erc20_allowances() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+
+    let mut signer_dave = EvmSigner::new(0, keys::dave::sigspec());
+    let mut signer_erin = EvmSigner::new(0, keys::erin::sigspec());
+
+    let contract_address = H160::from_slice(TestErcToken::ADDRESS.as_bytes());
+    let dave = primitive_types::H160::from_slice(signer_dave.address().as_bytes());
+    let erin = primitive_types::H160::from_slice(signer_erin.address().as_bytes());
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    Accounts::set_balance(
+        Address::from_sigspec(&keys::dave::sigspec()),
+        &token::BaseUnits::new(10, TestErcToken::denomination()),
+    );
+    Accounts::set_balance(
+        Address::from_sigspec(&keys::erin::sigspec()),
+        &token::BaseUnits::new(10, TestErcToken::denomination()),
+    );
+
+    // Allow erin to spend dave's tokens.
+    assert_eq!(
+        get_allowance(&ctx, &signer_dave, &dave, &erin),
+        0,
+        "allowance should be correct"
+    );
+    let result = signer_dave.call_evm(
+        &ctx,
+        contract_address,
+        "approve",
+        &[ParamType::Address, ParamType::Uint(256)],
+        &[Token::Address(erin), Token::Uint(5.into())],
+    );
+    assert_eq!(result.result.is_success(), true, "approve should succeed");
+    let logs = decode_evm_logs(&result.tags);
+    assert_eq!(logs.len(), 1, "1 evm log should be emitted");
+    assert_eq!(
+        logs[0].address, contract_address,
+        "contract addresses should match"
+    );
+    assert_eq!(
+        logs[0].topics,
+        &[
+            // Keccak-256("Approval(address,address,uint256)")
+            H256::from_slice(
+                &hex::decode("8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925")
+                    .unwrap()
+            ),
+            // Owner is dave.
+            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            // Happy spender is erin.
+            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+        ],
+        "approval event topics should be correct"
+    );
+    assert_eq!(
+        get_allowance(&ctx, &signer_dave, &dave, &erin),
+        5,
+        "allowance should be correct"
+    );
+
+    // Erin can't spend too much...
+    let result = signer_erin.call_evm(
+        &ctx,
+        contract_address,
+        "transferFrom",
+        &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
+        &[
+            Token::Address(dave),
+            Token::Address(erin),
+            Token::Uint(7.into()),
+        ],
+    );
+    assert_eq!(
+        result.result.is_success(),
+        false,
+        "transferFrom should fail"
+    );
+    if let module::CallResult::Failed {
+        module: _,
+        code: _,
+        message,
+    } = result.result
+    {
+        let message = BASE64_STANDARD.decode(&message[10..]).unwrap();
+        // Keccak256("ERC20InsufficientAllowance(address,uint256,uint256)") + erin's address + allowance + needed
+        assert_eq!(message, hex::decode("fb8f41b2000000000000000000000000709eebd979328a2b3605a160915deb26e186abf800000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000007").unwrap());
+    }
+
+    // ... but she can spend up to the allowance, changing Dave's balance and her allowance.
+    let result = signer_erin.call_evm(
+        &ctx,
+        contract_address,
+        "transferFrom",
+        &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
+        &[
+            Token::Address(dave),
+            Token::Address(erin),
+            Token::Uint(3.into()),
+        ],
+    );
+    assert_eq!(
+        result.result.is_success(),
+        true,
+        "transferFrom should succeed"
+    );
+    let logs = decode_evm_logs(&result.tags);
+    assert_eq!(logs.len(), 1, "1 evm log should be emitted");
+    assert_eq!(
+        logs[0].address, contract_address,
+        "contract addresses should match"
+    );
+    assert_eq!(
+        logs[0].topics,
+        &[
+            // Keccak-256("Transfer(address,address,uint256)")
+            H256::from_slice(
+                &hex::decode("ddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef")
+                    .unwrap()
+            ),
+            // The sender was dave.
+            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            // The sender was dave.
+            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+        ],
+        "transfer event topics should be correct"
+    );
+    assert_eq!(
+        get_balance(&ctx, &signer_dave, &dave),
+        7,
+        "dave's balance should be correct"
+    );
+    assert_eq!(
+        get_balance(&ctx, &signer_erin, &erin),
+        13,
+        "erin's balance should be correct"
+    );
+    assert_eq!(
+        get_allowance(&ctx, &signer_dave, &dave, &erin),
+        2,
+        "allowance should be correct"
+    );
 }

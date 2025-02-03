@@ -1187,6 +1187,36 @@ fn test_get_set_balance() {
 }
 
 #[test]
+fn test_get_set_allowance() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx();
+
+    init_accounts(&ctx);
+
+    let balance = Accounts::get_allowance(
+        keys::alice::address(),
+        keys::bob::address(),
+        Denomination::NATIVE,
+    )
+    .unwrap();
+    assert_eq!(balance, 0);
+
+    Accounts::set_allowance(
+        keys::alice::address(),
+        keys::bob::address(),
+        &BaseUnits::new(500_000, Denomination::NATIVE),
+    );
+
+    let balance = Accounts::get_allowance(
+        keys::alice::address(),
+        keys::bob::address(),
+        Denomination::NATIVE,
+    )
+    .unwrap();
+    assert_eq!(balance, 500_000);
+}
+
+#[test]
 fn test_get_set_total_supply() {
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx();

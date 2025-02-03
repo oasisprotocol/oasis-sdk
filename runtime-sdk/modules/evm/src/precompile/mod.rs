@@ -13,6 +13,8 @@ use primitive_types::H160;
 use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
+pub mod contract;
+pub mod erc20;
 mod gas;
 mod sha2;
 mod standard;
