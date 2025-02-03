@@ -624,11 +624,13 @@ where
         };
 
         // Determine gas price. Currently we always use the native denomination.
-        let mgp = client
-            .gas_price(round, &token::Denomination::NATIVE)
-            .await?;
-        let fee = mgp.saturating_mul(tx.fee_gas().into());
-        tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+        if tx.fee_amount().amount() == 0 {
+            let mgp = client
+                .gas_price(round, &token::Denomination::NATIVE)
+                .await?;
+            let fee = mgp.saturating_mul(tx.fee_gas().into());
+            tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+        }
 
         // Sign the transaction.
         let mut tx = tx.prepare_for_signing();

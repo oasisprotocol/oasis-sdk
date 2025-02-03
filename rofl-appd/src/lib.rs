@@ -34,13 +34,18 @@ where
         .merge(("address", cfg.address))
         .merge(("reuse", true));
 
-    rocket::custom(rocket_cfg)
+    let server = rocket::custom(rocket_cfg)
         .manage(env)
         .manage(cfg.kms)
         .mount("/rofl/v1/app", routes![routes::app::id,])
-        .mount("/rofl/v1/keys", routes![routes::keys::generate,])
-        .launch()
-        .await?;
+        .mount("/rofl/v1/keys", routes![routes::keys::generate,]);
+
+    #[cfg(feature = "tx")]
+    let server = server
+        .manage(routes::tx::Config::default())
+        .mount("/rofl/v1/tx", routes![routes::tx::sign_and_submit]);
+
+    server.launch().await?;
 
     Ok(())
 }
