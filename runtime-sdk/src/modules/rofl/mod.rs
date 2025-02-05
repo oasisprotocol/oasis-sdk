@@ -1,5 +1,5 @@
 //! On-chain coordination for ROFL components.
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use once_cell::sync::Lazy;
 
@@ -217,9 +217,16 @@ impl<Cfg: Config> Module<Cfg> {
         )?;
 
         // Generate the secret encryption (public) key.
-        let sek = Self::derive_app_key(ctx, &app_id, types::KeyKind::X25519, ROFL_KEY_ID_SEK)?
-            .input_keypair
-            .pk;
+        let sek = Self::derive_app_key(
+            ctx,
+            &app_id,
+            types::KeyKind::X25519,
+            types::KeyScope::Global,
+            ROFL_KEY_ID_SEK,
+            None,
+        )?
+        .input_keypair
+        .pk;
 
         // Register the application.
         let cfg = types::AppConfig {
@@ -263,9 +270,16 @@ impl<Cfg: Config> Module<Cfg> {
 
         // If there is no SEK defined, regenerate it.
         if cfg.sek == Default::default() {
-            cfg.sek = Self::derive_app_key(ctx, &body.id, types::KeyKind::X25519, ROFL_KEY_ID_SEK)?
-                .input_keypair
-                .pk;
+            cfg.sek = Self::derive_app_key(
+                ctx,
+                &body.id,
+                types::KeyKind::X25519,
+                types::KeyScope::Global,
+                ROFL_KEY_ID_SEK,
+                None,
+            )?
+            .input_keypair
+            .pk;
         }
 
         cfg.policy = body.policy;
@@ -408,12 +422,17 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Ensure caller is an authorized instance of the given application.
-        if !Self::is_authorized_origin(body.app) {
-            return Err(Error::Forbidden);
-        }
+        let reg = Self::get_origin_registration(body.app).ok_or(Error::Forbidden)?;
 
         // Derive application key.
-        let key = Self::derive_app_key(ctx, &body.app, body.kind, &body.key_id)?;
+        let key = Self::derive_app_key(
+            ctx,
+            &body.app,
+            body.kind,
+            body.scope,
+            &body.key_id,
+            Some(reg),
+        )?;
         let key = match body.kind {
             types::KeyKind::EntropyV0 => key.state_key.0.into(),
             types::KeyKind::X25519 => key.input_keypair.sk.as_ref().into(),
@@ -422,18 +441,75 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(types::DeriveKeyResponse { key })
     }
 
+    fn derive_app_key_id(
+        app: &app_id::AppId,
+        kind: types::KeyKind,
+        scope: types::KeyScope,
+        key_id: &[u8],
+        reg: Option<types::Registration>,
+    ) -> Result<keymanager::KeyPairId, Error> {
+        // Build the base key identifier.
+        //
+        // We use the following tuple elements which are fed into TupleHash to derive the final key
+        // identifier, in order:
+        //
+        // - V1 context domain separator.
+        // - App ID.
+        // - Encoded kind.
+        // - Key ID.
+        // - Optional CBOR-serialized extra domain separation.
+        //
+        let kind_id = &[kind as u8];
+        let mut key_id = vec![ROFL_DERIVE_KEY_CONTEXT, app.as_ref(), kind_id, key_id];
+        let mut extra_dom: BTreeMap<&str, Vec<u8>> = BTreeMap::new();
+
+        match scope {
+            types::KeyScope::Global => {
+                // Nothing to do here, global keys don't include an explicit scope for backwards
+                // compatibility.
+            }
+            types::KeyScope::Node => {
+                // Fetch node identifier corresponding to the application instance.
+                let node_id = reg.ok_or(Error::InvalidArgument)?.node_id;
+
+                extra_dom.insert("scope", [scope as u8].to_vec());
+                extra_dom.insert("node_id", node_id.as_ref().to_vec());
+            }
+            types::KeyScope::Entity => {
+                // Fetch entity identifier corresponding to the application instance.
+                let entity_id = reg
+                    .ok_or(Error::InvalidArgument)?
+                    .entity_id
+                    .ok_or(Error::InvalidArgument)?;
+
+                extra_dom.insert("scope", [scope as u8].to_vec());
+                extra_dom.insert("entity_id", entity_id.as_ref().to_vec());
+            }
+        };
+
+        // Add optional extra domain separation.
+        let extra_dom = if !extra_dom.is_empty() {
+            cbor::to_vec(extra_dom)
+        } else {
+            vec![]
+        };
+        if !extra_dom.is_empty() {
+            key_id.push(&extra_dom)
+        }
+
+        // Finalize the key identifier.
+        Ok(keymanager::get_key_pair_id(key_id))
+    }
+
     fn derive_app_key<C: Context>(
         ctx: &C,
         app: &app_id::AppId,
         kind: types::KeyKind,
+        scope: types::KeyScope,
         key_id: &[u8],
+        reg: Option<types::Registration>,
     ) -> Result<keymanager::KeyPair, Error> {
-        let key_id = keymanager::get_key_pair_id([
-            ROFL_DERIVE_KEY_CONTEXT,
-            app.as_ref(),
-            &[kind as u8],
-            key_id,
-        ]);
+        let key_id = Self::derive_app_key_id(app, kind, scope, key_id, reg)?;
 
         let km = ctx
             .key_manager()
