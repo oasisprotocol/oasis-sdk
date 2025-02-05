@@ -417,6 +417,11 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::InvalidArgument);
         }
 
+        // Disallow invocation from subcalls.
+        if CurrentState::with_env(|env| env.is_internal()) {
+            return Err(Error::Forbidden);
+        }
+
         if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(Default::default());
         }
