@@ -156,6 +156,11 @@ where
         }
         self.last_registration_epoch = Some(epoch);
 
+        // Notify about registration refresh.
+        self.env
+            .send_command(processor::Command::RegistrationRefreshed)
+            .await?;
+
         Ok(())
     }
 }
