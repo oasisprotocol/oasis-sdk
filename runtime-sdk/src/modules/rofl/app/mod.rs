@@ -26,6 +26,7 @@ mod notifier;
 pub mod prelude;
 mod processor;
 mod registration;
+mod watchdog;
 
 pub use crate::modules::rofl::app_id::AppId;
 pub use client::Client;

@@ -16,7 +16,7 @@ use crate::{
 };
 use rand::rngs::OsRng;
 
-use super::{notifier, registration, App, Environment};
+use super::{notifier, registration, watchdog, App, Environment};
 
 /// Size of the processor command queue.
 const CMDQ_BACKLOG: usize = 32;
@@ -31,6 +31,8 @@ pub(super) enum Command {
     GetLatestRound(oneshot::Sender<u64>),
     /// Notification that initial registration has been completed.
     InitialRegistrationCompleted,
+    /// Registration refreshed.
+    RegistrationRefreshed,
 }
 
 /// Processor state.
@@ -45,6 +47,7 @@ pub(super) struct State<A: App> {
 struct Tasks<A: App> {
     registration: registration::Task<A>,
     notifier: notifier::Task<A>,
+    watchdog: watchdog::Task,
 }
 
 /// Processor.
@@ -89,6 +92,7 @@ where
             tasks: Tasks {
                 registration: registration::Task::new(state.clone(), env.clone()),
                 notifier: notifier::Task::new(state.clone(), env.clone()),
+                watchdog: watchdog::Task::new(),
             },
             state,
             env,
@@ -125,6 +129,7 @@ where
         // Start the tasks.
         self.tasks.registration.start();
         self.tasks.notifier.start();
+        self.tasks.watchdog.start();
 
         slog::info!(self.logger, "entering processor loop");
         while let Some(cmd) = self.cmdq.recv().await {
@@ -146,6 +151,7 @@ where
             Command::InitialRegistrationCompleted => {
                 self.cmd_initial_registration_completed().await
             }
+            Command::RegistrationRefreshed => self.tasks.watchdog.keep_alive().await,
         }
     }
 
