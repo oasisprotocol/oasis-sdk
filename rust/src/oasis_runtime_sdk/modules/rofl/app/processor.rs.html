@@ -202,6 +202,12 @@
 <a href="#202" id="202">202</a>
 <a href="#203" id="203">203</a>
 <a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -220,7 +226,7 @@
 };
 <span class="kw">use </span>rand::rngs::OsRng;
 
-<span class="kw">use super</span>::{notifier, registration, App, Environment};
+<span class="kw">use super</span>::{notifier, registration, watchdog, App, Environment};
 
 <span class="doccomment">/// Size of the processor command queue.
 </span><span class="kw">const </span>CMDQ_BACKLOG: usize = <span class="number">32</span>;
@@ -235,6 +241,8 @@
     </span>GetLatestRound(oneshot::Sender&lt;u64&gt;),
     <span class="doccomment">/// Notification that initial registration has been completed.
     </span>InitialRegistrationCompleted,
+    <span class="doccomment">/// Registration refreshed.
+    </span>RegistrationRefreshed,
 }
 
 <span class="doccomment">/// Processor state.
@@ -249,6 +257,7 @@
 <span class="kw">struct </span>Tasks&lt;A: App&gt; {
     registration: registration::Task&lt;A&gt;,
     notifier: notifier::Task&lt;A&gt;,
+    watchdog: watchdog::Task,
 }
 
 <span class="doccomment">/// Processor.
@@ -293,6 +302,7 @@
             tasks: Tasks {
                 registration: registration::Task::new(state.clone(), env.clone()),
                 notifier: notifier::Task::new(state.clone(), env.clone()),
+                watchdog: watchdog::Task::new(),
             },
             state,
             env,
@@ -329,6 +339,7 @@
         <span class="comment">// Start the tasks.
         </span><span class="self">self</span>.tasks.registration.start();
         <span class="self">self</span>.tasks.notifier.start();
+        <span class="self">self</span>.tasks.watchdog.start();
 
         <span class="macro">slog::info!</span>(<span class="self">self</span>.logger, <span class="string">"entering processor loop"</span>);
         <span class="kw">while let </span><span class="prelude-val">Some</span>(cmd) = <span class="self">self</span>.cmdq.recv().<span class="kw">await </span>{
@@ -350,6 +361,7 @@
             Command::InitialRegistrationCompleted =&gt; {
                 <span class="self">self</span>.cmd_initial_registration_completed().<span class="kw">await
             </span>}
+            Command::RegistrationRefreshed =&gt; <span class="self">self</span>.tasks.watchdog.keep_alive().<span class="kw">await</span>,
         }
     }
 
