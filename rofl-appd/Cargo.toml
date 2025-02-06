@@ -1,12 +1,13 @@
 [package]
 name = "rofl-appd"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 # Oasis SDK.
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
+oasis-runtime-sdk-evm = { path = "../runtime-sdk/modules/evm" }
 
 # Third party.
 anyhow = "1.0.86"
@@ -22,3 +23,8 @@ zeroize = "1.7"
 
 [dev-dependencies]
 rustc-hex = "2.0.1"
+
+[features]
+default = ["tx"]
+# Add routes for transaction submission.
+tx = []
