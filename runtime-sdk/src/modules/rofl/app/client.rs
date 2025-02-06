@@ -71,6 +71,8 @@ impl Default for SubmitTxOpts {
 pub struct DeriveKeyRequest {
     /// Key kind.
     pub kind: modules::rofl::types::KeyKind,
+    /// Key scope.
+    pub scope: modules::rofl::types::KeyScope,
     /// Key generation.
     pub generation: u64,
     /// Key identifier.
@@ -198,6 +200,7 @@ where
             modules::rofl::types::DeriveKey {
                 app: A::id(),
                 kind: request.kind,
+                scope: request.scope,
                 generation: request.generation,
                 key_id: request.key_id,
             },

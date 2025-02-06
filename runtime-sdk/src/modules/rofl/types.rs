@@ -117,6 +117,29 @@ pub enum KeyKind {
     X25519 = 1,
 }
 
+/// Scope of key for derivation.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+#[cbor(with_default)]
+#[repr(u8)]
+pub enum KeyScope {
+    /// Global application scope (e.g. all instances get the same key).
+    #[default]
+    Global = 0,
+
+    /// Node scope (e.g. all instances endorsed by the same node get the same key).
+    Node = 1,
+
+    /// Entity scope (e.g. all instances endorsed by nodes from the same entity get the same key).
+    Entity = 2,
+}
+
+impl KeyScope {
+    /// Whether this key scope is the global key scope.
+    pub fn is_global(&self) -> bool {
+        matches!(self, Self::Global)
+    }
+}
+
 /// Derive key call.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct DeriveKey {
@@ -124,6 +147,9 @@ pub struct DeriveKey {
     pub app: AppId,
     /// Key kind.
     pub kind: KeyKind,
+    /// Key scope.
+    #[cbor(optional, skip_serializing_if = "KeyScope::is_global")]
+    pub scope: KeyScope,
     /// Key generation.
     pub generation: u64,
     /// Key identifier.
