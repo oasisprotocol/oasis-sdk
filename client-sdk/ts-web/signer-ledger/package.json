@@ -20,7 +20,7 @@
         "prepare": "tsc"
     },
     "dependencies": {
-        "@ledgerhq/hw-transport-webusb": "^6.28.6",
+        "@ledgerhq/hw-transport-webusb": "^6.29.4",
         "@oasisprotocol/client": "^1.1.0",
         "@oasisprotocol/ledger": "^1.0.0"
     },
