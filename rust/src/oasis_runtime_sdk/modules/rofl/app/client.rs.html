@@ -680,6 +680,8 @@
 <a href="#680" id="680">680</a>
 <a href="#681" id="681">681</a>
 <a href="#682" id="682">682</a>
+<a href="#683" id="683">683</a>
+<a href="#684" id="684">684</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::{
@@ -1306,11 +1308,13 @@
         </span>};
 
         <span class="comment">// Determine gas price. Currently we always use the native denomination.
-        </span><span class="kw">let </span>mgp = client
-            .gas_price(round, <span class="kw-2">&amp;</span>token::Denomination::NATIVE)
-            .<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="kw">let </span>fee = mgp.saturating_mul(tx.fee_gas().into());
-        tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+        </span><span class="kw">if </span>tx.fee_amount().amount() == <span class="number">0 </span>{
+            <span class="kw">let </span>mgp = client
+                .gas_price(round, <span class="kw-2">&amp;</span>token::Denomination::NATIVE)
+                .<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let </span>fee = mgp.saturating_mul(tx.fee_gas().into());
+            tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+        }
 
         <span class="comment">// Sign the transaction.
         </span><span class="kw">let </span><span class="kw-2">mut </span>tx = tx.prepare_for_signing();
