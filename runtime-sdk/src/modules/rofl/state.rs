@@ -48,13 +48,14 @@ impl KeyEndorsementInfo {
     }
 }
 
+fn apps<S: Store>(store: S) -> storage::TypedStore<impl Store> {
+    let store = storage::PrefixStore::new(store, &MODULE_NAME);
+    storage::TypedStore::new(storage::PrefixStore::new(store, &APPS))
+}
+
 /// Retrieves an application configuration.
 pub fn get_app(app_id: AppId) -> Option<types::AppConfig> {
-    CurrentState::with_store(|store| {
-        let store = storage::PrefixStore::new(store, &MODULE_NAME);
-        let apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
-        apps.get(app_id)
-    })
+    CurrentState::with_store(|store| apps(store).get(app_id))
 }
 
 /// Retrieves all application configurations.
@@ -71,18 +72,14 @@ pub fn get_apps() -> Vec<types::AppConfig> {
 /// Updates an application configuration.
 pub fn set_app(cfg: types::AppConfig) {
     CurrentState::with_store(|store| {
-        let store = storage::PrefixStore::new(store, &MODULE_NAME);
-        let mut apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
-        apps.insert(cfg.id, cfg);
+        apps(store).insert(cfg.id, cfg);
     })
 }
 
 /// Removes an application configuration.
 pub fn remove_app(app_id: AppId) {
     CurrentState::with_store(|store| {
-        let store = storage::PrefixStore::new(store, &MODULE_NAME);
-        let mut apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
-        apps.remove(app_id);
+        apps(store).remove(app_id);
     })
 }
 

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use crate::{
-    module,
+    crypto, module,
     modules::{
         accounts::{self, API as _},
         core,
@@ -316,6 +316,9 @@ fn test_derive_app_key_id() {
 
 #[test]
 fn test_key_derivation() {
+    let _guard = crypto::signature::context::test_using_chain_context();
+    crypto::signature::context::set_chain_context(Default::default(), "test");
+
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
 
