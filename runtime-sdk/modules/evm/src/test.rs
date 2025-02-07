@@ -811,6 +811,9 @@ fn test_c10l_evm_runtime() {
 
 #[test]
 fn test_c10l_queries() {
+    let _guard = crypto::signature::context::test_using_chain_context();
+    crypto::signature::context::set_chain_context(Default::default(), "test");
+
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
     let mut signer = EvmSigner::new(0, keys::dave::sigspec());

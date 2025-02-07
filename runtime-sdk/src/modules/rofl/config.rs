@@ -21,6 +21,13 @@ pub trait Config: 'static {
     /// Gas cost of rofl.DeriveKey call.
     const GAS_COST_CALL_DERIVE_KEY: u64 = 10_000;
 
+    /// Maximum number of metadata key-value pairs.
+    const MAX_METADATA_PAIRS: usize = 64;
+    /// Maximum metadata key size.
+    const MAX_METADATA_KEY_SIZE: usize = 1024;
+    /// Maximum metadata value size.
+    const MAX_METADATA_VALUE_SIZE: usize = 16 * 1024;
+
     /// Amount of stake required for maintaining an application.
     ///
     /// The stake is held in escrow and is returned to the administrator when the application is

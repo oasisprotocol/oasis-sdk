@@ -100,6 +100,11 @@ impl BaseUnits {
         self.0
     }
 
+    /// Mutable token amount in base units.
+    pub fn amount_mut(&mut self) -> &mut u128 {
+        &mut self.0
+    }
+
     /// Denomination of the token amount.
     pub fn denomination(&self) -> &Denomination {
         &self.1

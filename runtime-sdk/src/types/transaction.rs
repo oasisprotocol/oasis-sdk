@@ -8,7 +8,6 @@ use crate::{
         signature::{self, PublicKey, Signature, Signer},
     },
     types::{
-        address,
         address::{Address, SignatureAddressSpec},
         token,
     },
@@ -396,11 +395,7 @@ impl CallerAddress {
     pub fn address(&self) -> Address {
         match self {
             CallerAddress::Address(address) => *address,
-            CallerAddress::EthAddress(address) => Address::new(
-                address::ADDRESS_V0_SECP256K1ETH_CONTEXT,
-                address::ADDRESS_V0_VERSION,
-                address.as_ref(),
-            ),
+            CallerAddress::EthAddress(address) => Address::from_eth(address.as_ref()),
         }
     }
 

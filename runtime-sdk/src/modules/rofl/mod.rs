@@ -192,6 +192,18 @@ impl<Cfg: Config> Module<Cfg> {
     fn tx_create<C: Context>(ctx: &C, body: types::Create) -> Result<app_id::AppId, Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_CREATE)?;
 
+        if body.metadata.len() > Cfg::MAX_METADATA_PAIRS {
+            return Err(Error::InvalidArgument);
+        }
+        for (key, value) in &body.metadata {
+            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+        }
+
         if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(Default::default());
         }
@@ -266,6 +278,29 @@ impl<Cfg: Config> Module<Cfg> {
     fn tx_update<C: Context>(ctx: &C, body: types::Update) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_UPDATE)?;
 
+        if body.metadata.len() > Cfg::MAX_METADATA_PAIRS {
+            return Err(Error::InvalidArgument);
+        }
+        for (key, value) in &body.metadata {
+            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+        }
+        if body.secrets.len() > Cfg::MAX_METADATA_PAIRS {
+            return Err(Error::InvalidArgument);
+        }
+        for (key, value) in &body.secrets {
+            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+        }
+
         let mut cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
 
         // Ensure caller is the admin and is allowed to update the configuration.
@@ -337,6 +372,18 @@ impl<Cfg: Config> Module<Cfg> {
 
         if body.expiration <= ctx.epoch() {
             return Err(Error::RegistrationExpired);
+        }
+
+        if body.metadata.len() > Cfg::MAX_METADATA_PAIRS {
+            return Err(Error::InvalidArgument);
+        }
+        for (key, value) in &body.metadata {
+            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                return Err(Error::InvalidArgument);
+            }
+            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                return Err(Error::InvalidArgument);
+            }
         }
 
         let cfg = state::get_app(body.app).ok_or(Error::UnknownApp)?;
@@ -652,6 +699,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_app(args.id)
     }
 
+    /// Returns all ROFL app configurations.
     #[handler(query = "rofl.Apps", expensive)]
     fn query_apps<C: Context>(_ctx: &C, _args: ()) -> Result<Vec<types::AppConfig>, Error> {
         Self::get_apps()

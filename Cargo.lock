@@ -3209,6 +3209,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "oasis-runtime-sdk-rofl-market"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ethabi",
+ "oasis-cbor",
+ "oasis-runtime-sdk",
+ "oasis-runtime-sdk-evm",
+ "once_cell",
+ "rustc-hex",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
 name = "object"
 version = "0.36.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
