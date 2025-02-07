@@ -7,3 +7,4 @@ pub mod consensus_accounts;
 pub mod core;
 pub mod rewards;
 pub mod rofl;
+pub mod rofl_market;
