@@ -171,6 +171,11 @@ pub trait Context {
 
     /// Maximum number of consensus messages that the runtime can emit in this block.
     fn max_messages(&self) -> u32;
+
+    /// Current UNIX timestamp.
+    fn now(&self) -> u64 {
+        self.runtime_header().timestamp
+    }
 }
 
 /// Dispatch context for the whole batch.

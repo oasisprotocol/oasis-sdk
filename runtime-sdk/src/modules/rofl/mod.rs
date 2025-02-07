@@ -652,6 +652,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::get_app(args.id)
     }
 
+    /// Returns all ROFL app configurations.
     #[handler(query = "rofl.Apps", expensive)]
     fn query_apps<C: Context>(_ctx: &C, _args: ()) -> Result<Vec<types::AppConfig>, Error> {
         Self::get_apps()
