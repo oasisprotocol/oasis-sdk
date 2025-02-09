@@ -6,13 +6,15 @@ use evm::{
     executor::stack::{
         IsPrecompileResult, PrecompileFailure, PrecompileHandle, PrecompileOutput, PrecompileSet,
     },
-    ExitError,
+    Context, ExitError, ExitRevert,
 };
 use primitive_types::H160;
 
 use crate::{backend::EVMBackendExt, Config};
 
 mod confidential;
+pub mod contract;
+pub mod erc20;
 mod gas;
 mod sha2;
 mod standard;
@@ -159,6 +161,12 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
             }
         } else {
             Cfg::additional_precompiles()
+                /*.and_then(|pc| {
+                    match pc.is_precompile(address, remaining_gas) {
+                        IsPrecompileResult::Answer { is_precompile: false, .. } => Cfg::static_contracts().map(|pc| pc.is_precompile(address, remaining_gas)),
+                        res => Some(res),
+                    }
+                })*/
                 .map(|pc| pc.is_precompile(address, remaining_gas))
                 .unwrap_or(IsPrecompileResult::Answer {
                     is_precompile: false,

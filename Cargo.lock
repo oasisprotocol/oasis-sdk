@@ -3137,6 +3137,7 @@ dependencies = [
  "num",
  "oasis-cbor",
  "oasis-runtime-sdk",
+ "oasis-runtime-sdk-macros",
  "once_cell",
  "primitive-types",
  "rand 0.8.5",
@@ -3159,9 +3160,11 @@ version = "0.3.0"
 dependencies = [
  "darling 0.20.10",
  "difference",
+ "hex",
  "proc-macro2",
  "quote",
  "syn 2.0.90",
+ "tiny-keccak 2.0.2",
 ]
 
 [[package]]

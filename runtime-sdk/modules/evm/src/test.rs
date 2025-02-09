@@ -41,11 +41,28 @@ static FAUCET_CONTRACT_CODE_HEX: &str =
 pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
-    type AdditionalPrecompileSet = ();
+    type AdditionalPrecompileSet =
+        BTreeMap<primitive_types::H160, evm::executor::stack::PrecompileFn>;
 
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
+
+    fn additional_precompiles() -> Option<Self::AdditionalPrecompileSet> {
+        use crate::{precompile as p, precompile::contract::StaticContract as _};
+        struct Token {}
+        impl p::erc20::AccountToken for Token {
+            type Accounts = Accounts;
+            const GAS_COSTS: p::erc20::TokenOperationCosts = p::erc20::TokenOperationCosts::new();
+            const NAME: &str = "Token";
+            const SYMBOL: &str = "TOK";
+            const DECIMALS: u8 = 18;
+        }
+        Some(BTreeMap::from([(
+            primitive_types::H160([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+            p::erc20::Erc20Contract::<Token>::as_precompile(),
+        )]))
+    }
 }
 
 pub(crate) struct ConfidentialEVMConfig;
