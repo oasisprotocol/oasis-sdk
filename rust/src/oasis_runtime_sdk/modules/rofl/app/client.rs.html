@@ -682,6 +682,9 @@
 <a href="#682" id="682">682</a>
 <a href="#683" id="683">683</a>
 <a href="#684" id="684">684</a>
+<a href="#685" id="685">685</a>
+<a href="#686" id="686">686</a>
+<a href="#687" id="687">687</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::{
@@ -755,6 +758,8 @@
 </span><span class="kw">pub struct </span>DeriveKeyRequest {
     <span class="doccomment">/// Key kind.
     </span><span class="kw">pub </span>kind: modules::rofl::types::KeyKind,
+    <span class="doccomment">/// Key scope.
+    </span><span class="kw">pub </span>scope: modules::rofl::types::KeyScope,
     <span class="doccomment">/// Key generation.
     </span><span class="kw">pub </span>generation: u64,
     <span class="doccomment">/// Key identifier.
@@ -882,6 +887,7 @@
             modules::rofl::types::DeriveKey {
                 app: A::id(),
                 kind: request.kind,
+                scope: request.scope,
                 generation: request.generation,
                 key_id: request.key_id,
             },

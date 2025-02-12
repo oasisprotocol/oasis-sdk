@@ -182,6 +182,32 @@
 <a href="#182" id="182">182</a>
 <a href="#183" id="183">183</a>
 <a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::BTreeMap;
 
 <span class="kw">use crate</span>::{
@@ -301,6 +327,29 @@
     </span>X25519 = <span class="number">1</span>,
 }
 
+<span class="doccomment">/// Scope of key for derivation.
+</span><span class="attr">#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
+#[cbor(with_default)]
+#[repr(u8)]
+</span><span class="kw">pub enum </span>KeyScope {
+    <span class="doccomment">/// Global application scope (e.g. all instances get the same key).
+    </span><span class="attr">#[default]
+    </span>Global = <span class="number">0</span>,
+
+    <span class="doccomment">/// Node scope (e.g. all instances endorsed by the same node get the same key).
+    </span>Node = <span class="number">1</span>,
+
+    <span class="doccomment">/// Entity scope (e.g. all instances endorsed by nodes from the same entity get the same key).
+    </span>Entity = <span class="number">2</span>,
+}
+
+<span class="kw">impl </span>KeyScope {
+    <span class="doccomment">/// Whether this key scope is the global key scope.
+    </span><span class="kw">pub fn </span>is_global(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; bool {
+        <span class="macro">matches!</span>(<span class="self">self</span>, <span class="self">Self</span>::Global)
+    }
+}
+
 <span class="doccomment">/// Derive key call.
 </span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 </span><span class="kw">pub struct </span>DeriveKey {
@@ -308,6 +357,9 @@
     </span><span class="kw">pub </span>app: AppId,
     <span class="doccomment">/// Key kind.
     </span><span class="kw">pub </span>kind: KeyKind,
+    <span class="doccomment">/// Key scope.
+    </span><span class="attr">#[cbor(optional, skip_serializing_if = <span class="string">"KeyScope::is_global"</span>)]
+    </span><span class="kw">pub </span>scope: KeyScope,
     <span class="doccomment">/// Key generation.
     </span><span class="kw">pub </span>generation: u64,
     <span class="doccomment">/// Key identifier.
