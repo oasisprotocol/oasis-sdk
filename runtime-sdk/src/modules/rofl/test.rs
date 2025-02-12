@@ -243,6 +243,70 @@ fn test_create_scheme() {
 }
 
 #[test]
+fn test_derive_app_key_id() {
+    // Ensure that app key identifier derivation is stable.
+    let tcs = [
+        (
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf",
+            types::KeyKind::EntropyV0,
+            types::KeyScope::Global,
+            b"test key",
+            None,
+            "d5c2af4a445f893f3cc395fd7ed3aca53ecc98f4ff93401f03d8e17b9dac563f",
+        ),
+        (
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf",
+            types::KeyKind::X25519,
+            types::KeyScope::Global,
+            b"test key",
+            None,
+            "e1ad6dfca49ca3449642a8334c97120bbdeaf778e2c5b44f06b3584d9d77edbb",
+        ),
+        (
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf",
+            types::KeyKind::EntropyV0,
+            types::KeyScope::Node,
+            b"test key",
+            Some(types::Registration {
+                node_id: "0000000000000000000000000000000000000000000000000000000000000000".into(),
+                ..Default::default()
+            }),
+            "90725fe1f83e647f2a6ae917e076b5c42cf64944efa79fa4707a39583ff89b26",
+        ),
+        (
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf",
+            types::KeyKind::EntropyV0,
+            types::KeyScope::Node,
+            b"test key",
+            Some(types::Registration {
+                node_id: "1111111111111111111111111111111111111111111111111111111111111111".into(),
+                ..Default::default()
+            }),
+            "06374f036728adfbd64a2bb10d55a3d8ea8de122305383ea27064e12caafba71",
+        ),
+        (
+            "rofl1qqfuf7u556prwv0wkdt398prhrpat7r3rvr97khf",
+            types::KeyKind::EntropyV0,
+            types::KeyScope::Entity,
+            b"test key",
+            Some(types::Registration {
+                entity_id: Some(
+                    "1111111111111111111111111111111111111111111111111111111111111111".into(),
+                ),
+                ..Default::default()
+            }),
+            "5e3ec31fb6648b48fa8e721796fb1d01d11fee50303fd382118ddf9e69d6f77b",
+        ),
+    ];
+    for tc in tcs {
+        let key_id =
+            Module::<Config>::derive_app_key_id(&tc.0.into(), tc.1, tc.2, tc.3, tc.4.clone())
+                .unwrap();
+        assert_eq!(key_id, tc.5.into(), "{:?}", tc);
+    }
+}
+
+#[test]
 fn test_key_derivation() {
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
@@ -262,6 +326,7 @@ fn test_key_derivation() {
     let derive = types::DeriveKey {
         app,
         kind: types::KeyKind::EntropyV0,
+        scope: types::KeyScope::Global,
         generation: 0,
         key_id: b"my test key".into(),
     };
@@ -292,7 +357,7 @@ fn test_key_derivation() {
         extra_keys: vec![keys::alice::pk()],
         ..Default::default()
     };
-    state::update_registration(fake_registration).unwrap();
+    state::update_registration(fake_registration.clone()).unwrap();
 
     // The call should succeed now.
     let dispatch_result = signer_alice.call_opts(
@@ -343,4 +408,62 @@ fn test_key_derivation() {
     let (err_module, err_code) = dispatch_result.result.unwrap_failed();
     assert_eq!(&err_module, "rofl");
     assert_eq!(err_code, 1);
+
+    // Try different scopes.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        types::DeriveKey {
+            scope: types::KeyScope::Node,
+            ..derive.clone()
+        },
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let dispatch_result = dispatch_result.result.unwrap();
+    let result: types::DeriveKeyResponse = cbor::from_value(dispatch_result).unwrap();
+    assert!(!result.key.is_empty());
+
+    // Entity scope should fail as the registration doesn't have an entity set.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        types::DeriveKey {
+            scope: types::KeyScope::Entity,
+            ..derive.clone()
+        },
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let (err_module, err_code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(&err_module, "rofl");
+    assert_eq!(err_code, 1);
+
+    // Update registration to include an entity.
+    state::update_registration(types::Registration {
+        entity_id: Some(Default::default()),
+        ..fake_registration.clone()
+    })
+    .unwrap();
+
+    // Entity scope should now work.
+    let dispatch_result = signer_alice.call_opts(
+        &ctx,
+        "rofl.DeriveKey",
+        types::DeriveKey {
+            scope: types::KeyScope::Entity,
+            ..derive.clone()
+        },
+        CallOptions {
+            encrypted: true,
+            ..Default::default()
+        },
+    );
+    let dispatch_result = dispatch_result.result.unwrap();
+    let result: types::DeriveKeyResponse = cbor::from_value(dispatch_result).unwrap();
+    assert!(!result.key.is_empty());
 }
