@@ -3977,7 +3977,7 @@ dependencies = [
 
 [[package]]
 name = "rofl-appd"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "anyhow",
  "oasis-cbor",
@@ -3996,7 +3996,7 @@ dependencies = [
 
 [[package]]
 name = "rofl-containers"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "base64",
