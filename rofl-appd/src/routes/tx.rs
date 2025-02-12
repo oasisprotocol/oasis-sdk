@@ -104,7 +104,7 @@ pub async fn sign_and_submit(
     };
 
     // Deserialize the passed transaction, depending on its kind.
-    let tx = match body.into_inner().tx {
+    let mut tx = match body.into_inner().tx {
         Transaction::Std(data) => {
             cbor::from_slice(&data).map_err(|err| (Status::BadRequest, err.to_string()))?
         }
@@ -173,6 +173,9 @@ pub async fn sign_and_submit(
             "transaction method not allowed".to_string(),
         ));
     }
+
+    // Make the ROFL module resolve the payer for all of our transactions.
+    tx.set_fee_proxy("rofl", env.app_id().as_ref());
 
     // Sign and submit transaction.
     let result = env
