@@ -105,10 +105,10 @@ func fixture() *oasis.NetworkFixture {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
 						Components: []oasis.ComponentCfg{
 							{
-								Kind: component.RONL,
+								Kind:    component.RONL,
+								Version: version.Version{Major: 0, Minor: 1, Patch: 0},
 								Binaries: map[node.TEEHardware]string{
 									node.TEEHardwareInvalid: viper.GetString(cfgRuntimeBinary),
 								},

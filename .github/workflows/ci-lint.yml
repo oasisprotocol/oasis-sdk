@@ -72,13 +72,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Lint Go client-sdk
-        uses: golangci/golangci-lint-action@v5.1.0
+        uses: golangci/golangci-lint-action@v6.5.0
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.54.2
+          version: v1.63
           working-directory: client-sdk/go
 
   lint-go-tests-e2e:
@@ -101,13 +101,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Lint E2E tests
-        uses: golangci/golangci-lint-action@v5.1.0
+        uses: golangci/golangci-lint-action@v6.5.0
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.56.1
+          version: v1.63
           working-directory: tests/e2e
 
   lint-go-reflect:
@@ -120,13 +120,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Lint reflect-go
-        uses: golangci/golangci-lint-action@v5.1.0
+        uses: golangci/golangci-lint-action@v6.5.0
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.56.1
+          version: v1.63
           working-directory: client-sdk/ts-web/core/reflect-go
 
   lint-ts-web:

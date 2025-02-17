@@ -1120,7 +1120,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 		coinsPerAccount = uint64(1_000_000)
 	}
 
-	minBalanceRequired := coinsPerAccount * uint64(numAccounts)
+	minBalanceRequired := coinsPerAccount * uint64(numAccounts) //nolint: gosec
 	if balance < minBalanceRequired {
 		return fmt.Errorf("Alice is too broke to fund accounts (balance is %d, need %d)", balance, minBalanceRequired) //nolint: stylecheck
 	}
@@ -1139,7 +1139,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 	numT := make(map[string]uint64)
 	for i := 0; i < numAccounts; i++ {
 		// Create account.
-		at := txgen.AccountType(uint8(rng.Intn(int(txgen.AccountTypeMax) + 1)))
+		at := txgen.AccountType(uint8(rng.Intn(int(txgen.AccountTypeMax) + 1))) //nolint: gosec
 		numT[at.String()]++
 		sig, grr := txgen.CreateAndFundAccount(ctx, env.Client, testing.Alice.Signer, i, at, coinsPerAccount)
 		if grr != nil {

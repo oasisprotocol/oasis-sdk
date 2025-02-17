@@ -337,7 +337,7 @@ var encounteredVersionInfo = false
 
 func visitSigned(t reflect.Type) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting signed wrapper %v\n", t)
-	m, ok := reflect.PtrTo(t).MethodByName("Open")
+	m, ok := reflect.PointerTo(t).MethodByName("Open")
 	if !ok {
 		panic(fmt.Sprintf("signed wrapper %v has no open method", t))
 	}

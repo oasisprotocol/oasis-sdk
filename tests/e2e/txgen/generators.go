@@ -51,7 +51,7 @@ func GenTransfer(
 		Amount types.BaseUnits `json:"amount"`
 	}{
 		To:     types.NewAddress(sigspecForSigner(accts[rng.Intn(len(accts))])),
-		Amount: types.NewBaseUnits(*quantity.NewFromUint64(uint64(rng.Int63n(int64(balance)))), types.NativeDenomination),
+		Amount: types.NewBaseUnits(*quantity.NewFromUint64(uint64(rng.Int63n(int64(balance)))), types.NativeDenomination), //nolint: gosec
 	})
 	return tx, nil
 }
