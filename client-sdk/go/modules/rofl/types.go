@@ -131,6 +131,8 @@ const (
 	AppUpdatedEventCode = 2
 	// AppRemovedEventCode is the event code for the application removed event.
 	AppRemovedEventCode = 3
+	// InstanceRegisteredEventCode is the event code for the instance registered event.
+	InstanceRegisteredEventCode = 4
 )
 
 // AppCreatedEvent is an application created event.
@@ -148,11 +150,18 @@ type AppRemovedEvent struct {
 	ID AppID `json:"id"`
 }
 
+// InstanceRegisteredEvent is an instance registered event.
+type InstanceRegisteredEvent struct {
+	AppID AppID           `json:"app_id"`
+	RAK   types.PublicKey `json:"rak"`
+}
+
 // Event is a rofl module event.
 type Event struct {
-	AppCreated *AppCreatedEvent
-	AppUpdated *AppUpdatedEvent
-	AppRemoved *AppRemovedEvent
+	AppCreated         *AppCreatedEvent
+	AppUpdated         *AppUpdatedEvent
+	AppRemoved         *AppRemovedEvent
+	InstanceRegistered *InstanceRegisteredEvent
 }
 
 // StakeThresholds contains staking thresholds for managing ROFL.
