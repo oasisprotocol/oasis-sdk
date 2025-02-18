@@ -14,6 +14,7 @@ func RuntimeFixture(sc *scenario.RuntimeScenario, ff *oasis.NetworkFixture) {
 	// Add ROFL component.
 	ff.Runtimes[1].Deployments[0].Components = append(ff.Runtimes[1].Deployments[0].Components, oasis.ComponentCfg{
 		Kind:     component.ROFL,
+		Name:     "oracle",
 		Binaries: sc.ResolveRuntimeBinaries(roflBinaryName),
 	})
 

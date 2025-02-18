@@ -139,9 +139,9 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error {
 		return fmt.Errorf("ensuring contract->alice delegate runtime event: %w", err)
 	}
 
-	// Call the delegate done.
+	// Call the delegate done. Use uint8 to simplify CBOR encoding.
 	env.Logger.Info("calling delegateDone")
-	data, err = contractDelegation.ABI.Pack("delegateDone", uint8(receiptID)) // uint8 to simplify CBOR encoding.
+	data, err = contractDelegation.ABI.Pack("delegateDone", uint8(receiptID)) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to pack arguments: %w", err)
 	}
@@ -191,7 +191,7 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error {
 	}
 
 	// Call the undelegate start method.
-	data, err = contractDelegation.ABI.Pack("undelegateStart", uint8(receiptID)) // uint8 to simplify CBOR encoding.
+	data, err = contractDelegation.ABI.Pack("undelegateStart", uint8(receiptID)) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to pack arguments: %w", err)
 	}
@@ -213,7 +213,7 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error {
 
 	// Call the undelegate done method.
 	env.Logger.Info("calling undelegateDone")
-	data, err = contractDelegation.ABI.Pack("undelegateDone", uint8(receiptID)) // uint8 to simplify CBOR encoding.
+	data, err = contractDelegation.ABI.Pack("undelegateDone", uint8(receiptID)) //nolint: gosec
 	if err != nil {
 		return fmt.Errorf("failed to pack arguments: %w", err)
 	}

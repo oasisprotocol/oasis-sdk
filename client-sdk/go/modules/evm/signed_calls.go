@@ -95,7 +95,7 @@ func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, ga
 		Domain: apitypes.TypedDataDomain{
 			Name:              "oasis-runtime-sdk/evm: signed query",
 			Version:           "1.0.0",
-			ChainId:           math.NewHexOrDecimal256(int64(chainID)),
+			ChainId:           math.NewHexOrDecimal256(int64(chainID)), //nolint: gosec
 			VerifyingContract: "",
 			Salt:              "",
 		},
@@ -103,14 +103,14 @@ func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, ga
 			"from":     hex.EncodeToString(caller),
 			"to":       hex.EncodeToString(callee),
 			"value":    &valueU256,
-			"gasLimit": math.NewHexOrDecimal256(int64(gasLimit)),
+			"gasLimit": math.NewHexOrDecimal256(int64(gasLimit)), //nolint: gosec
 			"gasPrice": &gasPriceU256,
 			"data":     data,
 			"leash": map[string]interface{}{
-				"nonce":       math.NewHexOrDecimal256(int64(leash.Nonce)),
-				"blockNumber": math.NewHexOrDecimal256(int64(leash.BlockNumber)),
+				"nonce":       math.NewHexOrDecimal256(int64(leash.Nonce)),       //nolint: gosec
+				"blockNumber": math.NewHexOrDecimal256(int64(leash.BlockNumber)), //nolint: gosec
 				"blockHash":   leash.BlockHash,
-				"blockRange":  math.NewHexOrDecimal256(int64(leash.BlockRange)),
+				"blockRange":  math.NewHexOrDecimal256(int64(leash.BlockRange)), //nolint: gosec
 			},
 		},
 	}

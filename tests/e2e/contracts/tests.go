@@ -487,7 +487,7 @@ OUTER:
 				instance.ID,
 				map[string]map[string]interface{}{
 					"signature_verify": {
-						"kind":      uint32(i),
+						"kind":      uint32(i), //nolint: gosec
 						"key":       checker.keyBytes,
 						"context":   messageSigner.context,
 						"message":   message,

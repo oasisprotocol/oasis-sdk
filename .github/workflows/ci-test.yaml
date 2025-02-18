@@ -98,7 +98,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -120,7 +120,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -218,6 +218,9 @@ jobs:
         working-directory: client-sdk/ts-web/core/playground
         run: ./sample-run-envoy.sh &
 
+      - name: 'testnet: Install system packages'
+        run: sudo apt-get -y install bubblewrap
+
       - name: 'testnet: Download artifacts'
         working-directory: tests
         run: ./download-artifacts.sh
@@ -303,7 +306,7 @@ jobs:
       # Run all E2E tests in mock SGX.
       OASIS_UNSAFE_SKIP_AVR_VERIFY: 1
       OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES: 1
-      OASIS_UNSAFE_MOCK_SGX: 1
+      OASIS_UNSAFE_MOCK_TEE: 1
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -405,7 +408,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -484,7 +487,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -521,7 +524,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.23.x"
 
       - name: Install Oasis dependencies
         run: |

@@ -259,9 +259,9 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
 					{
-						Version: version.Version{Major: 0, Minor: 1, Patch: 0},
 						Components: []oasis.ComponentCfg{
 							{
+								Version:  version.Version{Major: 0, Minor: 1, Patch: 0},
 								Kind:     component.RONL,
 								Binaries: sc.ResolveRuntimeBinaries(runtimeBinary),
 							},

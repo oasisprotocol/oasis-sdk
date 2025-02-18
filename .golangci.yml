@@ -17,7 +17,6 @@ linters:
     - dupl
     - errcheck
     - exhaustive
-    - exportloopref
     - goconst
     - gocritic
     - gocyclo
@@ -52,9 +51,6 @@ linters-settings:
     # Switch statements are to be considered exhaustive if a 'default' case is
     # present, even if all enum members aren't listed in the switch.
     default-signifies-exhaustive: true
-  govet:
-    # Enabled checking for shadowed variables.
-    check-shadowing: true
   goimports:
     # Put local imports after 3rd-party packages.
     local-prefixes: github.com/oasisprotocol/

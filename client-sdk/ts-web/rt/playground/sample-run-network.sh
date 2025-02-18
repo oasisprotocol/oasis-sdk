@@ -22,8 +22,8 @@ FIXTURE_FILE="$WORKDIR/fixture.json"
     --fixture.default.halt_epoch 100000 \
     --fixture.default.runtime.version 0.1.0 \
     --fixture.default.runtime.version 0.1.0 \
-    --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE" \
-    --fixture.default.deterministic_entities
+    --fixture.default.deterministic_entities \
+    --fixture.default.staking_genesis ./staking.json >"$FIXTURE_FILE"
 
 # Use mock SGX.
 jq '
@@ -40,48 +40,6 @@ jq '
 ' "$FIXTURE_FILE" >"$FIXTURE_FILE.tmp"
 mv "$FIXTURE_FILE.tmp" "$FIXTURE_FILE"
 
-# Run test runner to generate genesis document.
-"$TEST_NET_RUNNER" \
-    --fixture.file "$FIXTURE_FILE" \
-    --basedir "$WORKDIR" \
-    --basedir.no_temp_dir &
-RUNNER_PID=$!
-
-# Below is a workaround for there being no way to change the default max tx size which
-# prevents the compute nodes from registering.
-#
-# Wait for genesis file to be created so we can patch it.
-GENESIS_FILE="$WORKDIR/net-runner/network/genesis.json"
-OUTPUT_GENESIS_FILE=/tmp/genesis.json
-while [ ! -e "$GENESIS_FILE" ]; do
-  sleep 1
-done
-# Stop the runner.
-kill $RUNNER_PID
-killall oasis-node
-wait
-# Wait for all the nodes to stop before proceeding.
-while [ $(pgrep oasis-node) ]; do
-  sleep 1
-done
-# Patch the genesis file.
-jq '
-  .consensus.params.max_tx_size = 131072 |
-  .consensus.params.max_block_size = 4194304
-' "$GENESIS_FILE" >"$OUTPUT_GENESIS_FILE"
-# Update the fixture to use the patched genesis.
-mv "$FIXTURE_FILE" /tmp/fixture.json
-jq '
-  .network.genesis_file = "'$OUTPUT_GENESIS_FILE'" |
-  .network.restore_identities = true |
-  .entities[1].Restore = true
-' /tmp/fixture.json > "$FIXTURE_FILE"
-# Reset state.
-rm -rf $WORKDIR/net-runner/network/client-*/{consensus,runtime,persistent-store.badger.db}
-rm -rf $WORKDIR/net-runner/network/compute-*/{consensus,runtime,persistent-store.badger.db}
-rm -rf $WORKDIR/net-runner/network/keymanager-*/{consensus,runtime,persistent-store.badger.db}
-rm -rf $WORKDIR/net-runner/network/seed-*/seed
-rm -rf $WORKDIR/net-runner/network/validator-*/consensus
 # Signal that we can continue.
 touch /tmp/cfg_ready
 

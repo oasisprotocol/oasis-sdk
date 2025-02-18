@@ -181,7 +181,10 @@ var (
 				fallthrough
 			default:
 				// Configure SGX signature for the right component.
-				comp := bnd.Manifest.GetComponentByID(compId)
+				comp, ok := bnd.Manifest.GetComponentByID(compId)
+				if !ok {
+					cobra.CheckErr(fmt.Errorf("component '%s' does not exist", compId))
+				}
 				comp.SGX.Signature = sgxSigName
 			}
 
@@ -216,7 +219,7 @@ var (
 
 			fmt.Printf("Components:\n")
 			if bnd.Manifest.Executable != "" {
-				legacyRonlComp := bnd.Manifest.GetComponentByID(component.ID_RONL)
+				legacyRonlComp, _ := bnd.Manifest.GetComponentByID(component.ID_RONL)
 				showComponent(bnd, legacyRonlComp, true)
 			}
 
