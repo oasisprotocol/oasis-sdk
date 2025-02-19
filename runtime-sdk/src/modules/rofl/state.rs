@@ -57,6 +57,17 @@ pub fn get_app(app_id: AppId) -> Option<types::AppConfig> {
     })
 }
 
+/// Retrieves all application configurations.
+pub fn get_apps() -> Vec<types::AppConfig> {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let apps = storage::TypedStore::new(storage::PrefixStore::new(store, &APPS));
+        apps.iter()
+            .map(|(_, cfg): (AppId, types::AppConfig)| cfg)
+            .collect()
+    })
+}
+
 /// Updates an application configuration.
 pub fn set_app(cfg: types::AppConfig) {
     CurrentState::with_store(|store| {
@@ -281,9 +292,15 @@ mod test {
         let app = get_app(app_id).expect("application config should be updated");
         assert_eq!(app, cfg);
 
+        let apps = get_apps();
+        assert_eq!(apps.len(), 1);
+        assert_eq!(apps[0], cfg);
+
         remove_app(app_id);
         let app = get_app(app_id);
         assert!(app.is_none(), "application should have been removed");
+        let apps = get_apps();
+        assert_eq!(apps.len(), 0);
     }
 
     #[test]

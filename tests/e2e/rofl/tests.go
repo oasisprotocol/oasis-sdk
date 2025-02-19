@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
@@ -131,7 +132,18 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 	env.Logger.Info("retrieved application config", "app_cfg", appCfg)
 
 	if appCfg.ID != exampleAppID {
-		return fmt.Errorf("expected app ID '%s', got '%s'", exampleAppID, appCfg.ID)
+		return fmt.Errorf("app: expected app ID '%s', got '%s'", exampleAppID, appCfg.ID)
+	}
+
+	apps, err := rf.Apps(ctx, client.RoundLatest)
+	if err != nil {
+		return err
+	}
+	if len(apps) != 1 {
+		return fmt.Errorf("apps: expected 1 application, got %d", len(apps))
+	}
+	if apps[0].ID != exampleAppID {
+		return fmt.Errorf("apps: expected app ID '%s', got '%s'", exampleAppID, apps[0].ID)
 	}
 
 	instances, err := rf.AppInstances(ctx, client.RoundLatest, exampleAppID)
@@ -153,7 +165,8 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 		}
 
 		// Query individual instance and ensure it is equal.
-		instance, err := rf.AppInstance(ctx, client.RoundLatest, exampleAppID, rak)
+		var instance *rofl.Registration
+		instance, err = rf.AppInstance(ctx, client.RoundLatest, exampleAppID, rak)
 		if err != nil {
 			return fmt.Errorf("failed to query instance '%s': %w", rak, err)
 		}
@@ -165,6 +178,23 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 	// There should be 3 instances, one for each compute node.
 	if expected := 3; len(instances) != expected {
 		return fmt.Errorf("expected %d application instances, got %d", expected, len(instances))
+	}
+
+	// InstanceRegistered events should be emitted on every re-registration.
+	ch, err := env.Client.WatchEvents(ctx, []client.EventDecoder{rf}, false)
+	if err != nil {
+		return err
+	}
+	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	ev, err := scenario.WaitForRuntimeEventUntil[*rofl.Event](waitCtx, ch, func(ev *rofl.Event) bool {
+		return ev.InstanceRegistered != nil
+	})
+	if err != nil {
+		return err
+	}
+	if ev.InstanceRegistered == nil || ev.InstanceRegistered.AppID != exampleAppID {
+		return fmt.Errorf("expected rofl.InstanceRegistered event to be emitted, got: %v", ev)
 	}
 
 	return nil

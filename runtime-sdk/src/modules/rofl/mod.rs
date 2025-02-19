@@ -97,6 +97,9 @@ pub trait API {
     /// Get an application's configuration.
     fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error>;
 
+    /// Get all application configurations.
+    fn get_apps() -> Result<Vec<types::AppConfig>, Error>;
+
     /// Get all registered instances for an application.
     fn get_instances(id: app_id::AppId) -> Result<Vec<types::Registration>, Error>;
 }
@@ -145,6 +148,10 @@ impl<Cfg: Config> API for Module<Cfg> {
 
     fn get_app(id: app_id::AppId) -> Result<types::AppConfig, Error> {
         state::get_app(id).ok_or(Error::UnknownApp)
+    }
+
+    fn get_apps() -> Result<Vec<types::AppConfig>, Error> {
+        Ok(state::get_apps())
     }
 
     fn get_instances(id: app_id::AppId) -> Result<Vec<types::Registration>, Error> {
@@ -389,6 +396,13 @@ impl<Cfg: Config> Module<Cfg> {
             metadata: body.metadata,
         };
         state::update_registration(registration)?;
+
+        CurrentState::with(|state| {
+            state.emit_event(Event::InstanceRegistered {
+                app_id: body.app,
+                rak: body.ect.capability_tee.rak.into(),
+            })
+        });
 
         Ok(())
     }
@@ -636,6 +650,11 @@ impl<Cfg: Config> Module<Cfg> {
     #[handler(query = "rofl.App")]
     fn query_app<C: Context>(_ctx: &C, args: types::AppQuery) -> Result<types::AppConfig, Error> {
         Self::get_app(args.id)
+    }
+
+    #[handler(query = "rofl.Apps", expensive)]
+    fn query_apps<C: Context>(_ctx: &C, _args: ()) -> Result<Vec<types::AppConfig>, Error> {
+        Self::get_apps()
     }
 
     /// Returns a specific registered instance for the given ROFL application.

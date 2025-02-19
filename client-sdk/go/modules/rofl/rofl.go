@@ -19,6 +19,7 @@ var (
 
 	// Queries.
 	methodApp             = types.NewMethodName("rofl.App", AppQuery{})
+	methodApps            = types.NewMethodName("rofl.Apps", nil)
 	methodAppInstance     = types.NewMethodName("rofl.AppInstance", AppInstanceQuery{})
 	methodAppInstances    = types.NewMethodName("rofl.AppInstances", AppQuery{})
 	methodParameters      = types.NewMethodName("rofl.Parameters", nil)
@@ -40,6 +41,9 @@ type V1 interface {
 
 	// App queries the given application configuration.
 	App(ctx context.Context, round uint64, id AppID) (*AppConfig, error)
+
+	// Apps queries all application configurations.
+	Apps(ctx context.Context, round uint64) ([]*AppConfig, error)
 
 	// AppInstance queries a specific registered instance of the given application.
 	AppInstance(ctx context.Context, round uint64, id AppID, rak types.PublicKey) (*Registration, error)
@@ -92,6 +96,16 @@ func (a *v1) App(ctx context.Context, round uint64, id AppID) (*AppConfig, error
 		return nil, err
 	}
 	return &appCfg, nil
+}
+
+// Implements V1.
+func (a *v1) Apps(ctx context.Context, round uint64) ([]*AppConfig, error) {
+	var apps []*AppConfig
+	err := a.rc.Query(ctx, round, methodApps, nil, &apps)
+	if err != nil {
+		return nil, err
+	}
+	return apps, nil
 }
 
 // Implements V1.
@@ -190,6 +204,14 @@ func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 		}
 		for _, ev := range evs {
 			events = append(events, &Event{AppRemoved: ev})
+		}
+	case InstanceRegisteredEventCode:
+		var evs []*InstanceRegisteredEvent
+		if err := cbor.Unmarshal(event.Value, &evs); err != nil {
+			return nil, fmt.Errorf("decode rofl instance registered event value: %w", err)
+		}
+		for _, ev := range evs {
+			events = append(events, &Event{InstanceRegistered: ev})
 		}
 	default:
 		return nil, fmt.Errorf("invalid rofl event code: %v", event.Code)

@@ -156,6 +156,8 @@ fn test_management_ops() {
             ..Default::default()
         }
     );
+    let apps = Module::<Config>::get_apps().unwrap();
+    assert_eq!(apps.len(), 2);
     let instances = Module::<Config>::get_instances(app_id).unwrap();
     assert_eq!(instances.len(), 0);
 
@@ -196,6 +198,8 @@ fn test_management_ops() {
             ..Default::default()
         }
     );
+    let apps = Module::<Config>::get_apps().unwrap();
+    assert_eq!(apps.len(), 2);
 
     // Remove application. Alice should not be allowed to do it.
     let remove = types::Remove { id: app_id };
@@ -216,6 +220,10 @@ fn test_management_ops() {
     assert_eq!(balance, 1_000); // Returned stake for one application.
     let balance = Accounts::get_balance(*ADDRESS_APP_STAKE_POOL, Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000); // One application remains.
+
+    // Ensure one app is left.
+    let apps = Module::<Config>::get_apps().unwrap();
+    assert_eq!(apps.len(), 1);
 }
 
 #[test]
