@@ -4,8 +4,12 @@ import TabItem from '@theme/TabItem';
 # Application
 
 This chapter will show you how to quickly create, build and test a minimal
-ROFL app that serves as a simple oracle, fetching data from remote sources via
-HTTPS and posting it on chain for aggregation.
+containerized ROFL app.
+
+ROFL apps come in different flavors and the right choice is a tradeoff between
+TCB size and ease of use. The easiest to use are TDX container-based apps which
+are presented in this guide and more advanced flavors with smaller TCBs are
+described separately.
 
 ## How do ROFL Apps Work?
 
@@ -15,7 +19,8 @@ Each ROFL app runs in its own Trusted Execution Environment (TEE) which is
 provisioned by an Oasis Node from its _bundle_ (a zip archive containing the
 program binaries and metadata required for execution). ROFL apps register to
 the Oasis Network in order to be able to easily authenticate to on-chain smart
-contracts.
+contracts and transparently gain access to the decentralized per-app key
+management system.
 
 Inside the TEE, the ROFL app performs important functions that ensure its
 security and enable secure communication with the outside world. This includes
@@ -36,220 +41,224 @@ chains).
 [Sapphire runtime]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
 <!-- markdownlint-enable line-length -->
 
-## Repository Structure and Dependencies
+## App Directory and Manifest
 
-:::info
-
-You can find the entire project inside the Oasis SDK repository under
-[`examples/runtime-sdk/rofl-oracle`].
-
-<!-- markdownlint-disable line-length -->
-[`examples/runtime-sdk/rofl-oracle`]: https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/runtime-sdk/rofl-oracle
-<!-- markdownlint-enable line-length -->
-
-:::
-
-First we create the basic directory structure for the minimal runtime using
-Rust's [`cargo`]:
+First we create the basic directory structure for the ROFL app using the Oasis
+CLI. We also need to select the network (in this case `testnet`) and the account
+that will be the initial administrator of the ROFL app (in this case
+`myaccount`):
 
 ```shell
-cargo init rofl-oracle
+oasis rofl init myapp --network testnet --account myaccount
 ```
 
-This will create the `rofl-oracle` directory and populate it with some
-boilerplate needed to describe a Rust application. It will also set up the
-directory for version control using Git. The rest of the guide assumes that you
-are executing commands from within this directory.
+This will create the `myapp` directory and initialize some boilerplate needed to
+build a TDX container-based ROFL app. The rest of the guide assumes that you are
+executing commands from within this directory.
 
-Since the Runtime SDK requires a nightly version of the Rust toolchain, you need
-to specify a version to use by creating a special file called
-`rust-toolchain.toml` containing the following information:
+The command will output a summary of what is being created:
 
-<!-- markdownlint-disable line-length -->
-![code toml](../../examples/runtime-sdk/rofl-oracle/rust-toolchain.toml "rust-toolchain.toml")
-<!-- markdownlint-enable line-length -->
-
-Additionally, due to the requirements of some upstream dependencies, you need to
-configure Cargo to always build with specific target CPU platform features
-(namely AES-NI and SSE3) by creating a `.cargo/config.toml` file with the
-following content:
-
-:::info
-
-You do not need this additional configuration if you're building with the
-[`rofl-dev`][rofl-dev] container, since that already has the relevant environment
-variables set appropriately.
-
-:::
-
-```toml title=".cargo/config.toml"
-[build]
-rustflags = ["-C", "target-feature=+aes,+ssse3"]
-rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
-
-[test]
-rustflags = ["-C", "target-feature=+aes,+ssse3"]
-rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+```
+Creating a new ROFL app with default policy...
+Name:     myapp
+Version:  0.1.0
+TEE:      tdx
+Kind:     container
+Deployment 'default':
+  Network:  testnet
+  ParaTime: sapphire
+  Debug:    false
+  Admin:    myaccount
+Created manifest in 'rofl.yaml'.
+Run `oasis rofl create --update-manifest` to register your ROFL app and configure an app ID.
 ```
 
 After you complete this guide, the directory structure will look as follows:
 
 ```
-rofl-oracle
-├── .cargo
-│   └── config.toml      # Cargo configuration.
-├── Cargo.lock           # Rust dependency tree checksums.
-├── Cargo.toml           # Rust crate defintion.
-├── rust-toolchain.toml  # Rust toolchain version configuration.
-└── src
-    └── main.rs          # The ROFL app definition.
+myapp
+├── compose.yaml        # Container compose file.
+└── rofl.yaml           # ROFL app manifest.
 ```
 
-[`cargo`]: https://doc.rust-lang.org/cargo
+The manifest contains things like ROFL app metadata, [secrets],
+[requested resources] and can be modified either manually or by using the CLI
+commands.
 
-## App Definition
+[secrets]: features.md#secrets
+[requested resources]: resources.md
 
-First you need to declare the required dependencies on `oasis-runtime-sdk` and
-related crates in order to be able to use the required features. To do this,
-edit the `[dependencies]` section in your `Cargo.toml` to look like the
-following:
+## Create
 
-![code toml](../../examples/runtime-sdk/rofl-oracle/Cargo.toml "Cargo.toml")
+Before the ROFL app can be built it needs to be created on chain to assign it a
+unique identifier (the app ID) which can be used by on-chain smart contracts to
+ensure that they are talking to the right app and also gives the app access to a
+decentralized key management system.
 
-After you have declared the required dependencies the next thing is to define
-the ROFL app. To do this, create `src/main.rs` with the following content:
+Anyone with enough funds can create an app. Currently, this threshold is 10,000
+TEST on Sapphire Testnet and Localnet (funded automatically). ROFL registration
+on Sapphire Mainnet is yet to be enabled.
+
+:::tip
+
+In order to obtain TEST tokens needed for creating and running your ROFL apps
+use [the faucet] or [ask on Discord]. To make things easier you should
+[create or import a `secp256k1-bip44` account] that you can also use with the
+Ethereum-compatible tooling like Hardhat.
 
 <!-- markdownlint-disable line-length -->
-![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs "src/main.rs")
+[the faucet]: https://faucet.testnet.oasis.io/?paratime=sapphire
+[ask on Discord]: https://github.com/oasisprotocol/docs/blob/main/docs/get-involved/README.md#social-media-channels
+[create or import a `secp256k1-bip44` account]: https://github.com/oasisprotocol/cli/blob/master/docs/wallet.md
 <!-- markdownlint-enable line-length -->
 
-## Testing it on Sapphire Localnet
+:::
 
-The simplest way to test and debug your ROFL is with a local stack.
+Passing the `--update-manifest` argument will make the CLI automatically update
+the app manifest (`rofl.yaml`) with the assigned app identifier.
 
-1. Disable trust root verification in [`src/main.rs`]. Replace:
+```shell
+oasis rofl create --update-manifest
+```
 
-   <!-- markdownlint-disable line-length -->
-   ![code rust](../../examples/runtime-sdk/rofl-oracle/src/main.rs#consensus-trust-root)
-   <!-- markdownlint-enable line-length -->
-
-   with an empty root:
-
-   ```rust
-    fn consensus_trust_root() -> Option<TrustRoot> {
-        // DO NOT USE IN PRODUCTION!
-        None
-    }
-   ```
-
-2. Navigate to `examples/runtime-sdk/rofl-oracle` and compile
-   ROFL in the _unsafe_ mode. If you're using the [`rofl-dev`][rofl-dev]
-   docker image (e.g. because you're developing on macOS), you can run the
-   container, build the app, and stop the container in just a single
-   command.
-
-   <Tabs>
-      <TabItem value="local" label="Local">
-         ```shell
-         oasis rofl build sgx --mode unsafe
-         ```
-      </TabItem>
-      <TabItem value="rofl-dev" label="Container">
-         ```shell
-         docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev oasis rofl build sgx --mode unsafe
-         ```
-      </TabItem>
-   </Tabs>
-
-3. Spin up the Sapphire Localnet docker container and mount your `rofl-oracle`
-   folder to `/rofls` inside the docker image:
-
-   ```shell
-   # Make sure to use the latest Sapphire Localnet docker image
-   docker pull ghcr.io/oasisprotocol/sapphire-localnet:latest
-   # Assuming you are running this command from the `rofl-oracle` directory
-   docker run -it -p8544-8548:8544-8548 -v .:/rofls ghcr.io/oasisprotocol/sapphire-localnet:latest
-   ```
-
-In a few moments, the Sapphire Localnet will spin up and automatically launch
-your ROFL inside the compute node. See [localnet][localnet] for more
-information.
-
-[localnet]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/localnet.mdx
-
-[rofl-dev]: https://github.com/oasisprotocol/oasis-sdk/pkgs/container/rofl-dev
+After successful creation, the CLI will also output the new identifier:
 
 ```
-sapphire-localnet 2024-09-19-git2332dba (oasis-core: 24.2, sapphire-paratime: 0.8.2, oasis-web3-gateway: 5.1.0)
-
- * Detected ROFL bundle: /rofls/rofl-oracle.orc
- * Starting oasis-net-runner with sapphire...
- * Waiting for Postgres to start....
- * Waiting for Oasis node to start.....
- * Starting oasis-web3-gateway...
- * Bootstrapping network (this might take a minute)...
- * Waiting for key manager......
- * Populating accounts...
-
-Available Accounts
-==================
-(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000 TEST)
-(1) 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (10000 TEST)
-(2) 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (10000 TEST)
-(3) 0x90F79bf6EB2c4f870365E785982E1f101E93b906 (10000 TEST)
-(4) 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65 (10000 TEST)
-
-Private Keys
-==================
-(0) 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-(1) 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-(2) 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
-(3) 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
-(4) 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
-
-HD Wallet
-==================
-Mnemonic:       test test test test test test test test test test test junk
-Base HD Path:   m/44'/60'/0'/0/%d
-
- * Configuring ROFL /rofls/rofl-oracle.orc:
-   Enclave ID: 0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg==
-   ROFL admin test:bob funded 10001 TEST
-   Compute node oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90 funded 1000 TEST
-   App ID: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
-
-WARNING: The chain is running in ephemeral mode. State will be lost after restart!
-
- * Listening on http://localhost:8545 and ws://localhost:8546. Chain ID: 0x5afd
- * Container start-up took 65 seconds, node log level is set to warn.
+Created ROFL application: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 ```
+
+The app deployer account automatically becomes the initial admin of the app so
+it can update the app's configuration. The admin address can always be changed
+by the current admin.
 
 :::info
 
-Sapphire Localnet will always assign constant
-<!-- markdownlint-disable line-length -->
-`0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLea/8+uR7hI7CyvHEm0soNTHhzEJfk1grNoBuUqQ9eNGg==`
-<!-- markdownlint-enable line-length -->
-enclave cryptographic identity regardless of your ROFL binary.
-
-Sapphire Localnet will derive your ROFL app ID in deterministic order based on
-the ROFL admin account nonce. By default the app ID of the first registered ROFL
-will be `rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf` for ROFL admin account
-[`test:bob`].
+While the CLI implements a simple governance mechanism where the admin of the
+ROFL app is a single account, even a smart contract can be the admin. This
+allows for implementation of advanced agent governance mechanisms, like using
+multi-sigs or DAOs with veto powers to control the upgrade process.
 
 :::
 
-:::tip Debugging
+## Oracle Contract
 
-Any `println!` calls you use in your Rust code will be logged inside the
-`/serverdir/node/net-runner/network/compute-0/node.log` file.
+:::info
+
+While we are using [EVM-based smart contracts] in this example, the on-chain
+part can be anything from a [WASM-based smart contract] to a dedicated
+[runtime module].
+
+[EVM-based smart contracts]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
+[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/other-paratimes/cipher/README.mdx
+[runtime module]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/runtime/modules.md
 
 :::
 
-<!-- markdownlint-enable line-length -->
-[`src/main.rs`]: #app-definition
-[`test:bob`]: https://github.com/oasisprotocol/cli/blob/master/docs/wallet.md#test-accounts
-<!-- markdownlint-disable line-length -->
+We have prepared a simple oracle contract for this example. You can find it by
+checking out the [prepared example project] from the Oasis SDK repository. It
+contains a simple [Oracle.sol] contract which collects observations from
+authenticated ROFL app instances, performs trivial aggregation and stores the
+final aggregated result. Read the [Sapphire quickstart] chapter to learn how to
+build and deploy Sapphire smart contracts, but to get you up and running for
+this part, simply copy the example project from above, install dependencies and
+compile the smart contract by executing:
 
-Now that you successfully compiled and tested your ROFL, proceed to the next
-chapter to deploy it.
+```shell
+npm install
+npx hardhat compile
+```
+
+Configure the `PRIVATE_KEY` of the deployment account and the ROFL app
+identifier (be sure to use the identifier that you received during
+registration), then deploy the contract by running, for example:
+
+```shell
+PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" \
+npx hardhat deploy rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf --network sapphire-testnet
+```
+
+After successful deployment you will see a message like:
+
+```
+Oracle for ROFL app rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf deployed to 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+```
+
+You can now proceed to building and deploying the ROFL app itself. Remember the
+address where the oracle contract was deployed to as you will need it in the
+next step.
+
+<!-- markdownlint-disable line-length -->
+[Oracle.sol]: https://github.com/oasisprotocol/oasis-sdk/blob/main/examples/runtime-sdk/rofl-oracle/oracle/contracts/Oracle.sol
+[prepared example project]: https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/runtime-sdk/rofl-oracle/oracle
+[Sapphire quickstart]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/quickstart.mdx
+<!-- markdownlint-enable line-length -->
+
+## Define Containerized Services
+
+What the core of the ROFL app does is defined with services running in Podman
+containers defined in [the compose file]. Anything that can run as a bunch of
+containers can also be run as a ROFL app.
+
+For an easier start, we will use the `oasisprotocol/demo-rofl` container which
+is defined in [the `demo-rofl` repository] and implements [a trivial oracle] in
+a shell script.
+
+The compose file (`compose.yaml`) looks as follows:
+
+```yaml
+services:
+  oracle:
+    # See the 'docker' subdirectory in demo-rofl for the content of this image.
+    # Note that we are using the sha256 hash of the image to ensure integrity.
+    image: docker.io/oasisprotocol/demo-rofl:latest@sha256:42c32ccfe0a0c84ac5969a1399e4658bed8e8d1517cc6b26cdce67439c66c910
+    environment:
+      # Address of the oracle contract deployed on Sapphire Testnet.
+      - CONTRACT_ADDRESS=1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+      # Ticker.
+      - TICKER=ROSEUSDT
+    volumes:
+      - /run/rofl-appd.sock:/run/rofl-appd.sock
+```
+
+[the compose file]: https://docs.docker.com/reference/compose-file/
+[the `demo-rofl` repository]: https://github.com/oasisprotocol/demo-rofl/tree/main/docker
+[a trivial oracle]: https://github.com/oasisprotocol/demo-rofl/blob/main/docker/app.sh
+
+## Build
+
+Whenever you make changes to your ROFL app and want to deploy it, you first need
+to build it. The build process takes the compose file together with other ROFL
+app artifacts and deterministically generates a bundle that can later be
+deployed.
+
+The build process also computes the _enclave identity_ of the bundle which is
+used during the process of remote attestation to authenticate the app instances
+before granting them access to the key management system and [other features].
+
+To build a ROFL app and update the enclave identity in the app manifest, simply
+run:
+
+```shell
+oasis rofl build --update-manifest
+```
+
+This will generate the resulting ROFL app bundle which can be used for later
+deployment and output something like:
+
+```
+ROFL app built and bundle written to 'myapp.default.orc'.
+```
+
+[other features]: features.md
+
+## Update On-chain App Config
+
+After any changes to the ROFL app policy defined in the manifest, the on-chain
+app config needs to be updated in order for the changes to take effect.
+
+The designated admin account is able to update this policy by issuing an update
+transaction which can be done via the CLI by running:
+
+```shell
+oasis rofl update
+```
