@@ -1,10 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
+	"math/big"
 	"os"
 	"strings"
 
@@ -121,33 +124,23 @@ var (
 	}
 
 	sgxSetSigCmd = &cobra.Command{
-		Use:   "sgx-set-sig [--component ID] <bundle.orc> <signature.sig> <public_key.pub>",
+		Use:   "sgx-set-sig [--component ID] <bundle.orc> [<signature.sig> <public_key.pub>]",
 		Short: "add or overwrite an SGXS signature to an existing runtime bundle",
-		Args:  cobra.ExactArgs(3),
+		Args:  cobra.RangeArgs(1, 3),
 		Run: func(cmd *cobra.Command, args []string) {
-			bundlePath, sigPath, publicKey := args[0], args[1], args[2]
+			var sigPath, publicKey string
+			bundlePath := args[0]
+			switch len(args) {
+			case 1:
+			case 3:
+				sigPath, publicKey = args[1], args[2]
+			default:
+				cobra.CheckErr("unsupported number of arguments")
+			}
 			compId := getComponentID()
 
 			rawCompId, _ := compId.MarshalText()
 			sgxSigName := fmt.Sprintf(sgxSigNameFmt, string(rawCompId))
-
-			// Load public key.
-			rawPub, err := os.ReadFile(publicKey)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to read public key: %w", err))
-			}
-			pubPem, _ := pem.Decode(rawPub)
-			if pubPem == nil {
-				cobra.CheckErr(fmt.Errorf("failed to decode public key pem file"))
-			}
-			pub, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to parse public key: %w", err))
-			}
-			pubKey, ok := pub.(*rsa.PublicKey)
-			if !ok {
-				cobra.CheckErr(fmt.Errorf("invalid public key type: %T", pub))
-			}
 
 			// Load bundle.
 			bnd, err := bundle.Open(bundlePath)
@@ -155,17 +148,49 @@ var (
 				cobra.CheckErr(fmt.Errorf("failed to open bundle: %w", err))
 			}
 
-			// Load signature file.
-			rawSig, err := os.ReadFile(sigPath)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to load signature file: %w", err))
-			}
-
 			// Construct sigstruct from provided arguments.
+			var signed []byte
 			sigstruct := constructSigstruct(bnd, compId)
-			signed, err := sigstruct.WithSignature(rawSig, pubKey)
-			if err != nil {
-				cobra.CheckErr(fmt.Errorf("failed to append signature: %w", err))
+			switch sigPath {
+			case "":
+				// Generate a new random key and sign the sigstruct.
+				sigKey, err := sgxGenerateKey(rand.Reader)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to generate signer key: %w", err))
+				}
+				signed, err = sigstruct.Sign(sigKey)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to sign SIGSTRUCT: %w", err))
+				}
+			default:
+				// Load public key.
+				rawPub, err := os.ReadFile(publicKey)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to read public key: %w", err))
+				}
+				pubPem, _ := pem.Decode(rawPub)
+				if pubPem == nil {
+					cobra.CheckErr(fmt.Errorf("failed to decode public key pem file"))
+				}
+				pub, err := x509.ParsePKIXPublicKey(pubPem.Bytes)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to parse public key: %w", err))
+				}
+				pubKey, ok := pub.(*rsa.PublicKey)
+				if !ok {
+					cobra.CheckErr(fmt.Errorf("invalid public key type: %T", pub))
+				}
+
+				// Load signature file.
+				rawSig, err := os.ReadFile(sigPath)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to load signature file: %w", err))
+				}
+
+				signed, err = sigstruct.WithSignature(rawSig, pubKey)
+				if err != nil {
+					cobra.CheckErr(fmt.Errorf("failed to append signature: %w", err))
+				}
 			}
 			err = bnd.Add(sgxSigName, bundle.NewBytesData(signed))
 			cobra.CheckErr(err)
@@ -529,6 +554,84 @@ func showTdxComponent(indent string, bnd *bundle.Bundle, comp *bundle.Component)
 	fmt.Printf("%sResources:\n", indent)
 	fmt.Printf("%s  CPUs:    %d\n", indent, comp.TDX.Resources.CPUCount)
 	fmt.Printf("%s  Memory:  %d MiB\n", indent, comp.TDX.Resources.Memory)
+}
+
+// sgxGenerateKey generates a 3072-bit RSA key with public exponent 3 as required for SGX.
+//
+// The code below is adopted from the Go standard library as it is otherwise not possible to
+// customize the exponent.
+func sgxGenerateKey(random io.Reader) (*rsa.PrivateKey, error) {
+	priv := new(rsa.PrivateKey)
+	priv.E = 3
+	bits := 3072
+	nprimes := 2
+
+	bigOne := big.NewInt(1)
+	primes := make([]*big.Int, nprimes)
+
+NextSetOfPrimes:
+	for {
+		todo := bits
+		// crypto/rand should set the top two bits in each prime.
+		// Thus each prime has the form
+		//   p_i = 2^bitlen(p_i) × 0.11... (in base 2).
+		// And the product is:
+		//   P = 2^todo × α
+		// where α is the product of nprimes numbers of the form 0.11...
+		//
+		// If α < 1/2 (which can happen for nprimes > 2), we need to
+		// shift todo to compensate for lost bits: the mean value of 0.11...
+		// is 7/8, so todo + shift - nprimes * log2(7/8) ~= bits - 1/2
+		// will give good results.
+		if nprimes >= 7 {
+			todo += (nprimes - 2) / 5
+		}
+		for i := 0; i < nprimes; i++ {
+			var err error
+			primes[i], err = rand.Prime(random, todo/(nprimes-i))
+			if err != nil {
+				return nil, err
+			}
+			todo -= primes[i].BitLen()
+		}
+
+		// Make sure that primes is pairwise unequal.
+		for i, prime := range primes {
+			for j := 0; j < i; j++ {
+				if prime.Cmp(primes[j]) == 0 {
+					continue NextSetOfPrimes
+				}
+			}
+		}
+
+		n := new(big.Int).Set(bigOne)
+		totient := new(big.Int).Set(bigOne)
+		pminus1 := new(big.Int)
+		for _, prime := range primes {
+			n.Mul(n, prime)
+			pminus1.Sub(prime, bigOne)
+			totient.Mul(totient, pminus1)
+		}
+		if n.BitLen() != bits {
+			// This should never happen for nprimes == 2 because
+			// crypto/rand should set the top two bits in each prime.
+			// For nprimes > 2 we hope it does not happen often.
+			continue NextSetOfPrimes
+		}
+
+		priv.D = new(big.Int)
+		e := big.NewInt(int64(priv.E))
+		ok := priv.D.ModInverse(e, totient)
+
+		if ok != nil {
+			priv.Primes = primes
+			priv.N = n
+			break
+		}
+	}
+
+	priv.Precompute()
+	return priv, nil
 }
 
 func main() {
