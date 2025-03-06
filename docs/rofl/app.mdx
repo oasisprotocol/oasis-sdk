@@ -140,6 +140,27 @@ multi-sigs or DAOs with veto powers to control the upgrade process.
 
 :::
 
+:::tip App ID calculation
+
+App ID is derived using one of the two schemes:
+
+- **Creator address + creator account nonce (default)**: This approach is
+  suitable for running tests (e.g. in [`sapphire-localnet`]) where you want
+  deterministic app ID.
+- **Creator address + block round number + index of the `rofl.Create`
+  transaction in the block**: This approach is non-deterministic and preferred
+  in production environments so that the potential attacker cannot simply
+  determine ROFL app ID in advance, even if they knew what the creator address
+  is.
+
+You can select the app ID derivation scheme by passing the
+[`--scheme` parameter][scheme-parameter].
+
+:::
+
+[`sapphire-localnet`]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/localnet.mdx
+[scheme-parameter]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#create
+
 ## Oracle Contract
 
 :::info
