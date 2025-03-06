@@ -48,6 +48,16 @@ jobs:
         id: determine-tag
         uses: ./.github/actions/determine-tag
 
+      - name: Compute all push tags
+        id: push-tags
+        run: |
+          all_tags="ghcr.io/oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}"
+          if [ "${{ steps.determine-tag.outputs.tag }}" = "main" ]; then
+            all_tags="$all_tags,ghcr.io/oasisprotocol/rofl-dev:latest"
+          fi
+          echo "all_tags=$all_tags"
+          echo "all_tags=$all_tags" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -63,7 +73,7 @@ jobs:
         with:
           context: docker/rofl-dev
           file: docker/rofl-dev/Dockerfile
-          tags: ghcr.io/oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}
+          tags: ${{ steps.push-tags.outputs.all_tags }}
           pull: true
           push: true
           labels: |
