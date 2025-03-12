@@ -1,4 +1,8 @@
+#![allow(unexpected_cfgs)]
 use std::{fs, path};
+
+#[cfg(fuzzing)]
+use honggfuzz::fuzz;
 
 use ethabi::Token;
 
@@ -71,6 +75,12 @@ fn gen_verify() -> Box<dyn Iterator<Item = Vec<u8>>> {
 }
 
 fn main() {
+    #[cfg(fuzzing)]
+    println!(
+        r#"This produces fuzzing data, it's not meant to be fuzzed itself.
+Run the regular build of this tool."#
+    );
+
     let precompiles = vec![
         (0, 0, 5, gen_test_vectors("modexp_eip2565")),
         (0, 0, 6, gen_test_vectors("bn256Add")),
@@ -97,4 +107,12 @@ fn main() {
                 .expect("failed to write input file");
         }
     }
+
+    // In case the file is being compiled by `cargo hfuzz build`,
+    // pull in the crate so it doesn't die with an unreadable error
+    // about missing coverage instrumentation symbols.
+    #[cfg(fuzzing)]
+    fuzz!(|data: &[u8]| {
+        std::hint::black_box(data);
+    });
 }

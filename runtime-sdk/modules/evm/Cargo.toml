@@ -52,7 +52,7 @@ ethabi = { version = "18.0.0", default-features = false, features = ["std", "ful
 
 [features]
 default = []
-test = ["serde", "serde_json"]
+test = ["serde", "serde_json", "oasis-runtime-sdk/test"]
 
 [[bench]]
 name = "criterion_benchmark"
@@ -67,4 +67,14 @@ required-features = ["test"]
 [[bin]]
 name = "fuzz-precompile-corpus"
 path = "fuzz/precompile_corpus.rs"
+required-features = ["test"]
+
+[[bin]]
+name = "fuzz-precompile-contract-dispatch"
+path = "fuzz/precompile_contract_dispatch.rs"
+required-features = ["test"]
+
+[[bin]]
+name = "fuzz-precompile-contract-dispatch-corpus"
+path = "fuzz/precompile_contract_dispatch_corpus.rs"
 required-features = ["test"]
