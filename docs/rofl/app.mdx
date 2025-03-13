@@ -226,7 +226,7 @@ a shell script.
 
 The compose file (`compose.yaml`) looks as follows:
 
-```yaml
+```yaml title="compose.yaml"
 services:
   oracle:
     # See the 'docker' subdirectory in demo-rofl for the content of this image.
@@ -240,6 +240,13 @@ services:
     volumes:
       - /run/rofl-appd.sock:/run/rofl-appd.sock
 ```
+
+:::warning Always specify FQDN image URL
+
+When specifying the container image URL, make sure to use fully qualified domain
+name e.g. `docker.io/ollama/ollama` and not just `ollama/ollama`.
+
+:::
 
 [the compose file]: https://docs.docker.com/reference/compose-file/
 [the `demo-rofl` repository]: https://github.com/oasisprotocol/demo-rofl/tree/main/docker
