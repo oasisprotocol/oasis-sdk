@@ -15,7 +15,7 @@ Secrets can be easily managed via the Oasis CLI, for example to create a secret
 called `mysecret` you can use:
 
 ```sh
-echo "my very secret value" | oasis rofl secret set mysecret -
+echo -n "my very secret value" | oasis rofl secret set mysecret -
 ```
 
 Note that this only encrypts the secret and updates the local app manifest file,
