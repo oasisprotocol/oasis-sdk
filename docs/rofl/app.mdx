@@ -44,12 +44,10 @@ chains).
 ## App Directory and Manifest
 
 First we create the basic directory structure for the ROFL app using the Oasis
-CLI. We also need to select the network (in this case `testnet`) and the account
-that will be the initial administrator of the ROFL app (in this case
-`myaccount`):
+CLI:
 
 ```shell
-oasis rofl init myapp --network testnet --account myaccount
+oasis rofl init myapp
 ```
 
 This will create the `myapp` directory and initialize some boilerplate needed to
@@ -64,16 +62,11 @@ Name:     myapp
 Version:  0.1.0
 TEE:      tdx
 Kind:     container
-Deployment 'default':
-  Network:  testnet
-  ParaTime: sapphire
-  Debug:    false
-  Admin:    myaccount
 Created manifest in 'rofl.yaml'.
-Run `oasis rofl create --update-manifest` to register your ROFL app and configure an app ID.
+Run `oasis rofl create` to register your ROFL app and configure an app ID.
 ```
 
-After you complete this guide, the directory structure will look as follows:
+The directory structure will look as follows:
 
 ```
 myapp
@@ -114,11 +107,13 @@ Ethereum-compatible tooling like Hardhat.
 
 :::
 
-Passing the `--update-manifest` argument will make the CLI automatically update
-the app manifest (`rofl.yaml`) with the assigned app identifier.
+We also need to select the network (in this case `testnet`) and the account
+that will be the initial administrator of the ROFL app (in this case
+`myaccount`). The CLI will automatically update the app manifest (`rofl.yaml`)
+with the assigned app identifier.
 
 ```shell
-oasis rofl create --update-manifest
+oasis rofl create --network testnet --account myaccount
 ```
 
 After successful creation, the CLI will also output the new identifier:
