@@ -41,6 +41,8 @@ use oasis_runtime_sdk::{
 
 use types::{H160, H256, U256};
 
+use crate as oasis_runtime_sdk_evm;
+
 #[cfg(any(test, feature = "test"))]
 pub mod mock;
 #[cfg(test)]
