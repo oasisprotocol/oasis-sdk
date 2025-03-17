@@ -182,6 +182,23 @@ pub trait API {
         }
     }
 
+    /// Get allowance for an address and denomination.
+    ///
+    /// The allowance is the amount an account owner allows another account to
+    /// spend from the owner's account for a given denomination.
+    ///
+    /// Note that the API user is responsible for taking allowances into
+    /// account, the transfer functions in this API do not.
+    fn get_allowance(
+        owner: Address,
+        beneficiary: Address,
+        denomination: token::Denomination,
+    ) -> Result<u128, Error>;
+
+    /// Set a user's allowance for spending tokens for the given denomination
+    /// from the owner's account.
+    fn set_allowance(owner: Address, beneficiary: Address, amount: &token::BaseUnits);
+
     /// Fetch an account's current balances.
     fn get_balances(address: Address) -> Result<types::AccountBalances, Error>;
 
@@ -190,6 +207,9 @@ pub trait API {
 
     /// Fetch total supplies.
     fn get_total_supplies() -> Result<BTreeMap<token::Denomination, u128>, Error>;
+
+    /// Fetch the total supply for the given denomination.
+    fn get_total_supply(denomination: token::Denomination) -> Result<u128, Error>;
 
     /// Sets the total supply for the given denomination.
     ///
@@ -238,6 +258,8 @@ pub mod state {
     pub const BALANCES: &[u8] = &[0x02];
     /// Map of total supplies (per denomination).
     pub const TOTAL_SUPPLY: &[u8] = &[0x03];
+    /// Map of allowances (per denomination).
+    pub const ALLOWANCES: &[u8] = &[0x04];
 }
 
 pub struct Module;
@@ -540,6 +562,34 @@ impl API for Module {
         })
     }
 
+    fn get_allowance(
+        owner: Address,
+        beneficiary: Address,
+        denomination: token::Denomination,
+    ) -> Result<u128, Error> {
+        CurrentState::with_store(|store| {
+            let store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let allowances = storage::PrefixStore::new(store, &state::ALLOWANCES);
+            let for_owner = storage::PrefixStore::new(allowances, &owner);
+            let for_beneficiary =
+                storage::TypedStore::new(storage::PrefixStore::new(for_owner, &beneficiary));
+
+            Ok(for_beneficiary.get(denomination).unwrap_or_default())
+        })
+    }
+
+    fn set_allowance(owner: Address, beneficiary: Address, amount: &token::BaseUnits) {
+        CurrentState::with_store(|store| {
+            let store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let allowances = storage::PrefixStore::new(store, &state::ALLOWANCES);
+            let for_owner = storage::PrefixStore::new(allowances, &owner);
+            let mut for_beneficiary =
+                storage::TypedStore::new(storage::PrefixStore::new(for_owner, &beneficiary));
+
+            for_beneficiary.insert(amount.denomination(), amount.amount());
+        })
+    }
+
     fn get_addresses(denomination: token::Denomination) -> Result<Vec<Address>, Error> {
         CurrentState::with_store(|store| {
             let store = storage::PrefixStore::new(store, &MODULE_NAME);
@@ -563,6 +613,15 @@ impl API for Module {
                 storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
 
             Ok(ts.iter().collect())
+        })
+    }
+
+    fn get_total_supply(denomination: token::Denomination) -> Result<u128, Error> {
+        CurrentState::with_store(|store| {
+            let store = storage::PrefixStore::new(store, &MODULE_NAME);
+            let ts =
+                storage::TypedStore::new(storage::PrefixStore::new(store, &state::TOTAL_SUPPLY));
+            Ok(ts.get(denomination).unwrap_or_default())
         })
     }
 
