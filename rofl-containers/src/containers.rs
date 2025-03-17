@@ -48,7 +48,7 @@ pub async fn start() -> Result<()> {
     // Bring containers up.
     run_cmd!(
         cd "/etc/oasis/containers";
-        podman-compose --env-file "/run/podman/secrets.env" up --detach --remove-orphans --force-recreate;
+        podman-compose --env-file "/run/podman/secrets.env" up --detach --remove-orphans --force-recreate --no-build;
     )?;
 
     // Follow container logs.
