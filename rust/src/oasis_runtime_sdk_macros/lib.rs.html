@@ -108,6 +108,50 @@
 <a href="#108" id="108">108</a>
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="attr">#![feature(proc_macro_diagnostic)]
 #![deny(rust_2018_idioms)]
 
@@ -115,6 +159,7 @@
 
 <span class="kw">mod </span>error_derive;
 <span class="kw">mod </span>event_derive;
+<span class="kw">mod </span>evm_derive;
 <span class="kw">mod </span>generators;
 <span class="kw">mod </span>module_derive;
 <span class="attr">#[cfg(test)]
@@ -153,18 +198,35 @@
     error_derive::derive_error(input).into()
 }
 
+<span class="doccomment">/// Derives the `EvmEvent` trait on a struct.
+</span><span class="attr">#[proc_macro_derive(EvmEvent, attributes(evm_event))]
+</span><span class="kw">pub fn </span>evm_event_derive(input: TokenStream) -&gt; TokenStream {
+    <span class="kw">let </span>input = <span class="macro">syn::parse_macro_input!</span>(input <span class="kw">as </span>syn::DeriveInput);
+    evm_derive::derive_evm_event(input).into()
+}
+
+<span class="doccomment">/// Derives the `EvmError` trait on an enum.
+</span><span class="attr">#[proc_macro_derive(EvmError, attributes(evm_error))]
+</span><span class="kw">pub fn </span>evm_error_derive(input: TokenStream) -&gt; TokenStream {
+    <span class="kw">let </span>input = <span class="macro">syn::parse_macro_input!</span>(input <span class="kw">as </span>syn::DeriveInput);
+    evm_derive::derive_evm_error(input).into()
+}
+
 <span class="doccomment">/// Derives traits from a non-trait `impl` block (rather than from a `struct`).
 ///
-/// Only the `Module` trait is supported. In other words, given an `impl MyModule` block, the macro
-/// derives implementations needed for implementing a module.
-/// See also the `#[handler]` and `#[migration]` attributes.
+/// Only the `Module` and `EvmContract` traits are supported. In other words,
+/// given an `impl MyModule` block, the macro derives implementations needed either
+/// for implementing a module (see also the `#[handler]` and `#[migration]` attributes)
+/// or for implementing an EVM contract (see also the `#[evm_method]` attribute).
 </span><span class="attr">#[proc_macro_attribute]
 </span><span class="kw">pub fn </span>sdk_derive(args: TokenStream, input: TokenStream) -&gt; TokenStream {
     <span class="kw">let </span>input = <span class="macro">syn::parse_macro_input!</span>(input <span class="kw">as </span>syn::ItemImpl);
-    <span class="kw">if </span>args.to_string() == <span class="string">"Module" </span>{
-        module_derive::derive_module(input).into()
-    } <span class="kw">else </span>{
-        emit_compile_error(<span class="string">"#[sdk_derive] only supports #[sdk_derive(Module)]"</span>);
+    <span class="kw">match </span>args.to_string().as_str() {
+        <span class="string">"Module" </span>=&gt; module_derive::derive_module(input).into(),
+        <span class="string">"EvmContract" </span>=&gt; evm_derive::derive_evm_contract(input).into(),
+        <span class="kw">_ </span>=&gt; emit_compile_error(
+            <span class="string">"#[sdk_derive] only supports #[sdk_derive(Module)] and #[sdk_derive(EvmContract)]"</span>,
+        ),
     }
 }
 
@@ -210,6 +272,32 @@
 ///    a non-negative integer.
 </span><span class="attr">#[proc_macro_attribute]
 </span><span class="kw">pub fn </span>migration(_args: TokenStream, input: TokenStream) -&gt; TokenStream {
+    input
+}
+
+<span class="doccomment">/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks functions that represent contract methods.
+///
+/// The permitted forms are:
+///  - `#[evm_method(signature = "...")]`: The method selector is computed from
+///    a Solidity method signature, and the method takes the precompute handle
+///    and data offset as parameters.
+///  - `#[evm_method(signature = "...", convert)]`: The method selector is
+///    computed from the signature, the arguments are automatically decoded and
+///    passed to the marked method, which must have the appropriate number and
+///    type of arguments.
+</span><span class="attr">#[proc_macro_attribute]
+</span><span class="kw">pub fn </span>evm_method(_args: TokenStream, input: TokenStream) -&gt; TokenStream {
+    input
+}
+
+<span class="doccomment">/// A helper attribute for `#[sdk_derive(...)]`. It doesn't do anything on its own;
+/// it only marks the function within a contract implementation that returns its address.
+///
+/// The method marked with this attribute should take no arguments and return
+/// an object of type `primitive_types::H160`.
+</span><span class="attr">#[proc_macro_attribute]
+</span><span class="kw">pub fn </span>evm_contract_address(_args: TokenStream, input: TokenStream) -&gt; TokenStream {
     input
 }
 
