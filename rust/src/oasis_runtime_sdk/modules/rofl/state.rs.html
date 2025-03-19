@@ -357,9 +357,6 @@
 <a href="#357" id="357">357</a>
 <a href="#358" id="358">358</a>
 <a href="#359" id="359">359</a>
-<a href="#360" id="360">360</a>
-<a href="#361" id="361">361</a>
-<a href="#362" id="362">362</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     core::{
         common::crypto::{hash::Hash, signature::PublicKey <span class="kw">as </span>CorePublicKey},
@@ -410,13 +407,14 @@
     }
 }
 
+<span class="kw">fn </span>apps&lt;S: Store&gt;(store: S) -&gt; storage::TypedStore&lt;<span class="kw">impl </span>Store&gt; {
+    <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
+    storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>APPS))
+}
+
 <span class="doccomment">/// Retrieves an application configuration.
 </span><span class="kw">pub fn </span>get_app(app_id: AppId) -&gt; <span class="prelude-ty">Option</span>&lt;types::AppConfig&gt; {
-    CurrentState::with_store(|store| {
-        <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
-        <span class="kw">let </span>apps = storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>APPS));
-        apps.get(app_id)
-    })
+    CurrentState::with_store(|store| apps(store).get(app_id))
 }
 
 <span class="doccomment">/// Retrieves all application configurations.
@@ -433,18 +431,14 @@
 <span class="doccomment">/// Updates an application configuration.
 </span><span class="kw">pub fn </span>set_app(cfg: types::AppConfig) {
     CurrentState::with_store(|store| {
-        <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
-        <span class="kw">let </span><span class="kw-2">mut </span>apps = storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>APPS));
-        apps.insert(cfg.id, cfg);
+        apps(store).insert(cfg.id, cfg);
     })
 }
 
 <span class="doccomment">/// Removes an application configuration.
 </span><span class="kw">pub fn </span>remove_app(app_id: AppId) {
     CurrentState::with_store(|store| {
-        <span class="kw">let </span>store = storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>MODULE_NAME);
-        <span class="kw">let </span><span class="kw-2">mut </span>apps = storage::TypedStore::new(storage::PrefixStore::new(store, <span class="kw-2">&amp;</span>APPS));
-        apps.remove(app_id);
+        apps(store).remove(app_id);
     })
 }
 

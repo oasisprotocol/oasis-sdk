@@ -642,11 +642,6 @@
 <a href="#642" id="642">642</a>
 <a href="#643" id="643">643</a>
 <a href="#644" id="644">644</a>
-<a href="#645" id="645">645</a>
-<a href="#646" id="646">646</a>
-<a href="#647" id="647">647</a>
-<a href="#648" id="648">648</a>
-<a href="#649" id="649">649</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Transaction types.
 </span><span class="kw">use </span>anyhow::anyhow;
 <span class="kw">use </span>thiserror::Error;
@@ -657,7 +652,6 @@
         signature::{<span class="self">self</span>, PublicKey, Signature, Signer},
     },
     types::{
-        address,
         address::{Address, SignatureAddressSpec},
         token,
     },
@@ -1045,11 +1039,7 @@
     </span><span class="kw">pub fn </span>address(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Address {
         <span class="kw">match </span><span class="self">self </span>{
             CallerAddress::Address(address) =&gt; <span class="kw-2">*</span>address,
-            CallerAddress::EthAddress(address) =&gt; Address::new(
-                address::ADDRESS_V0_SECP256K1ETH_CONTEXT,
-                address::ADDRESS_V0_VERSION,
-                address.as_ref(),
-            ),
+            CallerAddress::EthAddress(address) =&gt; Address::from_eth(address.as_ref()),
         }
     }
 

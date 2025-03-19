@@ -31,6 +31,13 @@
 <a href="#31" id="31">31</a>
 <a href="#32" id="32">32</a>
 <a href="#33" id="33">33</a>
+<a href="#34" id="34">34</a>
+<a href="#35" id="35">35</a>
+<a href="#36" id="36">36</a>
+<a href="#37" id="37">37</a>
+<a href="#38" id="38">38</a>
+<a href="#39" id="39">39</a>
+<a href="#40" id="40">40</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::token;
 
 <span class="doccomment">/// Module configuration.
@@ -53,6 +60,13 @@
     </span><span class="kw">const </span>GAS_COST_CALL_STAKE_THRESHOLDS: u64 = <span class="number">10</span>;
     <span class="doccomment">/// Gas cost of rofl.DeriveKey call.
     </span><span class="kw">const </span>GAS_COST_CALL_DERIVE_KEY: u64 = <span class="number">10_000</span>;
+
+    <span class="doccomment">/// Maximum number of metadata key-value pairs.
+    </span><span class="kw">const </span>MAX_METADATA_PAIRS: usize = <span class="number">64</span>;
+    <span class="doccomment">/// Maximum metadata key size.
+    </span><span class="kw">const </span>MAX_METADATA_KEY_SIZE: usize = <span class="number">1024</span>;
+    <span class="doccomment">/// Maximum metadata value size.
+    </span><span class="kw">const </span>MAX_METADATA_VALUE_SIZE: usize = <span class="number">16 </span>* <span class="number">1024</span>;
 
     <span class="doccomment">/// Amount of stake required for maintaining an application.
     ///

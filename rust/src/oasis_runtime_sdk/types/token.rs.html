@@ -162,6 +162,11 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Token types.
 </span><span class="kw">use </span>std::{convert::TryFrom, fmt};
 
@@ -262,6 +267,11 @@
     <span class="doccomment">/// Token amount in base units.
     </span><span class="kw">pub fn </span>amount(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; u128 {
         <span class="self">self</span>.<span class="number">0
+    </span>}
+
+    <span class="doccomment">/// Mutable token amount in base units.
+    </span><span class="kw">pub fn </span>amount_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>u128 {
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>.<span class="number">0
     </span>}
 
     <span class="doccomment">/// Denomination of the token amount.
