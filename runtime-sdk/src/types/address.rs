@@ -2,6 +2,7 @@
 use std::{convert::TryFrom, fmt};
 
 use bech32::{Bech32, Hrp};
+use sha3::Digest;
 use thiserror::Error;
 
 use oasis_core_runtime::{
@@ -230,6 +231,12 @@ impl From<&'static str> for Address {
     }
 }
 
+impl From<Address> for Vec<u8> {
+    fn from(a: Address) -> Self {
+        a.into_bytes().into()
+    }
+}
+
 impl fmt::LowerHex for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for i in &self.0[..] {
@@ -289,6 +296,30 @@ impl From<Address> for ConsensusAddress {
     fn from(addr: Address) -> ConsensusAddress {
         ConsensusAddress::from(&addr.0)
     }
+}
+
+/// Generate a custom Ethereum address with proper domain separation.
+pub fn generate_custom_eth_address(domain: &str, kind: &[u8]) -> [u8; 20] {
+    sha3::Keccak256::digest(
+        [
+            &[0xFFu8] as &[u8],                  // Same as CREATE2.
+            &[0x00; 20], // Use 0x00000...00 as the creator since this will never be used.
+            b"oasis-runtime-sdk/address: ethxx", // Same as salt in CREATE2.
+            &sha3::Keccak256::digest(
+                [
+                    &[0xFEu8] as &[u8], // Use invalid bytecode.
+                    b"oasis:",
+                    domain.as_bytes(),
+                    b".",
+                    kind,
+                ]
+                .concat(),
+            ),
+        ]
+        .concat(),
+    )[32 - 20..]
+        .try_into()
+        .unwrap()
 }
 
 #[cfg(test)]
