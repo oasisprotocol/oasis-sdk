@@ -4082,6 +4082,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rofl-scheduler"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64",
+ "cmd_lib",
+ "hex",
+ "nix",
+ "oasis-cbor",
+ "oasis-runtime-sdk",
+ "oasis-runtime-sdk-rofl-market",
+ "tokio",
+]
+
+[[package]]
 name = "rofl-utils"
 version = "0.1.1"
 dependencies = [
