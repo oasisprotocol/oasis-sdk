@@ -119,9 +119,8 @@ export const playground = (async function () {
             })();
         });
 
-        const alice = oasis.signature.NaclSigner.fromSeed(
+        const alice = await oasis.signature.WebCryptoSigner.fromPrivateKey(
             oasis.hash.hash(oasis.misc.fromString('oasis-runtime-sdk/test-keys: alice')),
-            'this key is not important',
         );
         const csAlice = new oasis.signature.BlindContextSigner(alice);
         const aliceAddr = oasis.staking.addressFromPublicKey(alice.public());

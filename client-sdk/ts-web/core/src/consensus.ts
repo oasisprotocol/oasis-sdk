@@ -91,9 +91,9 @@ export const TRANSACTION_ERR_GAS_PRICE_TOO_LOW_CODE = 3;
  */
 export const TRANSACTION_ERR_UPGRADE_PENDING = 4;
 
-export function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
+export async function openSignedTransaction(chainContext: string, signed: types.SignatureSigned) {
     const context = signature.combineChainContext(TRANSACTION_SIGNATURE_CONTEXT, chainContext);
-    return misc.fromCBOR(signature.openSigned(context, signed)) as types.ConsensusTransaction;
+    return misc.fromCBOR(await signature.openSigned(context, signed)) as types.ConsensusTransaction;
 }
 
 export async function signSignedTransaction(
