@@ -7,6 +7,7 @@ members = [
     # Runtime SDK Modules.
     "runtime-sdk/modules/contracts",
     "runtime-sdk/modules/evm",
+    "runtime-sdk/modules/evm-new",
     "runtime-sdk/modules/rofl-market",
 
     # Smart Contract SDK.
