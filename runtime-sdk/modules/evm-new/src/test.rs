@@ -1090,7 +1090,7 @@ fn test_transfer_event() {
     }
 
     let events: Vec<TransferEvent> = cbor::from_slice(&tags[0].value).unwrap();
-    println!("### Events: {:#?}", events);
+    println!("###4 Events: {:#?}", events);
     assert_eq!(events.len(), 2); // One event for fee payment, one for the withdrawal.
     let event = &events[0];
     assert_eq!(event.from, contract_address_native);

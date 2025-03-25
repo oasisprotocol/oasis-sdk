@@ -10,13 +10,13 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
-use std::sync::Arc;
-
 use base64::prelude::*;
 use revm::{
+    context::TxEnv,
+    context_interface::result::{ExecutionResult, Output},
     precompile::PrecompileWithAddress,
-    primitives::{Bytes, ExecutionResult, Output, SpecId, TxEnv, TxKind},
-    Evm,
+    primitives::{hardfork::SpecId, Bytes, TxKind},
+    Context as EvmContext, Database, ExecuteCommitEvm, ExecuteEvm, MainBuilder, MainContext,
 };
 
 use oasis_runtime_sdk::{
@@ -388,52 +388,57 @@ impl<Cfg: Config> Module<Cfg> {
     fn evm_execute<C: Context, F: FnOnce(&mut TxEnv)>(
         ctx: &C,
         estimate_gas: bool,
+        caller: H160,
         f: F,
     ) -> Result<Vec<u8>, Error> {
         let is_query = CurrentState::with_env(|env| !env.is_execute());
 
         // Prepare the environment.
-        let db = db::OasisDB::<'_, C, Cfg>::new(ctx);
-        let mut evm = Evm::builder()
+        let mut db = db::OasisDB::<'_, C, Cfg>::new(ctx, caller.0.into());
+        let nonce = db
+            .basic(caller.0.into())
+            .unwrap()
+            .map_or(0, |account| account.nonce);
+        let mut evm = EvmContext::mainnet()
             .with_db(db)
-            .with_spec_id(SpecId::SHANGHAI)
-            .modify_cfg_env(|cfg| {
+            .modify_cfg_chained(|cfg| {
+                cfg.spec = SpecId::SHANGHAI;
                 cfg.disable_eip3607 = true;
             })
-            .append_handler_register(|handler| {
+            // TODO: Port precompiles to the new API.
+            /*.append_handler_register(|handler| {
                 // Load standard precompiles.
                 //
                 // For Shanghai spec these include the following: ecrecover,
                 // sha256, ripemd160, identity, bn128::{add,mul,pair}, blake2,
                 // modexp.
                 let precompiles = handler.pre_execution.load_precompiles();
-
                 handler.pre_execution.load_precompiles = Arc::new(move || {
                     // Start with standard precompiles.
                     let mut precompiles = precompiles.clone();
-
                     // Extend with Oasis-specific precompiles.
                     precompiles.extend(precompile::new());
-
                     // Extend with module-specific precompiles (if any).
                     if let Some(additional_precompiles) = Cfg::additional_precompiles() {
                         precompiles.extend(additional_precompiles);
                     }
-
                     precompiles
                 });
+            })*/
+            .modify_tx_chained(|tx| {
+                tx.nonce = nonce;
             })
-            .modify_tx_env(f)
-            .build();
+            .modify_tx_chained(f)
+            .build_mainnet();
 
         // Run the transaction.
         let tx_result = if estimate_gas {
-            match evm.transact() {
+            match evm.transact(evm.tx.clone()) {
                 Ok(result) => result.result,
                 Err(err) => return Err(crate::Error::ExecutionFailed(format!("{:?}", err))),
             }
         } else {
-            match evm.transact_commit() {
+            match evm.transact_commit(evm.tx.clone()) {
                 Ok(result) => result,
                 Err(err) => return Err(crate::Error::ExecutionFailed(format!("{:?}", err))),
             }
@@ -516,14 +521,11 @@ impl<Cfg: Config> Module<Cfg> {
         init_code: Vec<u8>,
         estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
-        Self::evm_execute(ctx, estimate_gas, |tx| {
+        Self::evm_execute(ctx, estimate_gas, caller, |tx| {
             tx.gas_limit = <C::Runtime as Runtime>::Core::remaining_tx_gas();
-            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price())
-                .try_into()
-                .unwrap(); // XXX: err checking
-
+            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price());
             tx.caller = caller.0.into();
-            tx.transact_to = TxKind::Create;
+            tx.kind = TxKind::Create;
             tx.value = revm::primitives::U256::from_be_bytes(value.into());
             tx.data = init_code.into();
         })
@@ -537,14 +539,11 @@ impl<Cfg: Config> Module<Cfg> {
         data: Vec<u8>,
         estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
-        Self::evm_execute(ctx, estimate_gas, |tx| {
+        Self::evm_execute(ctx, estimate_gas, caller, |tx| {
             tx.gas_limit = <C::Runtime as Runtime>::Core::remaining_tx_gas();
-            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price())
-                .try_into()
-                .unwrap(); // XXX: err checking
-
+            tx.gas_price = CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price());
             tx.caller = caller.0.into();
-            tx.transact_to = TxKind::Call(address.0.into());
+            tx.kind = TxKind::Call(address.0.into());
             tx.value = revm::primitives::U256::from_be_bytes(value.into());
             tx.data = data.into();
         })

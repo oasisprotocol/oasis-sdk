@@ -1,8 +1,10 @@
 use revm::{
-    primitives::{Account, AccountInfo, Address, Bytecode, B256, KECCAK_EMPTY, U256},
+    database::DBErrorMarker,
+    primitives::{Address, B256, KECCAK_EMPTY, U256},
+    state::{Account, AccountInfo, Bytecode},
     Database, DatabaseCommit,
 };
-use std::{collections::HashMap, vec::Vec};
+use std::{collections::HashMap, error::Error, fmt, vec::Vec};
 
 use std::marker::PhantomData;
 
@@ -16,20 +18,42 @@ use crate::{state, types, Config};
 pub struct OasisDB<'ctx, C: Context, Cfg: Config> {
     ctx: &'ctx C,
     _cfg: PhantomData<Cfg>,
+    origin: Address,
+    origin_nonce_incremented: bool,
 }
 
 impl<'ctx, C: Context, Cfg: Config> OasisDB<'ctx, C, Cfg> {
-    pub fn new(ctx: &'ctx C) -> Self {
+    pub fn new(ctx: &'ctx C, origin: Address) -> Self {
         Self {
             ctx,
             _cfg: PhantomData,
+            origin,
+            origin_nonce_incremented: false,
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct DBError(pub String);
+
+impl DBErrorMarker for DBError {}
+impl Error for DBError {}
+
+impl fmt::Display for DBError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<String> for DBError {
+    fn from(s: String) -> Self {
+        Self(s)
     }
 }
 
 // Implement read-only parts of the database.
 impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
-    type Error = String;
+    type Error = DBError;
 
     /// Get basic account information.
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
@@ -42,7 +66,17 @@ impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
         let balance =
             <C::Runtime as Runtime>::Accounts::get_balance(sdk_address, Cfg::TOKEN_DENOMINATION)
                 .unwrap();
-        let nonce = <C::Runtime as Runtime>::Accounts::get_nonce(sdk_address).unwrap();
+        let mut nonce = <C::Runtime as Runtime>::Accounts::get_nonce(sdk_address).unwrap();
+
+        // If this is the caller's address, the caller nonce has not yet been incremented
+        // based on the EVM semantics and this is not a simulation context, return the
+        // nonce decremented by one to cancel out the Oasis SDK nonce changes.
+        // https://github.com/oasisprotocol/oasis-sdk/commit/eda6e0d67c2b2664182a0d60408875af32562a7f
+        let is_simulation = CurrentState::with_env(|env| env.is_simulation());
+        if address == self.origin && !self.origin_nonce_incremented && !is_simulation {
+            nonce = nonce.saturating_sub(1);
+            print!(" ! ");
+        }
 
         // Fetch code for this address from storage.
         let code = CurrentState::with_store(|store| {
@@ -68,8 +102,7 @@ impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
         println!(": {:#?} {:#?}", balance, nonce);
 
         Ok(Some(AccountInfo {
-            // XXX: The nonce needs a proper fix like: https://github.com/oasisprotocol/oasis-sdk/commit/eda6e0d67c2b2664182a0d60408875af32562a7f
-            nonce, //: nonce.saturating_sub(1),
+            nonce,
             balance: U256::from(balance),
             code,
             code_hash,
@@ -79,7 +112,7 @@ impl<'ctx, C: Context, Cfg: Config> Database for OasisDB<'ctx, C, Cfg> {
     /// Get account code by its hash (unimplemented).
     fn code_by_hash(&mut self, _code_hash: B256) -> Result<Bytecode, Self::Error> {
         println!("###### code_by_hash called ######");
-        Err("getting code by hash is not supported".to_string())
+        Err("getting code by hash is not supported".to_string().into())
     }
 
     /// Get storage value of address at index.
@@ -131,6 +164,12 @@ impl<'ctx, C: Context, Cfg: Config> DatabaseCommit for OasisDB<'ctx, C, Cfg> {
 
             // XXX
             //<C::Runtime as Runtime>::Accounts::set_nonce(sdk_address, account.info.nonce);
+
+            // XXX: This is probably not the right place to put this...
+            let is_simulation = CurrentState::with_env(|env| env.is_simulation());
+            if address == self.origin && !is_simulation {
+                self.origin_nonce_incremented = true;
+            }
 
             if account.info.code.is_some() {
                 let code = account.info.code.unwrap().bytecode().to_vec();

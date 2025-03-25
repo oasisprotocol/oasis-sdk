@@ -1,4 +1,4 @@
-use ethabi::{ParamType, Token};
+/*use ethabi::{ParamType, Token};
 use revm::{
     precompile::{PrecompileError, PrecompileOutput, PrecompileResult},
     primitives::{Bytes, Env},
@@ -49,3 +49,4 @@ pub(super) fn call_pad_gas(input: &Bytes, gas_limit: u64, _env: &Env) -> Precomp
 
     Ok(PrecompileOutput::new(cost, Bytes::new()))
 }
+*/

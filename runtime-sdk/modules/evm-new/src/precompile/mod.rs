@@ -1,4 +1,4 @@
-use revm::precompile::{Address, Precompile, PrecompileWithAddress};
+use revm::{precompile::PrecompileWithAddress, primitives::Address};
 
 mod confidential;
 mod gas;
@@ -13,7 +13,9 @@ pub const fn oasis_addr(a18: u8, a19: u8) -> Address {
 }
 
 pub fn new() -> Vec<PrecompileWithAddress> {
-    vec![
+    // TODO: Port precompiles to the new revm API.
+    vec![]
+    /*vec![
         // Oasis-specific, confidential.
         // TODO: random_bytes
         /*PrecompileWithAddress(
@@ -62,5 +64,5 @@ pub fn new() -> Vec<PrecompileWithAddress> {
             Precompile::Env(subcall::call_subcall),
         ),*/
         PrecompileWithAddress(oasis_addr(1, 4), Precompile::Standard(sha2::call_sha384)),
-    ]
+    ]*/
 }

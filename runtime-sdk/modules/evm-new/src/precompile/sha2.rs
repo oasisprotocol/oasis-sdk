@@ -1,5 +1,5 @@
 //! Implements SHA2 precompiles.
-use revm::{
+/*use revm::{
     precompile::{calc_linear_cost_u32, PrecompileError, PrecompileOutput, PrecompileResult},
     primitives::Bytes,
 };
@@ -24,3 +24,4 @@ macro_rules! make_hasher {
 make_hasher!(call_sha512_256, Sha512_256);
 make_hasher!(call_sha384, Sha384);
 make_hasher!(call_sha512, Sha512);
+*/

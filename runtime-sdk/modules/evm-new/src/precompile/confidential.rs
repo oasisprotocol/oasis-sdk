@@ -1,5 +1,5 @@
 //! Implements the confidential precompiles.
-use std::{collections::HashMap, convert::TryInto};
+/*use std::{collections::HashMap, convert::TryInto};
 
 use ethabi::{ParamType, Token};
 use hmac::{Hmac, Mac};
@@ -320,3 +320,4 @@ pub(super) fn call_verify(input: &Bytes, gas_limit: u64) -> PrecompileResult {
     let output = ethabi::encode(&[Token::Bool(result.is_ok())]);
     Ok(PrecompileOutput::new(cost, output.into()))
 }
+*/
