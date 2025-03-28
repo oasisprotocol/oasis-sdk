@@ -44,7 +44,7 @@ jobs:
         uses: ./.github/actions/lint-rust
         with:
           features: debug-logging,debug-mock-sgx,test,unsafe-allow-debug
-          exclude: rofl-containers,rofl-appd
+          exclude: rofl-containers,rofl-appd,rofl-scheduler
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Rust code (TDX)

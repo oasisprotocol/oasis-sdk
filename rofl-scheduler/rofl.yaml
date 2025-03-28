@@ -1,0 +1,44 @@
+name: rofl-scheduler
+version: 0.1.0
+repository: https://github.com/oasisprotocol/oasis-sdk
+tee: tdx
+kind: raw
+resources:
+  memory: 512
+  cpus: 1
+  storage:
+    kind: disk-ephemeral
+    size: 64
+artifacts:
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:e4b5ed62e9a9fa0015832304e1ff936ed2db95ecc62c613ab27e1e02fbef255a
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/stage1.bin#06e12cba9b2423b4dd5916f4d84bf9c043f30041ab03aa74006f46ef9c129d22
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
+deployments:
+  testnet:
+    app_id: rofl1qrqw99h0f7az3hwt2cl7yeew3wtz0fxunu7luyfg
+    network: testnet
+    paratime: sapphire
+    admin: test_a
+    trust_root:
+      height: 25755045
+      hash: 9eb1320bc63630fb0015c182a329616acecc37cc8ce9bf091b4b123867d28aec
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+          tdx: {}
+      enclaves:
+        - id: 2OKs276ykwRIRetgtYGQJMOyfI5FyZ861qMvZGgHVikAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.0-pre
+          description: Pre-release version of the scheduler
+        - id: gjsdGO/HZda3cpvIVp7se/EAUHf80TCKb60IEJ+ba4EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.0-pre
+          description: Pre-release version of the scheduler
+        - id: PE2TSgy9aMfAmxGIDgMpbjr9ejk2evb2wdzaBEkA4TMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: +3Sv/xqzc171KyieVot07v8H7lCGpSqIuaDelVmTE8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
