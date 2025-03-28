@@ -529,6 +529,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
+        instance.node_id = Some(body.node_id);
         instance.deployment = body.deployment;
         instance.metadata = body.metadata;
         instance.updated_at = ctx.now();
