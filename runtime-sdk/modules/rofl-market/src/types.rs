@@ -274,6 +274,8 @@ pub struct Instance {
     pub offer: OfferId,
     /// Status of the instance.
     pub status: InstanceStatus,
+    /// Address of the creator account.
+    pub creator: Address,
     /// Address of the administrator account.
     pub admin: Address,
     /// Identifier of the node where the instance has been provisioned.

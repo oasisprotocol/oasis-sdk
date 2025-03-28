@@ -349,15 +349,15 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::OutOfCapacity);
         }
 
+        let caller_address = CurrentState::with_env(|env| env.tx_caller_address());
         let instance_id = provider.instances_next_id.increment();
         let mut instance = types::Instance {
             provider: provider.address,
             id: instance_id,
             offer: offer.id,
             status: types::InstanceStatus::Created,
-            admin: body
-                .admin
-                .unwrap_or(CurrentState::with_env(|env| env.tx_caller_address())),
+            creator: caller_address,
+            admin: body.admin.unwrap_or(caller_address),
             resources: offer.resources,
             deployment: body.deployment,
             created_at: ctx.now(),
