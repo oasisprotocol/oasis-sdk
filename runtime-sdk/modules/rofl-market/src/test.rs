@@ -498,6 +498,7 @@ fn test_instance_management() {
     let update = types::InstanceUpdateMetadata {
         provider: keys::alice::address(),
         id: 0.into(),
+        node_id: keys::bob::pk_ed25519().into(),
         deployment: None,
         metadata: BTreeMap::from([("foo".to_string(), "bar".to_string())]),
     };

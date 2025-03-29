@@ -274,6 +274,8 @@ pub struct Instance {
     pub offer: OfferId,
     /// Status of the instance.
     pub status: InstanceStatus,
+    /// Address of the creator account.
+    pub creator: Address,
     /// Address of the administrator account.
     pub admin: Address,
     /// Identifier of the node where the instance has been provisioned.
@@ -450,6 +452,8 @@ pub struct InstanceUpdateMetadata {
     pub provider: Address,
     /// Target instance identifier.
     pub id: InstanceId,
+    /// Identifier of the node where the instance has been provisioned.
+    pub node_id: PublicKey,
     /// Deployment to update the instance with.
     pub deployment: Option<Deployment>,
     /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
