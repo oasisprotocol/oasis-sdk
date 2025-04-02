@@ -9,8 +9,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-contract-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.3.0" }
-oasis-contract-sdk-storage = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.3.0" }
+oasis-contract-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.4.0" }
+oasis-contract-sdk-storage = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "contract-sdk/v0.4.0" }
 
 # Third party.
 thiserror = "1.0.30"

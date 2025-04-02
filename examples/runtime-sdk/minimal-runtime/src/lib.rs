@@ -20,6 +20,9 @@ impl sdk::Runtime for Runtime {
     // Define the module that provides the core API.
     type Core = modules::core::Module<Config>;
 
+    // Define the module that provides the accounts API.
+    type Accounts = modules::accounts::Module;
+
     // Define the modules that the runtime will be composed of. Here we just use
     // the core and accounts modules from the SDK. Later on we will go into
     // detail on how to create your own modules.
