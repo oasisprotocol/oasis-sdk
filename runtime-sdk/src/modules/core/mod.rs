@@ -829,7 +829,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // hi == cap if binary search is disabled or this is a failing transaction.
-        let result = if hi == cap.into() {
+        let result = if hi == Into::<u128>::into(cap) {
             // Simulate one last time with maximum gas limit.
             simulate(&args.tx, cap, propagate_failures)
         } else {
@@ -1078,7 +1078,7 @@ impl<Cfg: Config> Module<Cfg> {
 impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
     fn approve_raw_tx<C: Context>(_ctx: &C, tx: &[u8]) -> Result<(), Error> {
         let params = Self::params();
-        if tx.len() > params.max_tx_size.try_into().unwrap() {
+        if tx.len() > TryInto::<usize>::try_into(params.max_tx_size).unwrap() {
             return Err(Error::OversizedTransaction);
         }
         Ok(())

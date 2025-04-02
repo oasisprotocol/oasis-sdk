@@ -13,9 +13,12 @@ import (
 )
 
 type (
-	OfferID    uint64
-	InstanceID uint64
-	CommandID  uint64
+	// OfferID is the per-provider offer identifier.
+	OfferID [8]byte
+	// InstanceID is the per-provider instance identifier.
+	InstanceID [8]byte
+	// CommandID is the per-instnce command identifier.
+	CommandID [8]byte
 )
 
 // Provider is the provider descriptor.
@@ -67,26 +70,33 @@ type Offer struct {
 type Term uint8
 
 const (
-	TermHour Term = 1
-	TermDay  Term = 2
-	TermYear Term = 3
+	TermHour  Term = 1
+	TermMonth Term = 2
+	TermYear  Term = 3
 )
 
+// PaymentAddress is the payment address.
 type PaymentAddress struct {
 	Native *types.Address `json:"native,omitempty"`
 	Eth    *[20]byte      `json:"eth,omitempty"`
 }
 
+// Payment is the payment information.
 type Payment struct {
-	Native *struct {
-		Denomination types.Denomination      `json:"denomination"`
-		Terms        map[Term]types.Quantity `json:"terms"`
-	} `json:"native,omitempty"`
+	Native      *NativePayment      `json:"native,omitempty"`
+	EvmContract *EvmContractPayment `json:"evm,omitempty"`
+}
 
-	EvmContract *struct {
-		Address [20]byte `json:"address"`
-		Data    []byte   `json:"data"`
-	} `json:"evm,omitempty"`
+// NativePayment is the native payment information.
+type NativePayment struct {
+	Denomination types.Denomination      `json:"denomination"`
+	Terms        map[Term]types.Quantity `json:"terms"`
+}
+
+// EvmContractPayment is the EVM contract-based payment information.
+type EvmContractPayment struct {
+	Address [20]byte `json:"address"`
+	Data    []byte   `json:"data"`
 }
 
 // Resources are describe the requested instance resources.
