@@ -23,6 +23,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/evm"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rewards"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/rofl"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/modules/roflmarket"
 )
 
 // RuntimeClient is a client.RuntimeClient augmented with commonly used modules.
@@ -36,6 +37,7 @@ type RuntimeClient struct {
 	Contracts         contracts.V1
 	Evm               evm.V1
 	ROFL              rofl.V1
+	ROFLMarket        roflmarket.V1
 }
 
 // Connection is the general node connection interface.
@@ -77,6 +79,7 @@ func (c *connection) Runtime(pt *config.ParaTime) RuntimeClient {
 		Contracts:         contracts.NewV1(cli),
 		Evm:               evm.NewV1(cli),
 		ROFL:              rofl.NewV1(cli),
+		ROFLMarket:        roflmarket.NewV1(cli),
 	}
 }
 
