@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CMAKE_POLICY_VERSION_MINIMUM: 3.5
+
 jobs:
   test-rust:
     # NOTE: This name appears in GitHub's Checks API.
