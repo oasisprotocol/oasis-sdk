@@ -373,7 +373,7 @@ fn test_c10l_evm_balance_transfer() {
         },
     )
     .unwrap();
-    assert_eq!(recipient_balance, 12345u64.into());
+    assert_eq!(recipient_balance, 12345u128);
 }
 
 #[test]

@@ -457,7 +457,7 @@ impl API for Module {
             let beacon = BeaconImmutableState::new(&state);
 
             let mut epoch_state = beacon.future_epoch_state()?;
-            if epoch_state.height > state.height().try_into().unwrap() {
+            if epoch_state.height > TryInto::<i64>::try_into(state.height()).unwrap() {
                 // Use current epoch if future epoch is in the future.
                 epoch_state = beacon.epoch_state().unwrap();
             }
