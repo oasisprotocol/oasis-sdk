@@ -301,6 +301,14 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
+
+        // First charge for gas so gas estimation works even in case of zeroized caller.
+        <C::Runtime as Runtime>::Core::use_tx_gas(
+            provider
+                .offers_count
+                .saturating_mul(Cfg::GAS_COST_CALL_PROVIDER_UPDATE_OFFERS_RM),
+        )?;
+
         Self::ensure_caller_is_provider_admin(&provider)?;
 
         // Forbid removal if the provider has any associated instances.
@@ -308,12 +316,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::ProviderHasInstances);
         }
 
-        // Remove all offers, first charging for gas.
-        <C::Runtime as Runtime>::Core::use_tx_gas(
-            provider
-                .offers_count
-                .saturating_mul(Cfg::GAS_COST_CALL_PROVIDER_UPDATE_OFFERS_RM),
-        )?;
+        // Remove all offers.
         for offer in state::get_offers(provider.address) {
             state::remove_offer(provider.address, offer.id);
         }
