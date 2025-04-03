@@ -331,7 +331,10 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "roflmarket.InstanceCreate")]
-    fn tx_instance_create<C: Context>(ctx: &C, body: types::InstanceCreate) -> Result<(), Error> {
+    fn tx_instance_create<C: Context>(
+        ctx: &C,
+        body: types::InstanceCreate,
+    ) -> Result<types::InstanceId, Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_CREATE)?;
 
         if body.term_count == 0 {
@@ -339,7 +342,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         if !ctx.should_execute_contracts() {
-            return Ok(());
+            return Ok(Default::default());
         }
 
         let mut provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
@@ -391,7 +394,7 @@ impl<Cfg: Config> Module<Cfg> {
             })
         });
 
-        Ok(())
+        Ok(instance_id)
     }
 
     #[handler(call = "roflmarket.InstanceTopUp")]

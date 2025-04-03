@@ -396,6 +396,8 @@ fn test_instance_management() {
     };
     let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
+    let result: types::InstanceId = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(result, 0.into());
 
     // Query the instances.
     let instances: Vec<types::Instance> = signer_alice
