@@ -261,9 +261,18 @@ before granting them access to the key management system and [other features].
 To build a ROFL app and update the enclave identity in the app manifest, simply
 run:
 
-```shell
-oasis rofl build --update-manifest
-```
+<Tabs>
+    <TabItem value="Native Linux">
+        ```shell
+        oasis rofl build
+        ```
+    </TabItem>
+    <TabItem value="Docker (Windows, Mac, Linux)">
+        ```shell
+        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+        ```
+    </TabItem>
+</Tabs>
 
 This will generate the resulting ROFL app bundle which can be used for later
 deployment and output something like:
