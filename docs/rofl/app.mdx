@@ -4,16 +4,19 @@ import TabItem from '@theme/TabItem';
 # Application
 
 This chapter will show you how to quickly create, build and test a minimal
-containerized ROFL app.
+containerized ROFL app that communicated with a confidential smart contract on
+[Oasis Sapphire].
 
 ROFL apps come in different flavors and the right choice is a tradeoff between
 TCB size and ease of use. The easiest to use are TDX container-based apps which
 are presented in this guide and more advanced flavors with smaller TCBs are
 described separately.
 
+[Oasis Sapphire]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/README.mdx
+
 ## How do ROFL Apps Work?
 
-![ROFL diagram](rofl.svg)
+![ROFL diagram](images/rofl.svg)
 
 Each ROFL app runs in its own Trusted Execution Environment (TEE) which is
 provisioned by an Oasis Node from its _bundle_ (a zip archive containing the
@@ -261,9 +264,18 @@ before granting them access to the key management system and [other features].
 To build a ROFL app and update the enclave identity in the app manifest, simply
 run:
 
-```shell
-oasis rofl build --update-manifest
-```
+<Tabs>
+    <TabItem value="Native Linux">
+        ```shell
+        oasis rofl build
+        ```
+    </TabItem>
+    <TabItem value="Docker (Windows, Mac, Linux)">
+        ```shell
+        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+        ```
+    </TabItem>
+</Tabs>
 
 This will generate the resulting ROFL app bundle which can be used for later
 deployment and output something like:
