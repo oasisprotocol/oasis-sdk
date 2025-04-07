@@ -2165,7 +2165,7 @@
         }
 
         <span class="comment">// hi == cap if binary search is disabled or this is a failing transaction.
-        </span><span class="kw">let </span>result = <span class="kw">if </span>hi == cap.into() {
+        </span><span class="kw">let </span>result = <span class="kw">if </span>hi == Into::&lt;u128&gt;::into(cap) {
             <span class="comment">// Simulate one last time with maximum gas limit.
             </span>simulate(<span class="kw-2">&amp;</span>args.tx, cap, propagate_failures)
         } <span class="kw">else </span>{
@@ -2414,7 +2414,7 @@
 <span class="kw">impl</span>&lt;Cfg: Config&gt; module::TransactionHandler <span class="kw">for </span>Module&lt;Cfg&gt; {
     <span class="kw">fn </span>approve_raw_tx&lt;C: Context&gt;(_ctx: <span class="kw-2">&amp;</span>C, tx: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
         <span class="kw">let </span>params = <span class="self">Self</span>::params();
-        <span class="kw">if </span>tx.len() &gt; params.max_tx_size.try_into().unwrap() {
+        <span class="kw">if </span>tx.len() &gt; TryInto::&lt;usize&gt;::try_into(params.max_tx_size).unwrap() {
             <span class="kw">return </span><span class="prelude-val">Err</span>(Error::OversizedTransaction);
         }
         <span class="prelude-val">Ok</span>(())

@@ -954,7 +954,7 @@
             <span class="kw">let </span>beacon = BeaconImmutableState::new(<span class="kw-2">&amp;</span>state);
 
             <span class="kw">let </span><span class="kw-2">mut </span>epoch_state = beacon.future_epoch_state()<span class="question-mark">?</span>;
-            <span class="kw">if </span>epoch_state.height &gt; state.height().try_into().unwrap() {
+            <span class="kw">if </span>epoch_state.height &gt; TryInto::&lt;i64&gt;::try_into(state.height()).unwrap() {
                 <span class="comment">// Use current epoch if future epoch is in the future.
                 </span>epoch_state = beacon.epoch_state().unwrap();
             }
