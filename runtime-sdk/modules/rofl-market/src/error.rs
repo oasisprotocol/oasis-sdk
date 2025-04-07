@@ -49,6 +49,10 @@ pub enum Error {
     #[sdk_error(code = 11)]
     BadResourceDescriptor(String),
 
+    #[error("invalid instance state")]
+    #[sdk_error(code = 12)]
+    InvalidInstanceState,
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),

@@ -309,13 +309,6 @@ pub struct Instance {
     pub cmd_count: u64,
 }
 
-impl Instance {
-    /// Whether the instance has been accepted by the provider.
-    pub fn is_accepted(&self) -> bool {
-        matches!(self.status, InstanceStatus::Accepted)
-    }
-}
-
 /// Instance status.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(with_default)]

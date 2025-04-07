@@ -412,6 +412,10 @@ impl<Cfg: Config> Module<Cfg> {
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
 
+        if instance.status != types::InstanceStatus::Accepted {
+            return Err(Error::InvalidInstanceState);
+        }
+
         // Handle payment.
         instance
             .payment
@@ -482,8 +486,8 @@ impl<Cfg: Config> Module<Cfg> {
                 Some(instance) => instance,
                 None => continue, // Skip instances that have been removed.
             };
-            // Skip instances that have already been accepted.
-            if instance.is_accepted() {
+            // Skip instances that have already been accepted or have been cancelled.
+            if instance.status != types::InstanceStatus::Created {
                 continue;
             }
 
@@ -569,7 +573,6 @@ impl<Cfg: Config> Module<Cfg> {
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
-        instance.updated_at = ctx.now();
 
         match instance.status {
             types::InstanceStatus::Created
@@ -596,6 +599,7 @@ impl<Cfg: Config> Module<Cfg> {
             _ => {
                 // The instance has either been accepted or cancelled within the acceptance time
                 // window. Make the provider claim the entire prepaid amount.
+                instance.updated_at = ctx.now();
                 instance.status = types::InstanceStatus::Cancelled;
                 instance
                     .payment
@@ -696,6 +700,10 @@ impl<Cfg: Config> Module<Cfg> {
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
+
+        if instance.status != types::InstanceStatus::Accepted {
+            return Err(Error::InvalidInstanceState);
+        }
 
         let new_cmd_count = instance
             .cmd_count
