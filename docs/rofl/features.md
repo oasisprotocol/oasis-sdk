@@ -162,11 +162,13 @@ by an endorsed key and are therefore automatically authenticated as coming from
 the ROFL app itself.
 
 This makes it possible to easily authenticate ROFL apps in smart contracts by
-simply invoking an appropriate subcall, for example:
+simply invoking an [appropriate subcall], for example:
 
 ```solidity
 Subcall.roflEnsureAuthorizedOrigin(roflAppID);
 ```
+
+[appropriate subcall]: https://api.docs.oasis.io/sol/sapphire-contracts/contracts/Subcall.sol/library.Subcall.html#roflensureauthorizedorigin
 
 **Endpoint:** `/rofl/v1/tx/sign-submit` (`POST`)
 
