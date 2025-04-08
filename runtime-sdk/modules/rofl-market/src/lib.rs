@@ -437,6 +437,12 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Ensure caller is the provider's scheduler app and return the endorsing node's public key.
     fn ensure_caller_is_scheduler_app(provider: &types::Provider) -> Result<PublicKey, Error> {
+        // Skip checks in simulation mode for correct gas estimation.
+        // This is fine because no confidential data is being protected here.
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            return Ok(Default::default());
+        }
+
         let node_id = Cfg::Rofl::get_origin_registration(provider.scheduler_app)
             .map(|r| r.node_id)
             .ok_or(Error::Forbidden)?;
@@ -554,6 +560,12 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Ensure caller is the current instance administrator, return an error otherwise.
     fn ensure_caller_is_instance_admin(instance: &types::Instance) -> Result<(), Error> {
+        // Skip checks in simulation mode for correct gas estimation.
+        // This is fine because no confidential data is being protected here.
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            return Ok(());
+        }
+
         let caller = CurrentState::with_env(|env| env.tx_caller_address());
         if instance.admin != caller {
             return Err(Error::Forbidden);
@@ -565,7 +577,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn tx_instance_cancel<C: Context>(ctx: &C, body: types::InstanceCancel) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_CANCEL)?;
 
-        if CurrentState::with_env(|env| env.is_check_only()) {
+        if !ctx.should_execute_contracts() {
             return Ok(());
         }
 
