@@ -84,6 +84,9 @@ pub struct GasCosts {
     pub store_receipt: u64,
     /// Cost of taking a delegation/undelegation receipt.
     pub take_receipt: u64,
+
+    /// Cost of getting delegation info through a subcall.
+    pub delegation: u64,
 }
 
 /// Parameters for the consensus module.
@@ -566,6 +569,17 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
         _ctx: &C,
         args: types::DelegationQuery,
     ) -> Result<types::DelegationInfo, Error> {
+        state::get_delegation(args.from, args.to)
+    }
+
+    #[handler(call = "consensus.Delegation", internal)]
+    fn internal_delegation<C: Context>(
+        _ctx: &C,
+        args: types::DelegationQuery,
+    ) -> Result<types::DelegationInfo, Error> {
+        let params = Self::params();
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.delegation)?;
+
         state::get_delegation(args.from, args.to)
     }
 
