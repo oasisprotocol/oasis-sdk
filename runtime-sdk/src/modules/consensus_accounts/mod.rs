@@ -569,6 +569,14 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
         state::get_delegation(args.from, args.to)
     }
 
+    #[handler(call = "consensus.Delegation", internal)]
+    fn internal_delegation<C: Context>(
+        _ctx: &C,
+        args: types::DelegationQuery,
+    ) -> Result<types::DelegationInfo, Error> {
+        state::get_delegation(args.from, args.to)
+    }
+
     #[handler(query = "consensus.Delegations")]
     fn query_delegations<C: Context>(
         _ctx: &C,

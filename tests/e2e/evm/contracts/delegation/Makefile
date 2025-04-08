@@ -3,4 +3,3 @@ abi = delegation.abi
 hex = delegation.hex
 
 include ../contracts.mk
-

@@ -74,7 +74,7 @@ func SubcallDelegationTest(ctx context.Context, env *scenario.Env) error {
 	return nil
 }
 
-func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error {
+func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 	ctx, cancelFn := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancelFn()
 
@@ -158,9 +158,34 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error {
 		return fmt.Errorf("failed to unpack result: %w", err)
 	}
 	shares := results[0].(*big.Int).Uint64() // We know the actual value is less than uint128.
-
-	if expectedShares := uint64(10); shares != expectedShares {
+	expectedShares := uint64(10)
+	if shares != expectedShares {
 		return fmt.Errorf("received unexpected number of shares (expected: %d got: %d)", expectedShares, shares)
+	}
+
+	// Test the Delegation subcall as well.
+	env.Logger.Info("calling delegation")
+	rawContractAddress, _ := contractSdkAddress.MarshalBinary()
+	data, err = contractDelegation.ABI.Pack("delegation", rawContractAddress, rawAddress)
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+	value = big.NewInt(0).Bytes() // Don't send any tokens.
+	result, err = evmCall(ctx, env.Client, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to call contract: %w", err)
+	}
+	infoRaw, err := contractDelegation.ABI.Unpack("delegation", result)
+	if err != nil {
+		return fmt.Errorf("failed to unpack result: %w", err)
+	}
+	var info consensusAccounts.DelegationInfo
+	if err = cbor.Unmarshal(infoRaw[0].([]byte), &info); err != nil {
+		return fmt.Errorf("failed to unmarshal result: %w", err)
+	}
+	shares = info.Shares.ToBigInt().Uint64()
+	if shares != expectedShares {
+		return fmt.Errorf("received unexpected number of shares from delegation subcall (expected: %d got: %d)", expectedShares, shares)
 	}
 
 	// Now trigger undelegation for half the shares.
