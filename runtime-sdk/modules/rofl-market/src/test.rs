@@ -496,6 +496,19 @@ fn test_instance_management() {
     assert_eq!(instance.status, types::InstanceStatus::Accepted);
     assert_eq!(instance.node_id, Some(keys::bob::pk_ed25519().into()));
 
+    // Query offer.
+    let offer: types::Offer = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Offer",
+            types::OfferQuery {
+                provider: keys::alice::address(),
+                id: instance.offer,
+            },
+        )
+        .unwrap();
+    assert_eq!(offer.capacity, 0, "offer capacity should be updated");
+
     // Update instance metadata.
     let update = types::InstanceUpdateMetadata {
         provider: keys::alice::address(),
@@ -826,6 +839,19 @@ fn test_instance_management() {
         )
         .unwrap();
     assert_eq!(cmds.len(), 0, "instance commands should be removed");
+
+    // Query offer.
+    let offer: types::Offer = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Offer",
+            types::OfferQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(offer.capacity, 1, "offer capacity should be updated");
 
     // Query the provider metadata.
     let provider: types::Provider = signer_alice

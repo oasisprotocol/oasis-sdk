@@ -497,6 +497,13 @@ impl<Cfg: Config> Module<Cfg> {
                 continue;
             }
 
+            // Update offer capacity iff the offer still exists. Note that offer capacity mangement
+            // is best-effort and the provider can always reset to an arbitrarily high value.
+            if let Some(mut offer) = state::get_offer(body.provider, instance.offer) {
+                offer.capacity = offer.capacity.saturating_sub(1);
+                state::set_offer(body.provider, offer);
+            }
+
             instance.status = types::InstanceStatus::Accepted;
             instance.node_id = Some(node_id);
             instance.metadata = body.metadata.clone();
@@ -663,7 +670,12 @@ impl<Cfg: Config> Module<Cfg> {
                 .claim(ctx, &provider, &mut instance)?;
         }
 
-        // TODO: update offer capacity (if the offer still exists).
+        // Update offer capacity iff the offer still exists. Note that offer capacity mangement
+        // is best-effort and the provider can always reset to an arbitrarily high value.
+        if let Some(mut offer) = state::get_offer(body.provider, instance.offer) {
+            offer.capacity = offer.capacity.saturating_add(1);
+            state::set_offer(body.provider, offer);
+        }
 
         state::set_provider(provider);
         state::remove_instance(body.provider, body.id);
