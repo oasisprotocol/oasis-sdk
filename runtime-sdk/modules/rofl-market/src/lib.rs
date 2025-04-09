@@ -765,7 +765,18 @@ impl<Cfg: Config> Module<Cfg> {
         Self::ensure_caller_is_scheduler_app(&provider)?;
 
         for (instance_id, cmd_id) in body.instances {
+            let mut instance =
+                state::get_instance(body.provider, instance_id).ok_or(Error::InstanceNotFound)?;
+
             let cmds = state::get_instance_commands(body.provider, instance_id, cmd_id);
+            if !cmds.is_empty() {
+                instance.cmd_count = instance
+                    .cmd_count
+                    .saturating_sub(cmds.len().try_into().map_err(|_| Error::InvalidArgument)?);
+                instance.updated_at = ctx.now();
+                state::set_instance(instance);
+            }
+
             for qc in cmds {
                 state::remove_instance_command(body.provider, instance_id, qc.id);
             }

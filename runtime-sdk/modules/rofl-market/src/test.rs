@@ -655,6 +655,19 @@ fn test_instance_management() {
     let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceExecuteCmds", exec.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
 
+    // Ensure command count has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.cmd_count, 3);
+
     // Query instance commands.
     let cmds: Vec<types::QueuedCommand> = signer_alice
         .query(
@@ -679,7 +692,6 @@ fn test_instance_management() {
         provider: keys::alice::address(),
         instances: BTreeMap::from([(0.into(), 0.into())]), // Complete the first command.
     };
-    // TODO: Results.
 
     // Only the scheduler app from the correct node should be allowed to complete commands.
     let dispatch_result =
@@ -693,6 +705,19 @@ fn test_instance_management() {
     let dispatch_result =
         signer_dave.call(&ctx, "roflmarket.InstanceCompleteCmds", complete.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure command count has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.cmd_count, 2);
 
     // Query instance commands.
     let cmds: Vec<types::QueuedCommand> = signer_alice
