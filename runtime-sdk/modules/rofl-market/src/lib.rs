@@ -521,22 +521,32 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(())
     }
 
-    #[handler(call = "roflmarket.InstanceUpdateMetadata")]
-    fn tx_instance_update_metadata<C: Context>(
-        ctx: &C,
-        body: types::InstanceUpdateMetadata,
-    ) -> Result<(), Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_METADATA)?;
+    #[handler(call = "roflmarket.InstanceUpdate")]
+    fn tx_instance_update<C: Context>(ctx: &C, body: types::InstanceUpdate) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_BASE)?;
 
-        if body.metadata.len() > Cfg::MAX_METADATA_PAIRS {
-            return Err(Error::InvalidArgument);
-        }
-        for (key, value) in &body.metadata {
-            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
-                return Err(Error::InvalidArgument);
-            }
-            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
-                return Err(Error::InvalidArgument);
+        let instance_count: u64 = body
+            .updates
+            .len()
+            .try_into()
+            .map_err(|_| Error::InvalidArgument)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(
+            instance_count.saturating_mul(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_INST),
+        )?;
+
+        for update in &body.updates {
+            if let Some(metadata) = &update.metadata {
+                if metadata.len() > Cfg::MAX_METADATA_PAIRS {
+                    return Err(Error::InvalidArgument);
+                }
+                for (key, value) in metadata {
+                    if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                        return Err(Error::InvalidArgument);
+                    }
+                    if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                        return Err(Error::InvalidArgument);
+                    }
+                }
             }
         }
 
@@ -547,20 +557,53 @@ impl<Cfg: Config> Module<Cfg> {
         let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
         Self::ensure_caller_is_scheduler_app(&provider)?;
 
-        let mut instance =
-            state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
-        instance.node_id = Some(body.node_id);
-        instance.deployment = body.deployment;
-        instance.metadata = body.metadata;
-        instance.updated_at = ctx.now();
-        state::set_instance(instance);
+        for update in body.updates {
+            let mut changed = false;
+            let mut instance =
+                state::get_instance(body.provider, update.id).ok_or(Error::InstanceNotFound)?;
 
-        CurrentState::with(|state| {
-            state.emit_event(Event::InstanceUpdated {
-                provider: body.provider,
-                id: body.id,
-            })
-        });
+            // Update various metadata.
+            if let Some(node_id) = update.node_id {
+                instance.node_id = Some(node_id);
+                changed = true;
+            }
+            if let Some(deployment) = update.deployment {
+                instance.deployment = deployment;
+                changed = true;
+            }
+            if let Some(metadata) = update.metadata {
+                instance.metadata = metadata;
+                changed = true;
+            }
+
+            // Complete commands.
+            if let Some(last_completed_cmd) = update.last_completed_cmd {
+                let cmds =
+                    state::get_instance_commands(body.provider, update.id, last_completed_cmd);
+                instance.cmd_count = instance
+                    .cmd_count
+                    .saturating_sub(cmds.len().try_into().map_err(|_| Error::InvalidArgument)?);
+
+                for qc in cmds {
+                    state::remove_instance_command(body.provider, update.id, qc.id);
+                    changed = true;
+                }
+            }
+
+            if !changed {
+                continue;
+            }
+
+            instance.updated_at = ctx.now();
+            state::set_instance(instance);
+
+            CurrentState::with(|state| {
+                state.emit_event(Event::InstanceUpdated {
+                    provider: body.provider,
+                    id: update.id,
+                })
+            });
+        }
 
         Ok(())
     }
@@ -749,50 +792,6 @@ impl<Cfg: Config> Module<Cfg> {
         instance.cmd_count = new_cmd_count;
         instance.updated_at = ctx.now();
         state::set_instance(instance);
-
-        Ok(())
-    }
-
-    #[handler(call = "roflmarket.InstanceCompleteCmds")]
-    fn tx_instance_complete_cmds<C: Context>(
-        ctx: &C,
-        body: types::InstanceCompleteCmds,
-    ) -> Result<(), Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_BASE)?;
-
-        let cmd_count: u64 = body
-            .instances
-            .len()
-            .try_into()
-            .map_err(|_| Error::InvalidArgument)?;
-        <C::Runtime as Runtime>::Core::use_tx_gas(
-            cmd_count.saturating_mul(Cfg::GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_CMD),
-        )?;
-
-        if CurrentState::with_env(|env| env.is_check_only()) {
-            return Ok(());
-        }
-
-        let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
-        Self::ensure_caller_is_scheduler_app(&provider)?;
-
-        for (instance_id, cmd_id) in body.instances {
-            let mut instance =
-                state::get_instance(body.provider, instance_id).ok_or(Error::InstanceNotFound)?;
-
-            let cmds = state::get_instance_commands(body.provider, instance_id, cmd_id);
-            if !cmds.is_empty() {
-                instance.cmd_count = instance
-                    .cmd_count
-                    .saturating_sub(cmds.len().try_into().map_err(|_| Error::InvalidArgument)?);
-                instance.updated_at = ctx.now();
-                state::set_instance(instance);
-            }
-
-            for qc in cmds {
-                state::remove_instance_command(body.provider, instance_id, qc.id);
-            }
-        }
 
         Ok(())
     }

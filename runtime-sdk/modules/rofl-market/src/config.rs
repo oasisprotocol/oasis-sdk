@@ -25,8 +25,10 @@ pub trait Config: 'static {
     const GAS_COST_CALL_INSTANCE_ACCEPT_INSTANCE: u64 = 10_000;
     /// Gas cost of roflmarket.InstanceTopUp call.
     const GAS_COST_CALL_INSTANCE_TOPUP: u64 = 10_000;
-    /// Gas cost of roflmarket.InstanceUpdateMetadata call.
-    const GAS_COST_CALL_INSTANCE_UPDATE_METADATA: u64 = 100_000;
+    /// Gas cost of roflmarket.InstanceUpdate call.
+    const GAS_COST_CALL_INSTANCE_UPDATE_BASE: u64 = 10_000;
+    /// Gas cost of each instance update in roflmarket.InstanceUpdate call.
+    const GAS_COST_CALL_INSTANCE_UPDATE_INST: u64 = 10_000;
     /// Gas cost of roflmarket.InstanceCancel call.
     const GAS_COST_CALL_INSTANCE_CANCEL: u64 = 10_000;
     /// Gas cost of roflmarket.InstanceRemove call.
@@ -35,10 +37,6 @@ pub trait Config: 'static {
     const GAS_COST_CALL_INSTANCE_EXECUTE_CMDS_BASE: u64 = 10_000;
     /// Gas cost of each command in roflmarket.InstanceExecuteCmds call.
     const GAS_COST_CALL_INSTANCE_EXECUTE_CMDS_CMD: u64 = 10_000;
-    /// Gas cost of roflmarket.InstanceCompleteCmds call.
-    const GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_BASE: u64 = 10_000;
-    /// Gas cost of each command in roflmarket.InstanceCompleteCmds call.
-    const GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_CMD: u64 = 10_000;
     /// Gas cost of roflmarket.InstanceClaimPayment call.
     const GAS_COST_CALL_INSTANCE_CLAIM_PAYMENT_BASE: u64 = 10_000;
     /// Gas cost of each instance in roflmarket.InstanceClaimPayment call.
