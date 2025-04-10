@@ -2,6 +2,7 @@ package roflmarket
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 
@@ -20,6 +21,63 @@ type (
 	// CommandID is the per-instnce command identifier.
 	CommandID [8]byte
 )
+
+// String returns a string representation of offer ID.
+func (id OfferID) String() string {
+	return hex.EncodeToString(id[:])
+}
+
+// MarshalText encodes an offer ID.
+func (id *OfferID) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(id[:])), nil
+}
+
+// UnmarshalText decodes a text marshalled offer ID.
+func (id *OfferID) UnmarshalText(data []byte) error {
+	if hex.DecodedLen(len(data)) != 8 {
+		return fmt.Errorf("malformed offer ID")
+	}
+	_, err := hex.Decode(id[:], data)
+	return err
+}
+
+// String returns a string representation of instance ID.
+func (id InstanceID) String() string {
+	return hex.EncodeToString(id[:])
+}
+
+// MarshalText encodes an instance ID.
+func (id *InstanceID) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(id[:])), nil
+}
+
+// UnmarshalText decodes a text marshalled instance ID.
+func (id *InstanceID) UnmarshalText(data []byte) error {
+	if hex.DecodedLen(len(data)) != 8 {
+		return fmt.Errorf("malformed instance ID")
+	}
+	_, err := hex.Decode(id[:], data)
+	return err
+}
+
+// String returns a string representation of command ID.
+func (id CommandID) String() string {
+	return hex.EncodeToString(id[:])
+}
+
+// MarshalText encodes a command ID.
+func (id *CommandID) MarshalText() ([]byte, error) {
+	return []byte(hex.EncodeToString(id[:])), nil
+}
+
+// UnmarshalText decodes a text marshalled command ID.
+func (id *CommandID) UnmarshalText(data []byte) error {
+	if hex.DecodedLen(len(data)) != 8 {
+		return fmt.Errorf("malformed command ID")
+	}
+	_, err := hex.Decode(id[:], data)
+	return err
+}
 
 // Provider is the provider descriptor.
 type Provider struct {
@@ -183,6 +241,20 @@ const (
 	InstanceStatusAccepted  InstanceStatus = 1
 	InstanceStatusCancelled InstanceStatus = 2
 )
+
+// String returns a string representation of instance status.
+func (s InstanceStatus) String() string {
+	switch s {
+	case InstanceStatusCreated:
+		return "created"
+	case InstanceStatusAccepted:
+		return "accepted"
+	case InstanceStatusCancelled:
+		return "cancelled"
+	default:
+		return fmt.Sprintf("[unknown: %d]", s)
+	}
+}
 
 // Deployment is a descriptor of what is deployed into an instance.
 type Deployment struct {

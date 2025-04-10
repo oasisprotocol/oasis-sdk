@@ -309,13 +309,6 @@ pub struct Instance {
     pub cmd_count: u64,
 }
 
-impl Instance {
-    /// Whether the instance has been accepted by the provider.
-    pub fn is_accepted(&self) -> bool {
-        matches!(self.status, InstanceStatus::Accepted)
-    }
-}
-
 /// Instance status.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, cbor::Encode, cbor::Decode)]
 #[cbor(with_default)]
@@ -445,7 +438,32 @@ pub struct InstanceAccept {
     pub metadata: BTreeMap<String, String>,
 }
 
+/// A request by the provider to update multiple instances.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct InstanceUpdate {
+    /// Provider address.
+    pub provider: Address,
+    /// Instance updates.
+    pub updates: Vec<Update>,
+}
+
+/// Update of an instance.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct Update {
+    /// Instance identifier.
+    pub id: InstanceId,
+    /// Identifier of the node where the instance has been provisioned.
+    pub node_id: Option<PublicKey>,
+    /// Deployment to update the instance with.
+    pub deployment: Option<Option<Deployment>>,
+    /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
+    pub metadata: Option<BTreeMap<String, String>>,
+    /// Last completed command identifier (inclusive).
+    pub last_completed_cmd: Option<CommandId>,
+}
+
 /// A request by the provider to update instance metadata.
+// TODO: Remove as it is superseded by InstanceUpdate.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceUpdateMetadata {
     /// Provider address.
@@ -514,13 +532,13 @@ pub struct QueuedCommand {
 }
 
 /// A request by the provider to clear command queues of multiple instances.
+// TODO: Remove as it is superseded by InstanceUpdate.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceCompleteCmds {
     /// Target provider address.
     pub provider: Address,
     /// A map of instances to last command identifier (inclusive) to clear.
     pub instances: BTreeMap<InstanceId, CommandId>,
-    // TODO: What about results? Should probably be emitted as events.
 }
 
 /// Provider-related query.

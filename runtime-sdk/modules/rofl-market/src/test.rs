@@ -396,6 +396,8 @@ fn test_instance_management() {
     };
     let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
+    let result: types::InstanceId = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(result, 0.into());
 
     // Query the instances.
     let instances: Vec<types::Instance> = signer_alice
@@ -494,18 +496,32 @@ fn test_instance_management() {
     assert_eq!(instance.status, types::InstanceStatus::Accepted);
     assert_eq!(instance.node_id, Some(keys::bob::pk_ed25519().into()));
 
+    // Query offer.
+    let offer: types::Offer = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Offer",
+            types::OfferQuery {
+                provider: keys::alice::address(),
+                id: instance.offer,
+            },
+        )
+        .unwrap();
+    assert_eq!(offer.capacity, 0, "offer capacity should be updated");
+
     // Update instance metadata.
-    let update = types::InstanceUpdateMetadata {
+    let update = types::InstanceUpdate {
         provider: keys::alice::address(),
-        id: 0.into(),
-        node_id: keys::bob::pk_ed25519().into(),
-        deployment: None,
-        metadata: BTreeMap::from([("foo".to_string(), "bar".to_string())]),
+        updates: vec![types::Update {
+            id: 0.into(),
+            metadata: Some(BTreeMap::from([("foo".to_string(), "bar".to_string())])),
+            // Other fields are unchanged.
+            ..Default::default()
+        }],
     };
 
     // Only the scheduler app from the correct node should be allowed to update metadata.
-    let dispatch_result =
-        signer_charlie.call(&ctx, "roflmarket.InstanceUpdateMetadata", update.clone());
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceUpdate", update.clone());
     assert!(!dispatch_result.result.is_success(), "call should fail");
     let (module, code) = dispatch_result.result.unwrap_failed();
     assert_eq!(module, "roflmarket");
@@ -525,8 +541,7 @@ fn test_instance_management() {
     assert_eq!(instance.metadata.get("foo"), None);
 
     // Scheduler app from the correct node should be allowed to update metadata.
-    let dispatch_result =
-        signer_dave.call(&ctx, "roflmarket.InstanceUpdateMetadata", update.clone());
+    let dispatch_result = signer_dave.call(&ctx, "roflmarket.InstanceUpdate", update.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
 
     // Query instance.
@@ -653,6 +668,19 @@ fn test_instance_management() {
     let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceExecuteCmds", exec.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
 
+    // Ensure command count has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.cmd_count, 3);
+
     // Query instance commands.
     let cmds: Vec<types::QueuedCommand> = signer_alice
         .query(
@@ -673,24 +701,39 @@ fn test_instance_management() {
     assert_eq!(&cmds[2].cmd, b"and the last one.");
 
     // Complete instance commands.
-    let complete = types::InstanceCompleteCmds {
+    let complete = types::InstanceUpdate {
         provider: keys::alice::address(),
-        instances: BTreeMap::from([(0.into(), 0.into())]), // Complete the first command.
+        updates: vec![types::Update {
+            id: 0.into(),
+            last_completed_cmd: Some(0.into()), // Complete the first command.
+            // Leave the rest unchanged.
+            ..Default::default()
+        }],
     };
-    // TODO: Results.
 
     // Only the scheduler app from the correct node should be allowed to complete commands.
-    let dispatch_result =
-        signer_charlie.call(&ctx, "roflmarket.InstanceCompleteCmds", complete.clone());
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceUpdate", complete.clone());
     assert!(!dispatch_result.result.is_success(), "call should fail");
     let (module, code) = dispatch_result.result.unwrap_failed();
     assert_eq!(module, "roflmarket");
     assert_eq!(code, 4); // Forbidden.
 
     // Scheduler app from the correct node should be allowed to complete commands.
-    let dispatch_result =
-        signer_dave.call(&ctx, "roflmarket.InstanceCompleteCmds", complete.clone());
+    let dispatch_result = signer_dave.call(&ctx, "roflmarket.InstanceUpdate", complete.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure command count has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.cmd_count, 2);
 
     // Query instance commands.
     let cmds: Vec<types::QueuedCommand> = signer_alice
@@ -799,6 +842,19 @@ fn test_instance_management() {
         )
         .unwrap();
     assert_eq!(cmds.len(), 0, "instance commands should be removed");
+
+    // Query offer.
+    let offer: types::Offer = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Offer",
+            types::OfferQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(offer.capacity, 1, "offer capacity should be updated");
 
     // Query the provider metadata.
     let provider: types::Provider = signer_alice

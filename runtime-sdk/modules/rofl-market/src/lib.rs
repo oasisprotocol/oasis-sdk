@@ -331,7 +331,10 @@ impl<Cfg: Config> Module<Cfg> {
     }
 
     #[handler(call = "roflmarket.InstanceCreate")]
-    fn tx_instance_create<C: Context>(ctx: &C, body: types::InstanceCreate) -> Result<(), Error> {
+    fn tx_instance_create<C: Context>(
+        ctx: &C,
+        body: types::InstanceCreate,
+    ) -> Result<types::InstanceId, Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_CREATE)?;
 
         if body.term_count == 0 {
@@ -339,7 +342,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         if !ctx.should_execute_contracts() {
-            return Ok(());
+            return Ok(Default::default());
         }
 
         let mut provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
@@ -391,7 +394,7 @@ impl<Cfg: Config> Module<Cfg> {
             })
         });
 
-        Ok(())
+        Ok(instance_id)
     }
 
     #[handler(call = "roflmarket.InstanceTopUp")]
@@ -408,6 +411,10 @@ impl<Cfg: Config> Module<Cfg> {
 
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
+
+        if instance.status != types::InstanceStatus::Accepted {
+            return Err(Error::InvalidInstanceState);
+        }
 
         // Handle payment.
         instance
@@ -430,6 +437,12 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Ensure caller is the provider's scheduler app and return the endorsing node's public key.
     fn ensure_caller_is_scheduler_app(provider: &types::Provider) -> Result<PublicKey, Error> {
+        // Skip checks in simulation mode for correct gas estimation.
+        // This is fine because no confidential data is being protected here.
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            return Ok(Default::default());
+        }
+
         let node_id = Cfg::Rofl::get_origin_registration(provider.scheduler_app)
             .map(|r| r.node_id)
             .ok_or(Error::Forbidden)?;
@@ -479,9 +492,16 @@ impl<Cfg: Config> Module<Cfg> {
                 Some(instance) => instance,
                 None => continue, // Skip instances that have been removed.
             };
-            // Skip instances that have already been accepted.
-            if instance.is_accepted() {
+            // Skip instances that have already been accepted or have been cancelled.
+            if instance.status != types::InstanceStatus::Created {
                 continue;
+            }
+
+            // Update offer capacity iff the offer still exists. Note that offer capacity mangement
+            // is best-effort and the provider can always reset to an arbitrarily high value.
+            if let Some(mut offer) = state::get_offer(body.provider, instance.offer) {
+                offer.capacity = offer.capacity.saturating_sub(1);
+                state::set_offer(body.provider, offer);
             }
 
             instance.status = types::InstanceStatus::Accepted;
@@ -501,22 +521,32 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(())
     }
 
-    #[handler(call = "roflmarket.InstanceUpdateMetadata")]
-    fn tx_instance_update_metadata<C: Context>(
-        ctx: &C,
-        body: types::InstanceUpdateMetadata,
-    ) -> Result<(), Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_METADATA)?;
+    #[handler(call = "roflmarket.InstanceUpdate")]
+    fn tx_instance_update<C: Context>(ctx: &C, body: types::InstanceUpdate) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_BASE)?;
 
-        if body.metadata.len() > Cfg::MAX_METADATA_PAIRS {
-            return Err(Error::InvalidArgument);
-        }
-        for (key, value) in &body.metadata {
-            if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
-                return Err(Error::InvalidArgument);
-            }
-            if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
-                return Err(Error::InvalidArgument);
+        let instance_count: u64 = body
+            .updates
+            .len()
+            .try_into()
+            .map_err(|_| Error::InvalidArgument)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(
+            instance_count.saturating_mul(Cfg::GAS_COST_CALL_INSTANCE_UPDATE_INST),
+        )?;
+
+        for update in &body.updates {
+            if let Some(metadata) = &update.metadata {
+                if metadata.len() > Cfg::MAX_METADATA_PAIRS {
+                    return Err(Error::InvalidArgument);
+                }
+                for (key, value) in metadata {
+                    if key.len() > Cfg::MAX_METADATA_KEY_SIZE {
+                        return Err(Error::InvalidArgument);
+                    }
+                    if value.len() > Cfg::MAX_METADATA_VALUE_SIZE {
+                        return Err(Error::InvalidArgument);
+                    }
+                }
             }
         }
 
@@ -527,26 +557,65 @@ impl<Cfg: Config> Module<Cfg> {
         let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
         Self::ensure_caller_is_scheduler_app(&provider)?;
 
-        let mut instance =
-            state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
-        instance.node_id = Some(body.node_id);
-        instance.deployment = body.deployment;
-        instance.metadata = body.metadata;
-        instance.updated_at = ctx.now();
-        state::set_instance(instance);
+        for update in body.updates {
+            let mut changed = false;
+            let mut instance =
+                state::get_instance(body.provider, update.id).ok_or(Error::InstanceNotFound)?;
 
-        CurrentState::with(|state| {
-            state.emit_event(Event::InstanceUpdated {
-                provider: body.provider,
-                id: body.id,
-            })
-        });
+            // Update various metadata.
+            if let Some(node_id) = update.node_id {
+                instance.node_id = Some(node_id);
+                changed = true;
+            }
+            if let Some(deployment) = update.deployment {
+                instance.deployment = deployment;
+                changed = true;
+            }
+            if let Some(metadata) = update.metadata {
+                instance.metadata = metadata;
+                changed = true;
+            }
+
+            // Complete commands.
+            if let Some(last_completed_cmd) = update.last_completed_cmd {
+                let cmds =
+                    state::get_instance_commands(body.provider, update.id, last_completed_cmd);
+                instance.cmd_count = instance
+                    .cmd_count
+                    .saturating_sub(cmds.len().try_into().map_err(|_| Error::InvalidArgument)?);
+
+                for qc in cmds {
+                    state::remove_instance_command(body.provider, update.id, qc.id);
+                    changed = true;
+                }
+            }
+
+            if !changed {
+                continue;
+            }
+
+            instance.updated_at = ctx.now();
+            state::set_instance(instance);
+
+            CurrentState::with(|state| {
+                state.emit_event(Event::InstanceUpdated {
+                    provider: body.provider,
+                    id: update.id,
+                })
+            });
+        }
 
         Ok(())
     }
 
     /// Ensure caller is the current instance administrator, return an error otherwise.
     fn ensure_caller_is_instance_admin(instance: &types::Instance) -> Result<(), Error> {
+        // Skip checks in simulation mode for correct gas estimation.
+        // This is fine because no confidential data is being protected here.
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            return Ok(());
+        }
+
         let caller = CurrentState::with_env(|env| env.tx_caller_address());
         if instance.admin != caller {
             return Err(Error::Forbidden);
@@ -558,7 +627,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn tx_instance_cancel<C: Context>(ctx: &C, body: types::InstanceCancel) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_CANCEL)?;
 
-        if CurrentState::with_env(|env| env.is_check_only()) {
+        if !ctx.should_execute_contracts() {
             return Ok(());
         }
 
@@ -566,7 +635,6 @@ impl<Cfg: Config> Module<Cfg> {
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
-        instance.updated_at = ctx.now();
 
         match instance.status {
             types::InstanceStatus::Created
@@ -593,6 +661,7 @@ impl<Cfg: Config> Module<Cfg> {
             _ => {
                 // The instance has either been accepted or cancelled within the acceptance time
                 // window. Make the provider claim the entire prepaid amount.
+                instance.updated_at = ctx.now();
                 instance.status = types::InstanceStatus::Cancelled;
                 instance
                     .payment
@@ -644,7 +713,12 @@ impl<Cfg: Config> Module<Cfg> {
                 .claim(ctx, &provider, &mut instance)?;
         }
 
-        // TODO: update offer capacity (if the offer still exists).
+        // Update offer capacity iff the offer still exists. Note that offer capacity mangement
+        // is best-effort and the provider can always reset to an arbitrarily high value.
+        if let Some(mut offer) = state::get_offer(body.provider, instance.offer) {
+            offer.capacity = offer.capacity.saturating_add(1);
+            state::set_offer(body.provider, offer);
+        }
 
         state::set_provider(provider);
         state::remove_instance(body.provider, body.id);
@@ -694,6 +768,10 @@ impl<Cfg: Config> Module<Cfg> {
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
 
+        if instance.status != types::InstanceStatus::Accepted {
+            return Err(Error::InvalidInstanceState);
+        }
+
         let new_cmd_count = instance
             .cmd_count
             .checked_add(cmd_count)
@@ -714,39 +792,6 @@ impl<Cfg: Config> Module<Cfg> {
         instance.cmd_count = new_cmd_count;
         instance.updated_at = ctx.now();
         state::set_instance(instance);
-
-        Ok(())
-    }
-
-    #[handler(call = "roflmarket.InstanceCompleteCmds")]
-    fn tx_instance_complete_cmds<C: Context>(
-        ctx: &C,
-        body: types::InstanceCompleteCmds,
-    ) -> Result<(), Error> {
-        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_BASE)?;
-
-        let cmd_count: u64 = body
-            .instances
-            .len()
-            .try_into()
-            .map_err(|_| Error::InvalidArgument)?;
-        <C::Runtime as Runtime>::Core::use_tx_gas(
-            cmd_count.saturating_mul(Cfg::GAS_COST_CALL_INSTANCE_COMPLETE_CMDS_CMD),
-        )?;
-
-        if CurrentState::with_env(|env| env.is_check_only()) {
-            return Ok(());
-        }
-
-        let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
-        Self::ensure_caller_is_scheduler_app(&provider)?;
-
-        for (instance_id, cmd_id) in body.instances {
-            let cmds = state::get_instance_commands(body.provider, instance_id, cmd_id);
-            for qc in cmds {
-                state::remove_instance_command(body.provider, instance_id, qc.id);
-            }
-        }
 
         Ok(())
     }
