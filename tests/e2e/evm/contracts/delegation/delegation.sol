@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract Test {
     string private constant CONSENSUS_DELEGATE = "consensus.Delegate";
     string private constant CONSENSUS_UNDELEGATE = "consensus.Undelegate";
     string private constant CONSENSUS_TAKE_RECEIPT = "consensus.TakeReceipt";
+    string private constant CONSENSUS_DELEGATION = "consensus.Delegation";
 
     uint8 private constant RECEIPT_KIND_DELEGATE = 1;
     uint8 private constant RECEIPT_KIND_UNDELEGATE_START = 2;
@@ -78,6 +80,33 @@ contract Test {
         pendingDelegations[receiptId] = PendingDelegation(msg.sender, to, amount);
 
         return receiptId;
+    }
+
+    function delegation(bytes calldata from, bytes calldata to) public returns (bytes memory) {
+        require(from.length == 21, "from address must be 21 bytes long");
+        require(to.length == 21, "to address must be 21 bytes long");
+
+        (bool success, bytes memory data) = SUBCALL.call(abi.encode(
+            CONSENSUS_DELEGATION,
+            // Manually encode CBOR for the DelegationQuery argument struct.
+            abi.encodePacked(
+                hex"a262", // map(2) + text(2)
+                "to",      // The "to" field comes first, since our CBOR is deterministic.
+                hex"55",   // Should be 95 (array(21)), but only map seems to work...
+                to,
+                hex"64",   // text(4)
+                "from",
+                hex"55",   // Should be 95 (array(21)), but only map seems to work...
+                from
+            )
+        ));
+        require(success, "delegation subcall failed");
+        (uint64 status, bytes memory result) = abi.decode(data, (uint64, bytes));
+        if (status != 0) {
+            revert SubcallFailed(status, result);
+        }
+
+        return result;
     }
 
     function takeReceipt(uint8 kind, uint8 receiptId) internal returns (bytes memory) {
