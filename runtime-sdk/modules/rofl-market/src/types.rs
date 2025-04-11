@@ -455,11 +455,42 @@ pub struct Update {
     /// Identifier of the node where the instance has been provisioned.
     pub node_id: Option<PublicKey>,
     /// Deployment to update the instance with.
-    pub deployment: Option<Option<Deployment>>,
+    pub deployment: Option<DeploymentUpdate>,
     /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
     pub metadata: Option<BTreeMap<String, String>>,
     /// Last completed command identifier (inclusive).
     pub last_completed_cmd: Option<CommandId>,
+}
+
+/// Update of the deployment field.
+///
+/// This needs to be handled as a separate type due to problems with `Option<Option<Deployment>>`
+/// serialization in CBOR.
+#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+pub enum DeploymentUpdate {
+    #[cbor(rename = 0)]
+    Clear,
+
+    #[cbor(rename = 1)]
+    Set(Deployment),
+}
+
+impl From<Option<Deployment>> for DeploymentUpdate {
+    fn from(value: Option<Deployment>) -> Self {
+        match value {
+            None => Self::Clear,
+            Some(deployment) => Self::Set(deployment),
+        }
+    }
+}
+
+impl From<DeploymentUpdate> for Option<Deployment> {
+    fn from(value: DeploymentUpdate) -> Self {
+        match value {
+            DeploymentUpdate::Clear => None,
+            DeploymentUpdate::Set(deployment) => Some(deployment),
+        }
+    }
 }
 
 /// A request by the provider to update instance metadata.
