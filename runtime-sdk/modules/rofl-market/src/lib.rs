@@ -568,7 +568,7 @@ impl<Cfg: Config> Module<Cfg> {
                 changed = true;
             }
             if let Some(deployment) = update.deployment {
-                instance.deployment = deployment;
+                instance.deployment = deployment.into();
                 changed = true;
             }
             if let Some(metadata) = update.metadata {

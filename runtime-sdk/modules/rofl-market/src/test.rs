@@ -365,7 +365,7 @@ fn test_instance_management() {
         provider: keys::alice::address(),
         offer: 0.into(),
         admin: None, // Caller.
-        deployment: None,
+        deployment: Some(Default::default()),
         term: types::Term::Hour, // Hourly term does not exist for this offer.
         term_count: 1,
     };
@@ -514,6 +514,7 @@ fn test_instance_management() {
         provider: keys::alice::address(),
         updates: vec![types::Update {
             id: 0.into(),
+            deployment: Some(None.into()),
             metadata: Some(BTreeMap::from([("foo".to_string(), "bar".to_string())])),
             // Other fields are unchanged.
             ..Default::default()
@@ -556,6 +557,7 @@ fn test_instance_management() {
         )
         .unwrap();
     assert_eq!(instance.metadata.get("foo"), Some(&"bar".to_string()));
+    assert_eq!(instance.deployment, None);
 
     // Top-up instance.
     let topup = types::InstanceTopUp {
