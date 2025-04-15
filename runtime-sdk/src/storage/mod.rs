@@ -3,7 +3,7 @@ use oasis_core_runtime::storage::mkvs::Iterator;
 
 pub mod confidential;
 mod hashed;
-mod host;
+pub mod host;
 mod mkvs;
 mod overlay;
 mod prefix;
