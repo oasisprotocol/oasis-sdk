@@ -7,13 +7,13 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context as _, Result};
 use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     core::{
-        common::crypto::mrae::deoxysii,
+        common::crypto::{hash::Hash, mrae::deoxysii},
         consensus::{
             registry::{SGXConstraints, TEEHardware},
             state::{
@@ -22,6 +22,7 @@ use crate::{
         },
         enclave_rpc::{client::RpcClient, session},
         host::{self, Host as _},
+        storage::mkvs,
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
@@ -31,7 +32,7 @@ use crate::{
         core::types::{CallDataPublicKeyQueryResponse, EstimateGasQuery},
     },
     state::CurrentState,
-    storage::HostStore,
+    storage::{host::new_mkvs_tree_for_round, HostStore},
     types::{
         address::{Address, SignatureAddressSpec},
         callformat, token,
@@ -55,6 +56,8 @@ pub struct SubmitTxOpts {
     pub timeout: Option<Duration>,
     /// Whether the call data should be encrypted (true by default).
     pub encrypt: bool,
+    /// Whether to verify the transaction result (true by default).
+    pub verify: bool,
 }
 
 impl Default for SubmitTxOpts {
@@ -62,6 +65,7 @@ impl Default for SubmitTxOpts {
         Self {
             timeout: Some(Duration::from_millis(15_000)), // 15 seconds.
             encrypt: true,
+            verify: true,
         }
     }
 }
@@ -641,10 +645,12 @@ where
             tx.append_sign(signer)?;
         }
         let tx = tx.finalize();
+        let raw_tx = cbor::to_vec(tx);
+        let tx_hash = Hash::digest_bytes(&raw_tx);
 
         // Submit the transaction.
         let submit_tx_task = client.state.host.submit_tx(
-            cbor::to_vec(tx),
+            raw_tx,
             host::SubmitTxOpts {
                 wait: true,
                 ..Default::default()
@@ -656,6 +662,37 @@ where
             submit_tx_task.await
         };
         let result = result?.ok_or(anyhow!("missing result"))?;
+
+        if opts.verify {
+            // TODO: Ensure consensus verifier is up to date.
+
+            // Verify transaction inclusion and result.
+            let io_tree = new_mkvs_tree_for_round(
+                client.state.host.clone(),
+                &client.state.consensus_verifier,
+                client.state.host.get_runtime_id(),
+                result.round,
+                mkvs::RootType::IO,
+            )
+            .await?;
+            // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
+            // TODO: Remove spawn once we have async MKVS.
+            let verified_result = tokio::task::spawn_blocking(move || -> Result<_> {
+                let key = [&[b'T'], tx_hash.as_ref(), &[0x02]].concat();
+                let output_artifacts = io_tree
+                    .get(&key)
+                    .context("failed to verify transaction result")?
+                    .ok_or(anyhow!("failed to verify transaction result"))?;
+
+                let output_artifacts: (Vec<u8>,) = cbor::from_slice(&output_artifacts)
+                    .context("malformed output transaction artifacts")?;
+                Ok(output_artifacts.0)
+            })
+            .await??;
+            if result.output != verified_result {
+                return Err(anyhow!("failed to verify transaction result"));
+            }
+        }
 
         // Update latest known round.
         client

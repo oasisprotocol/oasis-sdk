@@ -21,13 +21,9 @@ pub struct HostStore {
 impl HostStore {
     /// Create a new host store for the given host and root.
     pub fn new(host: Arc<Protocol>, root: mkvs::Root) -> Self {
-        let read_syncer = mkvs::sync::HostReadSyncer::new(host, HostStorageEndpoint::Runtime);
-        let tree = mkvs::Tree::builder()
-            .with_capacity(10_000, 1024 * 1024)
-            .with_root(root)
-            .build(Box::new(read_syncer));
-
-        Self { tree }
+        Self {
+            tree: new_mkvs_tree_for_root(host, root),
+        }
     }
 
     /// Create a new host store for the given host and root at the given round.
@@ -37,28 +33,19 @@ impl HostStore {
     pub async fn new_for_round(
         host: Arc<Protocol>,
         consensus_verifier: &Arc<dyn Verifier>,
-        id: Namespace,
+        runtime_id: Namespace,
         round: u64,
     ) -> Result<Self> {
-        // Fetch latest consensus layer state.
-        let state = consensus_verifier.latest_state().await?;
-        // Fetch latest state root for the given namespace.
-        let roots = tokio::task::spawn_blocking(move || {
-            let roothash = RoothashState::new(&state);
-            roothash.round_roots(id, round)
+        Ok(Self {
+            tree: new_mkvs_tree_for_round(
+                host,
+                consensus_verifier,
+                runtime_id,
+                round,
+                mkvs::RootType::State,
+            )
+            .await?,
         })
-        .await??
-        .ok_or(anyhow!("root not found"))?;
-
-        Ok(Self::new(
-            host,
-            mkvs::Root {
-                namespace: id,
-                version: round,
-                root_type: mkvs::RootType::State,
-                hash: roots.state_root,
-            },
-        ))
     }
 }
 
@@ -82,4 +69,48 @@ impl storage::Store for HostStore {
     fn prefetch_prefixes(&mut self, prefixes: Vec<mkvs::Prefix>, limit: u16) {
         self.tree.prefetch_prefixes(&prefixes, limit).unwrap();
     }
+}
+
+/// Create a new MKVS tree for the given host and root.
+pub fn new_mkvs_tree_for_root(host: Arc<Protocol>, root: mkvs::Root) -> mkvs::Tree {
+    let read_syncer = mkvs::sync::HostReadSyncer::new(host, HostStorageEndpoint::Runtime);
+    mkvs::Tree::builder()
+        .with_capacity(10_000, 1024 * 1024)
+        .with_root(root)
+        .build(Box::new(read_syncer))
+}
+
+/// Create a new MKVS tree for the given host and runtime at the given round.
+///
+/// The corresponding root hash is fetched by looking it up in consensus layer state, verified
+/// by the passed verifier to be correct.
+pub async fn new_mkvs_tree_for_round(
+    host: Arc<Protocol>,
+    consensus_verifier: &Arc<dyn Verifier>,
+    runtime_id: Namespace,
+    round: u64,
+    root_type: mkvs::RootType,
+) -> Result<mkvs::Tree> {
+    // Fetch latest consensus layer state.
+    let state = consensus_verifier.latest_state().await?;
+    // Fetch latest roots for the given namespace.
+    let roots = tokio::task::spawn_blocking(move || {
+        let roothash = RoothashState::new(&state);
+        roothash.round_roots(runtime_id, round)
+    })
+    .await??
+    .ok_or(anyhow!("root not found"))?;
+
+    let root = mkvs::Root {
+        namespace: runtime_id,
+        version: round,
+        root_type,
+        hash: match root_type {
+            mkvs::RootType::State => roots.state_root,
+            mkvs::RootType::IO => roots.io_root,
+            _ => return Err(anyhow!("unsupported root type")),
+        },
+    };
+
+    Ok(new_mkvs_tree_for_root(host, root))
 }
