@@ -9,6 +9,10 @@ inputs:
     description: Should the base branch be used for pull requests
     default: no
     required: false
+  trim_prefix:
+    description: Trim the given prefix
+    default: no
+    required: false
 outputs:
   tag:
     description: The tag derived from the branch information
@@ -23,8 +27,12 @@ runs:
       id: determine-tag
       run: |
         if [[ -z $GITHUB_BASE_REF ]]; then
-          # On master/stable branches.
-          branch=${GITHUB_REF#refs/heads/}
+          # On master/stable branches or tags.
+          branch=${GITHUB_REF_NAME}
+
+          if [[ -n "${{ inputs.trim_prefix }}" ]]; then
+            branch=${branch#"${{ inputs.trim_prefix }}"}
+          fi
         elif [[ "${{ inputs.use_base_for_pr }}" == "yes" ]]; then
           # Use base branch.
           branch=$GITHUB_BASE_REF
