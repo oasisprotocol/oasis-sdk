@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use tokio::sync::mpsc;
 
-use crate::{core::identity::Identity, crypto::signature::Signer};
+use crate::{
+    core::{common::namespace::Namespace, host::Host, identity::Identity, protocol::Protocol},
+    crypto::signature::Signer,
+};
 
 use super::{client, processor, App};
 
@@ -13,6 +16,7 @@ pub struct Environment<A: App> {
     client: client::Client<A>,
     signer: Arc<dyn Signer>,
     identity: Arc<Identity>,
+    host: Arc<Protocol>,
     cmdq: mpsc::WeakSender<processor::Command>,
 }
 
@@ -29,6 +33,7 @@ where
             app: state.app.clone(),
             signer: state.signer.clone(),
             identity: state.identity.clone(),
+            host: state.host.clone(),
             client: client::Client::new(state, cmdq.clone()),
             cmdq,
         }
@@ -54,6 +59,22 @@ where
         self.identity.clone()
     }
 
+    /// Host interface.
+    pub fn host(&self) -> Arc<dyn Host> {
+        self.host.clone()
+    }
+
+    /// Runtime identifier.
+    pub fn runtime_id(&self) -> Namespace {
+        self.host.get_runtime_id()
+    }
+
+    /// Untrusted local runtime configuration defined by the node operator where the node hosting
+    /// the ROFL app is running.
+    pub fn untrusted_local_config(&self) -> BTreeMap<String, cbor::Value> {
+        self.host.get_host_info().local_config
+    }
+
     /// Send a command to the processor.
     pub(super) async fn send_command(&self, cmd: processor::Command) -> Result<()> {
         let cmdq = self
@@ -74,6 +95,7 @@ where
             app: self.app.clone(),
             signer: self.signer.clone(),
             identity: self.identity.clone(),
+            host: self.host.clone(),
             client: self.client.clone(),
             cmdq: self.cmdq.clone(),
         }
