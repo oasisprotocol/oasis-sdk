@@ -88,7 +88,11 @@ export function handleMessage(e: MessageEvent<unknown>) {
             const handlerKey = `${e.origin}/${m.event.type}`;
             if (!eventHandlers[handlerKey]) break;
             const handler = eventHandlers[handlerKey];
-            handler(m.event as never);
+            if (typeof handler === 'function') {
+                handler(m.event as never);
+            } else {
+                console.error(`Invalid handler for key: ${handlerKey}`);
+            }
             break;
         }
     }
