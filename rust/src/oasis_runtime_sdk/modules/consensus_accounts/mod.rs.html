@@ -997,6 +997,20 @@
 <a href="#997" id="997">997</a>
 <a href="#998" id="998">998</a>
 <a href="#999" id="999">999</a>
+<a href="#1000" id="1000">1000</a>
+<a href="#1001" id="1001">1001</a>
+<a href="#1002" id="1002">1002</a>
+<a href="#1003" id="1003">1003</a>
+<a href="#1004" id="1004">1004</a>
+<a href="#1005" id="1005">1005</a>
+<a href="#1006" id="1006">1006</a>
+<a href="#1007" id="1007">1007</a>
+<a href="#1008" id="1008">1008</a>
+<a href="#1009" id="1009">1009</a>
+<a href="#1010" id="1010">1010</a>
+<a href="#1011" id="1011">1011</a>
+<a href="#1012" id="1012">1012</a>
+<a href="#1013" id="1013">1013</a>
 </pre></div><pre class="rust"><code><span class="doccomment">//! Consensus accounts module.
 //!
 //! This module allows consensus transfers in and out of the runtime account,
@@ -1083,6 +1097,9 @@
     </span><span class="kw">pub </span>store_receipt: u64,
     <span class="doccomment">/// Cost of taking a delegation/undelegation receipt.
     </span><span class="kw">pub </span>take_receipt: u64,
+
+    <span class="doccomment">/// Cost of getting delegation info through a subcall.
+    </span><span class="kw">pub </span>delegation: u64,
 }
 
 <span class="doccomment">/// Parameters for the consensus module.
@@ -1565,6 +1582,17 @@
         _ctx: <span class="kw-2">&amp;</span>C,
         args: types::DelegationQuery,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;types::DelegationInfo, Error&gt; {
+        state::get_delegation(args.from, args.to)
+    }
+
+    <span class="attr">#[handler(call = <span class="string">"consensus.Delegation"</span>, internal)]
+    </span><span class="kw">fn </span>internal_delegation&lt;C: Context&gt;(
+        _ctx: <span class="kw-2">&amp;</span>C,
+        args: types::DelegationQuery,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;types::DelegationInfo, Error&gt; {
+        <span class="kw">let </span>params = <span class="self">Self</span>::params();
+        &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::use_tx_gas(params.gas_costs.delegation)<span class="question-mark">?</span>;
+
         state::get_delegation(args.from, args.to)
     }
 
