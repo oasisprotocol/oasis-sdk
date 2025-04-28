@@ -6,6 +6,7 @@ contract Test {
     string private constant CONSENSUS_UNDELEGATE = "consensus.Undelegate";
     string private constant CONSENSUS_TAKE_RECEIPT = "consensus.TakeReceipt";
     string private constant CONSENSUS_DELEGATION = "consensus.Delegation";
+    string private constant CONSENSUS_SHARES_TO_TOKENS = "consensus.SharesToTokens";
 
     uint8 private constant RECEIPT_KIND_DELEGATE = 1;
     uint8 private constant RECEIPT_KIND_UNDELEGATE_START = 2;
@@ -107,6 +108,35 @@ contract Test {
         }
 
         return result;
+    }
+
+    function sharesToTokens(bytes calldata addr, uint8 pool, uint128 shares) public returns (uint128) {
+        (bool success, bytes memory data) = SUBCALL.call(abi.encode(
+            CONSENSUS_SHARES_TO_TOKENS,
+            // Manually encode CBOR for the SharesToTokens argument struct.
+            abi.encodePacked(
+                hex"a364", // map(3) + text(4)
+                "pool",
+                pool,      // Only works for values <= 23.
+                hex"66",   // text(6)
+                "shares",
+                hex"50",
+                shares,
+                hex"67",   // text(7)
+                "address",
+                hex"55",
+                addr
+            )
+        ));
+        require(success, "sharesToTokens subcall failed");
+        (uint64 status, bytes memory result) = abi.decode(data, (uint64, bytes));
+        if (status != 0) {
+            revert SubcallFailed(status, result);
+        }
+
+        // We'd have to decode CBOR here, but this hack works well enough for the test...
+        // Double cast required because Solidity is dumb.
+        return uint128(uint8(result[1]));
     }
 
     function takeReceipt(uint8 kind, uint8 receiptId) internal returns (bytes memory) {

@@ -87,6 +87,9 @@ pub struct GasCosts {
 
     /// Cost of getting delegation info through a subcall.
     pub delegation: u64,
+
+    /// Cost of converting the number of delegated shares to tokens at current rate.
+    pub shares_to_tokens: u64,
 }
 
 /// Parameters for the consensus module.
@@ -597,6 +600,30 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
         args: types::UndelegationsQuery,
     ) -> Result<Vec<types::UndelegationInfo>, Error> {
         state::get_undelegations(args.to)
+    }
+
+    #[handler(call = "consensus.SharesToTokens", internal)]
+    fn internal_shares_to_tokens<C: Context>(
+        ctx: &C,
+        args: types::SharesToTokens,
+    ) -> Result<u128, Error> {
+        let params = Self::params();
+        <C::Runtime as Runtime>::Core::use_tx_gas(params.gas_costs.shares_to_tokens)?;
+
+        let account = Consensus::account(ctx, args.address)?;
+        let pool = match args.pool {
+            types::SharePool::Active => &account.escrow.active,
+            types::SharePool::Debonding => &account.escrow.debonding,
+            _ => return Err(Error::InvalidArgument),
+        };
+
+        args.shares
+            .checked_mul(u128::try_from(pool.balance.clone()).map_err(|_| Error::InvalidArgument)?)
+            .ok_or(Error::InvalidArgument)?
+            .checked_div(
+                u128::try_from(pool.total_shares.clone()).map_err(|_| Error::InvalidArgument)?,
+            )
+            .ok_or(Error::InvalidArgument)
     }
 
     #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
