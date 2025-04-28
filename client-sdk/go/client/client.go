@@ -480,8 +480,8 @@ func (rc *runtimeClient) State() syncer.ReadSyncer {
 // New creates a new runtime client for the specified runtime.
 func New(conn *grpc.ClientConn, runtimeID common.Namespace) RuntimeClient {
 	return &runtimeClient{
-		cs:        consensus.NewConsensusClient(conn),
-		cc:        coreClient.NewRuntimeClient(conn),
+		cs:        consensus.NewClient(conn),
+		cc:        coreClient.NewClient(conn),
 		runtimeID: runtimeID,
 	}
 }

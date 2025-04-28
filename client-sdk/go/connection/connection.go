@@ -57,7 +57,7 @@ type connection struct {
 }
 
 func (c *connection) Consensus() consensus.ClientBackend {
-	return consensus.NewConsensusClient(c.conn)
+	return consensus.NewClient(c.conn)
 }
 
 func (c *connection) Control() control.NodeController {

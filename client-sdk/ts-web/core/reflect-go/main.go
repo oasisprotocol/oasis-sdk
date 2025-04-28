@@ -281,6 +281,7 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/runtime/client":          "RuntimeClient",
 	"github.com/oasisprotocol/oasis-core/go/runtime/host":            "RuntimeHost",
 	"github.com/oasisprotocol/oasis-core/go/runtime/bundle":          "RuntimeBundle",
+	"github.com/oasisprotocol/oasis-core/go/runtime/history":         "RuntimeHistory",
 	"github.com/oasisprotocol/oasis-core/go/scheduler":               "Scheduler",
 	"github.com/oasisprotocol/oasis-core/go/staking":                 "Staking",
 	"github.com/oasisprotocol/oasis-core/go/storage":                 "Storage",
@@ -550,8 +551,7 @@ const (
 )
 
 var skipMethods = map[string]bool{
-	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.TrackRuntime": true,
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized":   true,
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
 	// Cleanup functions
 	"github.com/oasisprotocol/oasis-core/go/scheduler/api.Backend.Cleanup":  true,
 	"github.com/oasisprotocol/oasis-core/go/registry/api.Backend.Cleanup":   true,
@@ -565,6 +565,7 @@ var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking":    true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Scheduler":  true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.KeyManager": true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash":   true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State":      true,
 	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Vault":      true,

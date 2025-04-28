@@ -350,7 +350,7 @@ const methodDescriptorStakingWatchEvents = createMethodDescriptorServerStreaming
 
 const methodDescriptorKeyManagerStateToGenesis = createMethodDescriptorUnary<
     types.longnum,
-    types.KeyManagerSecretsGenesis
+    types.KeyManagerGenesis
 >('KeyManager', 'StateToGenesis');
 
 const methodDescriptorRootHashConsensusParameters = createMethodDescriptorUnary<
@@ -550,6 +550,14 @@ const methodDescriptorConsensusGetGenesisDocument = createMethodDescriptorUnary<
     void,
     types.GenesisDocument
 >('Consensus', 'GetGenesisDocument');
+const methodDescriptorConsensusGetLastRetainedHeight = createMethodDescriptorUnary<
+    void,
+    types.longnum
+>('Consensus', 'GetLastRetainedHeight');
+const methodDescriptorConsensusGetLatestHeight = createMethodDescriptorUnary<void, types.longnum>(
+    'Consensus',
+    'GetLatestHeight',
+);
 const methodDescriptorConsensusGetLightBlock = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightBlock
@@ -628,6 +636,10 @@ const methodDescriptorConsensusStateSyncIterate = createMethodDescriptorUnary<
     types.StorageProofResponse
 >('Consensus', 'StateSyncIterate');
 
+const methodDescriptorNodeControllerAddBundle = createMethodDescriptorUnary<string, void>(
+    'NodeController',
+    'AddBundle',
+);
 const methodDescriptorNodeControllerCancelUpgrade = createMethodDescriptorUnary<
     types.UpgradeDescriptor,
     void
@@ -1152,7 +1164,7 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
-     * GetPastRoundRoots returns the stored state and I/O roots for the given runtime and round.
+     * GetRoundRoots returns the stored state and I/O roots for the given runtime and round.
      */
     rootHashGetRoundRoots(request: types.RootHashRoundRootsRequest) {
         return this.callUnary(methodDescriptorRootHashGetRoundRoots, request);
@@ -1455,6 +1467,20 @@ export class NodeInternal extends GRPCWrapper {
     }
 
     /**
+     * GetLastRetainedHeight returns the height of the oldest retained consensus block.
+     */
+    consensusGetLastRetainedHeight() {
+        return this.callUnary(methodDescriptorConsensusGetLastRetainedHeight, undefined);
+    }
+
+    /**
+     * GetLatestHeight returns the height of the latest consensus block.
+     */
+    consensusGetLatestHeight() {
+        return this.callUnary(methodDescriptorConsensusGetLatestHeight, undefined);
+    }
+
+    /**
      * GetLightBlock returns a light version of the consensus layer block that can be used for light
      * client verification.
      */
@@ -1600,6 +1626,16 @@ export class NodeInternal extends GRPCWrapper {
      */
     consensusStateSyncIterate(request: types.StorageIterateRequest) {
         return this.callUnary(methodDescriptorConsensusStateSyncIterate, request);
+    }
+
+    /**
+     * AddBundle adds bundle from the given path.
+     *
+     * If the bundle upgrades an existing ROFL component, the latter will
+     * be upgraded to the new version.
+     */
+    nodeControllerAddBundle(path: string) {
+        return this.callUnary(methodDescriptorNodeControllerAddBundle, path);
     }
 
     /**

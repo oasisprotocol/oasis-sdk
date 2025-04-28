@@ -66,6 +66,7 @@ linters-settings:
           - $all
         allow:
           - $gostd
+          - golang.org/x/crypto/sha3
           - github.com/oasisprotocol
           - github.com/btcsuite/btcd/btcec
           - google.golang.org/grpc
