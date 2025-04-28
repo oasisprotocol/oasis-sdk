@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["LOCAL_RPC_ENDPOINT_VOLUME_MANAGER","METHOD_VOLUME_ADD","METHOD_VOLUME_LIST","METHOD_VOLUME_REMOVE"],"struct":["VolumeAddRequest","VolumeAddResponse","VolumeInfo","VolumeListRequest","VolumeListResponse","VolumeRemoveRequest","VolumeRemoveResponse"],"trait":["VolumeManager"]};
