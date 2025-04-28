@@ -124,6 +124,30 @@ pub struct UndelegationsQuery {
     pub to: Address,
 }
 
+/// Kind of shares pool.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
+#[repr(u8)]
+pub enum SharePool {
+    #[default]
+    Invalid = 0,
+    Active = 1,
+    Debonding = 2,
+}
+
+/// SharesToTokens arguments.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct SharesToTokens {
+    /// Target account.
+    pub address: Address,
+
+    /// Kind of shares pool.
+    pub pool: SharePool,
+
+    /// Number of delegated shares to convert into tokens.
+    pub shares: u128,
+}
+
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct AccountBalance {
     pub balance: u128,
