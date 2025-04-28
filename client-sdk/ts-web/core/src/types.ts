@@ -129,6 +129,10 @@ export interface ConsensusBlock {
      */
     state_root: StorageRoot;
     /**
+     * Size is the size of the block in bytes.
+     */
+    size?: longnum;
+    /**
      * Meta contains the consensus backend specific block metadata.
      */
     meta: unknown;
@@ -323,8 +327,19 @@ export interface ConsensusP2PStatus {
  * Parameters are the consensus parameters.
  */
 export interface ConsensusParameters {
+    /**
+     * TimeoutCommit specifies the duration to wait after committing a block
+     * before starting a new height.
+     */
     timeout_commit: longnum;
+    /**
+     * SkipTimeoutCommit determines whether to proceed immediately once all
+     * precommits are received.
+     */
     skip_timeout_commit: boolean;
+    /**
+     * EmptyBlockInterval defines the time interval between empty blocks.
+     */
     empty_block_interval: longnum;
     max_tx_size: longnum;
     max_block_size: longnum;
@@ -354,6 +369,11 @@ export interface ConsensusParameters {
      * PublicKeyBlacklist is the network-wide public key blacklist.
      */
     public_key_blacklist?: Uint8Array[];
+    /**
+     * FeatureVersion represents the latest consensus-breaking software version
+     * that follows calendar versioning (yy.minor[.micro]).
+     */
+    feature_version?: Version;
 }
 
 /**
@@ -376,6 +396,7 @@ export interface ConsensusProof {
 export interface ConsensusResult {
     error: ConsensusError;
     events: ConsensusEvent[];
+    gas_used?: longnum;
 }
 
 /**
@@ -418,6 +439,10 @@ export interface ConsensusStatus {
      * LatestStateRoot is the Merkle root of the consensus state tree.
      */
     latest_state_root: StorageRoot;
+    /**
+     * LatestBlockSize is the size (in bytes) of the latest block.
+     */
+    latest_block_size?: longnum;
     /**
      * GenesisHeight is the height of the genesis block.
      */
@@ -508,6 +533,33 @@ export interface ConsensusVotes {
     voting_power: longnum;
     ratio: number;
     votes: ConsensusVote[];
+}
+
+/**
+ * ComponentStatus is the runtime component status overview.
+ */
+export interface ControlComponentStatus {
+    /**
+     * Kind is the component kind.
+     */
+    kind: string;
+    /**
+     * Name is the name of the component.
+     */
+    name?: string;
+    /**
+     * Version is the component version.
+     */
+    version?: Version;
+    /**
+     * Detached specifies whether the component was in a detached bundle.
+     */
+    detached?: boolean;
+    /**
+     * Disabled specifies whether the component is disabled by default
+     * and needs to be explicitly enabled via node configuration to be used.
+     */
+    disabled?: boolean;
 }
 
 /**
@@ -622,8 +674,7 @@ export interface ControlRuntimeStatus {
      */
     last_retained_hash: Uint8Array;
     /**
-     * Committee contains the runtime worker status in case this node is a (candidate) member of a
-     * runtime committee.
+     * Committee contains the runtime common committee worker status.
      */
     committee: WorkerCommonStatus;
     /**
@@ -635,9 +686,17 @@ export interface ControlRuntimeStatus {
      */
     storage?: WorkerStorageStatus;
     /**
+     * Indexer contains the runtime history indexer status in case this runtime has a block indexer.
+     */
+    indexer?: RuntimeHistoryIndexerStatus;
+    /**
      * Provisioner is the name of the runtime provisioner.
      */
     provisioner?: string;
+    /**
+     * Components contains statuses of the runtime components.
+     */
+    components?: ControlComponentStatus[];
 }
 
 /**
@@ -760,7 +819,7 @@ export interface GenesisDocument {
     /**
      * KeyManager is the key manager genesis state.
      */
-    keymanager: KeyManagerSecretsGenesis;
+    keymanager: KeyManagerGenesis;
     /**
      * Scheduler is the scheduler genesis state.
      */
@@ -1101,6 +1160,13 @@ export interface KeyManagerCHURPConfirmationRequest extends KeyManagerCHURPIdent
 }
 
 /**
+ * ConsensusParameters are the key manager CHURP consensus parameters.
+ */
+export interface KeyManagerCHURPConsensusParameters {
+    gas_costs?: {[op: string]: longnum};
+}
+
+/**
  * CreateRequest contains the initial configuration.
  */
 export interface KeyManagerCHURPCreateRequest extends KeyManagerCHURPIdentity {
@@ -1132,6 +1198,20 @@ export interface KeyManagerCHURPCreateRequest extends KeyManagerCHURPIdentity {
 }
 
 /**
+ * Genesis is the key manager management genesis state for CHURP.
+ */
+export interface KeyManagerCHURPGenesis {
+    /**
+     * Parameters are the consensus parameters for CHURP.
+     */
+    params: KeyManagerCHURPConsensusParameters;
+    /**
+     * Statuses are the statuses of CHURP instances.
+     */
+    statuses?: KeyManagerCHURPStatus[];
+}
+
+/**
  * Identity uniquely identifies a CHURP instance.
  */
 export interface KeyManagerCHURPIdentity {
@@ -1147,7 +1227,8 @@ export interface KeyManagerCHURPIdentity {
 
 /**
  * PolicySGX represents an SGX access control policy used to authenticate
- * key manager enclaves during handoffs.
+ * key manager enclaves during handoffs and remote client enclaves when
+ * querying key shares.
  */
 export interface KeyManagerCHURPPolicySGX extends KeyManagerCHURPIdentity {
     /**
@@ -1156,7 +1237,7 @@ export interface KeyManagerCHURPPolicySGX extends KeyManagerCHURPIdentity {
     serial: number;
     /**
      * MayShare is the vector of enclave identities from which a share can be
-     * obtained during handouts.
+     * obtained during handoffs.
      */
     may_share: SGXEnclaveIdentity[];
     /**
@@ -1164,6 +1245,11 @@ export interface KeyManagerCHURPPolicySGX extends KeyManagerCHURPIdentity {
      * committee in the next handoffs.
      */
     may_join: SGXEnclaveIdentity[];
+    /**
+     * MayQuery is the map of runtime identities to the vector of enclave
+     * identities that may query key shares.
+     */
+    may_query?: Map<Uint8Array, SGXEnclaveIdentity[]>;
 }
 
 /**
@@ -1292,6 +1378,16 @@ export interface KeyManagerCHURPUpdateRequest extends KeyManagerCHURPIdentity {
 }
 
 /**
+ * Genesis is the key manager management genesis state.
+ */
+export interface KeyManagerGenesis extends KeyManagerSecretsGenesis {
+    /**
+     * Churp is the optional CHURP genesis state.
+     */
+    churp?: KeyManagerCHURPGenesis;
+}
+
+/**
  * ConsensusParameters are the key manager consensus parameters.
  */
 export interface KeyManagerSecretsConsensusParameters {
@@ -1312,8 +1408,10 @@ export interface KeyManagerSecretsEnclavePolicySGX {
     may_query: Map<Uint8Array, SGXEnclaveIdentity[]>;
     /**
      * MayReplicate is the vector of enclave IDs that may retrieve the master
-     * secret (Note: Each enclave ID may always implicitly replicate from other
-     * instances of itself).
+     * secret.
+     *
+     * NOTE: Each enclave ID may always implicitly replicate from other
+     * instances of itself.
      */
     may_replicate: SGXEnclaveIdentity[];
 }
@@ -1377,13 +1475,16 @@ export interface KeyManagerSecretsEncryptedSecret {
 }
 
 /**
- * Genesis is the key manager management genesis state.
+ * Genesis is the key manager management genesis state for secrets.
  */
 export interface KeyManagerSecretsGenesis {
     /**
-     * Parameters are the key manager consensus parameters.
+     * Parameters are the consensus parameters for secrets.
      */
     params: KeyManagerSecretsConsensusParameters;
+    /**
+     * Statuses are the statuses of secrets.
+     */
     statuses?: KeyManagerSecretsStatus[];
 }
 
@@ -1707,6 +1808,10 @@ export interface NodeTEEFeaturesSGX {
      * DefaultMaxAttestationAge is the default maximum attestation age (in blocks).
      */
     max_attestation_age?: longnum;
+    /**
+     * TDX is a feature flag specifying whether support for TDX is enabled.
+     */
+    tdx?: boolean;
 }
 
 /**
@@ -1809,7 +1914,9 @@ export interface RegistryConsensusParameters {
      */
     disable_km_runtime_registration?: boolean;
     /**
-     * EnableKeyManagerCHURP is true iff the CHURP extension for the key manager is enabled.
+     * DeprecatedEnableKeyManagerCHURP is true iff the CHURP extension for the key manager is enabled.
+     *
+     * Deprecated: CHURP extension is enabled by default since version 24.0.
      */
     enable_km_churp?: boolean;
     /**
@@ -2325,7 +2432,7 @@ export interface RegistryVersionInfo {
      */
     tee?: Uint8Array;
     /**
-     * BundleChecksum is the SHA256 hash of the runtime bundle (optional).
+     * BundleChecksum is the SHA256 hash of the runtime bundle manifest (optional).
      */
     bundle_checksum?: Uint8Array;
 }
@@ -3129,6 +3236,49 @@ export interface RuntimeClientTransactionWithResults {
 }
 
 /**
+ * IndexerStatus is the status of runtime history indexer.
+ */
+export interface RuntimeHistoryIndexerStatus {
+    /**
+     * Status is the concise status of runtime history indexer state.
+     */
+    status: string;
+    /**
+     * LastRound is the last runtime round that was indexed.
+     */
+    last_round: longnum;
+    /**
+     * ReindexStatus is history reindex status.
+     *
+     * It is nil unless during history reindex.
+     */
+    reindex_status?: RuntimeHistoryReindexStatus;
+}
+
+export interface RuntimeHistoryReindexStatus {
+    /**
+     * BatchSize is the number of blocks to reindex in a single batch.
+     */
+    batch_size: number;
+    /**
+     * LastHeight is the last consensus height that was indexed.
+     */
+    last_height: longnum;
+    /**
+     * StartHeight is the first height of history reindex interval.
+     */
+    start_height: longnum;
+    /**
+     * EndHeight is the last height of history reindex interval.
+     */
+    end_height: longnum;
+    /**
+     * ETA is expected time of history reindex completition.
+     */
+    eta: longnum;
+}
+
+/**
  * Error is a message body representing an error.
  */
 export interface RuntimeHostError {
@@ -3332,6 +3482,35 @@ export interface SGXPcsQuotePolicy {
      * packages and platform instances are blocked.
      */
     fmspc_blacklist?: string[];
+    /**
+     * TDX is an optional TDX-specific policy. In case this is nil, TDX quotes are disallowed.
+     */
+    tdx?: SGXPcsTdxQuotePolicy;
+}
+
+/**
+ * TdxModulePolicy is the TDX module policy.
+ */
+export interface SGXPcsTdxModulePolicy {
+    /**
+     * MrSeam is the optional allowed measurement of the TDX Module. In case it is nil, ANY
+     * measurement is allowed and only the signer is checked.
+     */
+    mr_seam?: Uint8Array;
+    /**
+     * MrSignerSeam is the allowed signer of the TDX Module (zero for Intel).
+     */
+    mr_signer_seam: Uint8Array;
+}
+
+/**
+ * TdxQuotePolicy is the TDX-specific quote policy.
+ */
+export interface SGXPcsTdxQuotePolicy {
+    /**
+     * AllowedTdxModules are the allowed TDX modules. Empty to allow ANY Intel-signed module.
+     */
+    allowed_tdx_modules?: SGXPcsTdxModulePolicy[];
 }
 
 /**
@@ -4277,7 +4456,7 @@ export interface VaultAuthorizeAction {
 }
 
 /**
- * CancelAction is an action cancelation call body.
+ * CancelAction is an action cancellation call body.
  */
 export interface VaultCancelAction {
     /**

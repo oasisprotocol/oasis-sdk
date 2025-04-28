@@ -495,7 +495,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 		Scenario:   sc,
 		Logger:     sc.Logger,
 		Connection: conn,
-		Consensus:  consensus.NewConsensusClient(conn),
+		Consensus:  consensus.NewClient(conn),
 		Client:     rtc,
 	}
 
