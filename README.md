@@ -4,6 +4,7 @@
 [![CI audit status][github-ci-audit-badge]][github-ci-audit-link]
 [![CI test status][github-ci-test-badge]][github-ci-test-link]
 [![Rust coverage][codecov-badge]][codecov-link]
+[![License][license-badge]][license-link]
 
 <!-- markdownlint-disable line-length -->
 [github-ci-lint-badge]: https://github.com/oasisprotocol/oasis-sdk/workflows/ci-lint/badge.svg
@@ -14,6 +15,8 @@
 [github-ci-test-link]: https://github.com/oasisprotocol/oasis-sdk/actions?query=workflow:ci-test+branch:main
 [codecov-badge]: https://codecov.io/gh/oasisprotocol/oasis-sdk/branch/main/graph/badge.svg
 [codecov-link]: https://codecov.io/gh/oasisprotocol/oasis-sdk
+[license-badge]: https://img.shields.io/github/license/oasisprotocol/oasis-sdk
+[license-link]: https://github.com/oasisprotocol/oasis-sdk/blob/main/LICENSE
 <!-- markdownlint-enable line-length -->
 
 ## Directories
