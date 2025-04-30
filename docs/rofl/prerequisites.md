@@ -25,7 +25,7 @@ To use it, bind the directory with your app source to the container's
 the next section of this guide:
 
 ```bash
-docker run --platform linux/amd64 --volume ./rofl-oracle:/src -it ghcr.io/oasisprotocol/rofl-dev
+docker run --platform linux/amd64 --volume ./rofl-oracle:/src -it ghcr.io/oasisprotocol/rofl-dev:main
 ```
 
 Note that on macOS you **must** use the `--platform linux/amd64`
