@@ -152,8 +152,7 @@ function getSigner() {
                     );
                 }
             }
-            const pair = await oasis.hdkey.HDKey.getAccountSigner(mnemonic);
-            const rawSigner = new oasis.signature.NaclSigner(pair, 'this key is not important');
+            const rawSigner = await oasis.hdkey.HDKey.getAccountSigner(mnemonic);
             return new oasis.signature.BlindContextSigner(rawSigner);
         })();
     }

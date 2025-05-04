@@ -1,0 +1,29 @@
+{
+    "name": "@oasisprotocol/signer-tweetnacl",
+    "version": "1.0.0",
+    "license": "Apache-2.0",
+    "homepage": "https://github.com/oasisprotocol/oasis-sdk/tree/main/client-sdk/ts-web/signer-tweetnacl",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/oasisprotocol/oasis-sdk.git",
+        "directory": "client-sdk/ts-web/signer-tweetnacl"
+    },
+    "files": [
+        "dist"
+    ],
+    "main": "dist/index.js",
+    "scripts": {
+        "prepare": "tsc",
+        "fmt": "prettier --write src",
+        "lint": "prettier --check src"
+    },
+    "dependencies": {
+        "@oasisprotocol/client": "^1.1.0",
+        "tweetnacl": "^1.0.3"
+    },
+    "devDependencies": {
+        "prettier": "^3.3.3",
+        "typedoc": "^0.26.7",
+        "typescript": "^5.6.2"
+    }
+}

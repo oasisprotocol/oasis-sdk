@@ -3,6 +3,7 @@
         "core",
         "ext-utils",
         "rt",
-        "signer-ledger"
+        "signer-ledger",
+        "signer-tweetnacl"
     ]
 }

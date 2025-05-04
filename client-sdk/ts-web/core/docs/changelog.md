@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased changes
+
+Breaking changes:
+
+- `signature.NaclSigner` is moved out to a new
+  `@oasisprotocol/signer-tweetnacl` package.
+- `hdkey.HDKey.getAccountSigner` now returns a `signature.Signer` instead of
+  a tweetnacl `SignKeyPair`.
+  To get the private key, use the new `hdkey.HDKey.seedFromMnemonic` and
+  `hdkey.HDKey.privateKeyFromSeed` functions.
+
+New features:
+
+- Hashing and many related functions that internally need to compute a hash,
+  such as getting the address of a public key, are now declared as
+  synchronous.
+  We had implementations that used synchronous hashing libraries all along,
+  but this is us giving up on eventually using the Web Crypto API for
+  SHA-512/256.
+- For Ed25519 signing, there's a new `signature.WebCryptoSigner` taking the
+  place of `signature.NaclSigner`.
+  `await signature.WebCryptoSigner.generate(extractable)` is equivalent to
+  `signature.NaclSigner.fromRandom(note)`, and
+  `await signature.WebCryptoSigner.fromPrivateKey(priv)` is equivalent to
+  `signature.NaclSigner.fromSeed(priv, note)`.
+
+Little things:
+
+- Removed dependency on tweetnacl.
+- We're switching lots of cryptography dependencies to noble cryptography
+  libraries.
+- Ed25519 verification now uses the Web Crypto API.
+
 ## v1.1.0
 
 Spotlight change:

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased changes
+
+New features:
+
+- Functions that internally need to compute a hash, such as
+  `address.fromSigspec`, are declared as synchronous now.
+- secp256k1 verification is declared as synchronous now.
+
+Little things:
+
+- We're switching lots of cryptography dependencies to noble cryptography
+  libraries.
+
 ## v1.1.0
 
 Spotlight change:
