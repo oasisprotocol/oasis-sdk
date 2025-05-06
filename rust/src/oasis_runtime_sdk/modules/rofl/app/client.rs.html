@@ -685,6 +685,43 @@
 <a href="#685" id="685">685</a>
 <a href="#686" id="686">686</a>
 <a href="#687" id="687">687</a>
+<a href="#688" id="688">688</a>
+<a href="#689" id="689">689</a>
+<a href="#690" id="690">690</a>
+<a href="#691" id="691">691</a>
+<a href="#692" id="692">692</a>
+<a href="#693" id="693">693</a>
+<a href="#694" id="694">694</a>
+<a href="#695" id="695">695</a>
+<a href="#696" id="696">696</a>
+<a href="#697" id="697">697</a>
+<a href="#698" id="698">698</a>
+<a href="#699" id="699">699</a>
+<a href="#700" id="700">700</a>
+<a href="#701" id="701">701</a>
+<a href="#702" id="702">702</a>
+<a href="#703" id="703">703</a>
+<a href="#704" id="704">704</a>
+<a href="#705" id="705">705</a>
+<a href="#706" id="706">706</a>
+<a href="#707" id="707">707</a>
+<a href="#708" id="708">708</a>
+<a href="#709" id="709">709</a>
+<a href="#710" id="710">710</a>
+<a href="#711" id="711">711</a>
+<a href="#712" id="712">712</a>
+<a href="#713" id="713">713</a>
+<a href="#714" id="714">714</a>
+<a href="#715" id="715">715</a>
+<a href="#716" id="716">716</a>
+<a href="#717" id="717">717</a>
+<a href="#718" id="718">718</a>
+<a href="#719" id="719">719</a>
+<a href="#720" id="720">720</a>
+<a href="#721" id="721">721</a>
+<a href="#722" id="722">722</a>
+<a href="#723" id="723">723</a>
+<a href="#724" id="724">724</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{
     collections::{BTreeMap, HashSet},
     sync::{
@@ -694,13 +731,13 @@
     time::Duration,
 };
 
-<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as _</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>rand::{rngs::OsRng, Rng};
 <span class="kw">use </span>tokio::sync::{mpsc, oneshot};
 
 <span class="kw">use crate</span>::{
     core::{
-        common::crypto::mrae::deoxysii,
+        common::crypto::{hash::Hash, mrae::deoxysii},
         consensus::{
             registry::{SGXConstraints, TEEHardware},
             state::{
@@ -709,6 +746,7 @@
         },
         enclave_rpc::{client::RpcClient, session},
         host::{<span class="self">self</span>, Host <span class="kw">as _</span>},
+        storage::mkvs,
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
@@ -718,7 +756,7 @@
         core::types::{CallDataPublicKeyQueryResponse, EstimateGasQuery},
     },
     state::CurrentState,
-    storage::HostStore,
+    storage::{host::new_mkvs_tree_for_round, HostStore},
     types::{
         address::{Address, SignatureAddressSpec},
         callformat, token,
@@ -742,6 +780,8 @@
     </span><span class="kw">pub </span>timeout: <span class="prelude-ty">Option</span>&lt;Duration&gt;,
     <span class="doccomment">/// Whether the call data should be encrypted (true by default).
     </span><span class="kw">pub </span>encrypt: bool,
+    <span class="doccomment">/// Whether to verify the transaction result (true by default).
+    </span><span class="kw">pub </span>verify: bool,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>SubmitTxOpts {
@@ -749,6 +789,7 @@
         <span class="self">Self </span>{
             timeout: <span class="prelude-val">Some</span>(Duration::from_millis(<span class="number">15_000</span>)), <span class="comment">// 15 seconds.
             </span>encrypt: <span class="bool-val">true</span>,
+            verify: <span class="bool-val">true</span>,
         }
     }
 }
@@ -1328,10 +1369,12 @@
             tx.append_sign(signer)<span class="question-mark">?</span>;
         }
         <span class="kw">let </span>tx = tx.finalize();
+        <span class="kw">let </span>raw_tx = cbor::to_vec(tx);
+        <span class="kw">let </span>tx_hash = Hash::digest_bytes(<span class="kw-2">&amp;</span>raw_tx);
 
         <span class="comment">// Submit the transaction.
         </span><span class="kw">let </span>submit_tx_task = client.state.host.submit_tx(
-            cbor::to_vec(tx),
+            raw_tx,
             host::SubmitTxOpts {
                 wait: <span class="bool-val">true</span>,
                 ..Default::default()
@@ -1343,6 +1386,37 @@
             submit_tx_task.<span class="kw">await
         </span>};
         <span class="kw">let </span>result = result<span class="question-mark">?</span>.ok_or(<span class="macro">anyhow!</span>(<span class="string">"missing result"</span>))<span class="question-mark">?</span>;
+
+        <span class="kw">if </span>opts.verify {
+            <span class="comment">// TODO: Ensure consensus verifier is up to date.
+
+            // Verify transaction inclusion and result.
+            </span><span class="kw">let </span>io_tree = new_mkvs_tree_for_round(
+                client.state.host.clone(),
+                <span class="kw-2">&amp;</span>client.state.consensus_verifier,
+                client.state.host.get_runtime_id(),
+                result.round,
+                mkvs::RootType::IO,
+            )
+            .<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="comment">// TODO: Add transaction accessors in transaction:Tree in Oasis Core.
+            // TODO: Remove spawn once we have async MKVS.
+            </span><span class="kw">let </span>verified_result = tokio::task::spawn_blocking(<span class="kw">move </span>|| -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt; {
+                <span class="kw">let </span>key = [<span class="kw-2">&amp;</span>[<span class="string">b'T'</span>], tx_hash.as_ref(), <span class="kw-2">&amp;</span>[<span class="number">0x02</span>]].concat();
+                <span class="kw">let </span>output_artifacts = io_tree
+                    .get(<span class="kw-2">&amp;</span>key)
+                    .context(<span class="string">"failed to verify transaction result"</span>)<span class="question-mark">?
+                    </span>.ok_or(<span class="macro">anyhow!</span>(<span class="string">"failed to verify transaction result"</span>))<span class="question-mark">?</span>;
+
+                <span class="kw">let </span>output_artifacts: (Vec&lt;u8&gt;,) = cbor::from_slice(<span class="kw-2">&amp;</span>output_artifacts)
+                    .context(<span class="string">"malformed output transaction artifacts"</span>)<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(output_artifacts.<span class="number">0</span>)
+            })
+            .<span class="kw">await</span><span class="question-mark">??</span>;
+            <span class="kw">if </span>result.output != verified_result {
+                <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"failed to verify transaction result"</span>));
+            }
+        }
 
         <span class="comment">// Update latest known round.
         </span>client

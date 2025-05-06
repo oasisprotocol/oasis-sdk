@@ -83,6 +83,37 @@
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
 <a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
+<a href="#99" id="99">99</a>
+<a href="#100" id="100">100</a>
+<a href="#101" id="101">101</a>
+<a href="#102" id="102">102</a>
+<a href="#103" id="103">103</a>
+<a href="#104" id="104">104</a>
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -106,13 +137,9 @@
 <span class="kw">impl </span>HostStore {
     <span class="doccomment">/// Create a new host store for the given host and root.
     </span><span class="kw">pub fn </span>new(host: Arc&lt;Protocol&gt;, root: mkvs::Root) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>read_syncer = mkvs::sync::HostReadSyncer::new(host, HostStorageEndpoint::Runtime);
-        <span class="kw">let </span>tree = mkvs::Tree::builder()
-            .with_capacity(<span class="number">10_000</span>, <span class="number">1024 </span>* <span class="number">1024</span>)
-            .with_root(root)
-            .build(Box::new(read_syncer));
-
-        <span class="self">Self </span>{ tree }
+        <span class="self">Self </span>{
+            tree: new_mkvs_tree_for_root(host, root),
+        }
     }
 
     <span class="doccomment">/// Create a new host store for the given host and root at the given round.
@@ -122,28 +149,19 @@
     </span><span class="kw">pub async fn </span>new_for_round(
         host: Arc&lt;Protocol&gt;,
         consensus_verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
-        id: Namespace,
+        runtime_id: Namespace,
         round: u64,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-        <span class="comment">// Fetch latest consensus layer state.
-        </span><span class="kw">let </span>state = consensus_verifier.latest_state().<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="comment">// Fetch latest state root for the given namespace.
-        </span><span class="kw">let </span>roots = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
-            <span class="kw">let </span>roothash = RoothashState::new(<span class="kw-2">&amp;</span>state);
-            roothash.round_roots(id, round)
+        <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+            tree: new_mkvs_tree_for_round(
+                host,
+                consensus_verifier,
+                runtime_id,
+                round,
+                mkvs::RootType::State,
+            )
+            .<span class="kw">await</span><span class="question-mark">?</span>,
         })
-        .<span class="kw">await</span><span class="question-mark">??
-        </span>.ok_or(<span class="macro">anyhow!</span>(<span class="string">"root not found"</span>))<span class="question-mark">?</span>;
-
-        <span class="prelude-val">Ok</span>(<span class="self">Self</span>::new(
-            host,
-            mkvs::Root {
-                namespace: id,
-                version: round,
-                root_type: mkvs::RootType::State,
-                hash: roots.state_root,
-            },
-        ))
     }
 }
 
@@ -167,5 +185,49 @@
     <span class="kw">fn </span>prefetch_prefixes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, prefixes: Vec&lt;mkvs::Prefix&gt;, limit: u16) {
         <span class="self">self</span>.tree.prefetch_prefixes(<span class="kw-2">&amp;</span>prefixes, limit).unwrap();
     }
+}
+
+<span class="doccomment">/// Create a new MKVS tree for the given host and root.
+</span><span class="kw">pub fn </span>new_mkvs_tree_for_root(host: Arc&lt;Protocol&gt;, root: mkvs::Root) -&gt; mkvs::Tree {
+    <span class="kw">let </span>read_syncer = mkvs::sync::HostReadSyncer::new(host, HostStorageEndpoint::Runtime);
+    mkvs::Tree::builder()
+        .with_capacity(<span class="number">10_000</span>, <span class="number">1024 </span>* <span class="number">1024</span>)
+        .with_root(root)
+        .build(Box::new(read_syncer))
+}
+
+<span class="doccomment">/// Create a new MKVS tree for the given host and runtime at the given round.
+///
+/// The corresponding root hash is fetched by looking it up in consensus layer state, verified
+/// by the passed verifier to be correct.
+</span><span class="kw">pub async fn </span>new_mkvs_tree_for_round(
+    host: Arc&lt;Protocol&gt;,
+    consensus_verifier: <span class="kw-2">&amp;</span>Arc&lt;<span class="kw">dyn </span>Verifier&gt;,
+    runtime_id: Namespace,
+    round: u64,
+    root_type: mkvs::RootType,
+) -&gt; <span class="prelude-ty">Result</span>&lt;mkvs::Tree&gt; {
+    <span class="comment">// Fetch latest consensus layer state.
+    </span><span class="kw">let </span>state = consensus_verifier.latest_state().<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="comment">// Fetch latest roots for the given namespace.
+    </span><span class="kw">let </span>roots = tokio::task::spawn_blocking(<span class="kw">move </span>|| {
+        <span class="kw">let </span>roothash = RoothashState::new(<span class="kw-2">&amp;</span>state);
+        roothash.round_roots(runtime_id, round)
+    })
+    .<span class="kw">await</span><span class="question-mark">??
+    </span>.ok_or(<span class="macro">anyhow!</span>(<span class="string">"root not found"</span>))<span class="question-mark">?</span>;
+
+    <span class="kw">let </span>root = mkvs::Root {
+        namespace: runtime_id,
+        version: round,
+        root_type,
+        hash: <span class="kw">match </span>root_type {
+            mkvs::RootType::State =&gt; roots.state_root,
+            mkvs::RootType::IO =&gt; roots.io_root,
+            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">"unsupported root type"</span>)),
+        },
+    };
+
+    <span class="prelude-val">Ok</span>(new_mkvs_tree_for_root(host, root))
 }
 </code></pre></div></section></main></body></html>
