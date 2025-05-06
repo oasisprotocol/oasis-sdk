@@ -50,11 +50,13 @@ func CreateUpdateRemoveTest(ctx context.Context, env *scenario.Env) error {
 
 	env.Logger.Info("waiting for AppCreated event", "app_id", appID)
 
-	ev, err := scenario.WaitForNextRuntimeEvent[*rofl.Event](ctx, ch)
+	ev, err := scenario.WaitForRuntimeEventUntil(ctx, ch, func(ev *rofl.Event) bool {
+		return ev.AppCreated != nil
+	})
 	if err != nil {
 		return err
 	}
-	if ev.AppCreated == nil || ev.AppCreated.ID != appID {
+	if ev.AppCreated.ID != appID {
 		return fmt.Errorf("expected rofl.AppCreated event to be emitted")
 	}
 
@@ -69,11 +71,13 @@ func CreateUpdateRemoveTest(ctx context.Context, env *scenario.Env) error {
 
 	env.Logger.Info("waiting for AppUpdated event", "app_id", appID)
 
-	ev, err = scenario.WaitForNextRuntimeEvent[*rofl.Event](ctx, ch)
+	ev, err = scenario.WaitForRuntimeEventUntil(ctx, ch, func(ev *rofl.Event) bool {
+		return ev.AppUpdated != nil
+	})
 	if err != nil {
 		return err
 	}
-	if ev.AppUpdated == nil || ev.AppUpdated.ID != appID {
+	if ev.AppUpdated.ID != appID {
 		return fmt.Errorf("expected rofl.AppUpdated event to be emitted")
 	}
 
@@ -93,11 +97,13 @@ func CreateUpdateRemoveTest(ctx context.Context, env *scenario.Env) error {
 
 	env.Logger.Info("waiting for AppRemoved event", "app_id", appID)
 
-	ev, err = scenario.WaitForNextRuntimeEvent[*rofl.Event](ctx, ch)
+	ev, err = scenario.WaitForRuntimeEventUntil(ctx, ch, func(ev *rofl.Event) bool {
+		return ev.AppRemoved != nil
+	})
 	if err != nil {
 		return err
 	}
-	if ev.AppRemoved == nil || ev.AppRemoved.ID != appID {
+	if ev.AppRemoved.ID != appID {
 		return fmt.Errorf("expected rofl.AppRemoved event to be emitted")
 	}
 
@@ -187,13 +193,13 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 	}
 	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	ev, err := scenario.WaitForRuntimeEventUntil[*rofl.Event](waitCtx, ch, func(ev *rofl.Event) bool {
+	ev, err := scenario.WaitForRuntimeEventUntil(waitCtx, ch, func(ev *rofl.Event) bool {
 		return ev.InstanceRegistered != nil
 	})
 	if err != nil {
 		return err
 	}
-	if ev.InstanceRegistered == nil || ev.InstanceRegistered.AppID != exampleAppID {
+	if ev.InstanceRegistered.AppID != exampleAppID {
 		return fmt.Errorf("expected rofl.InstanceRegistered event to be emitted, got: %v", ev)
 	}
 

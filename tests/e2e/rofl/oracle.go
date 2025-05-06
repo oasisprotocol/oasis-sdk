@@ -54,7 +54,7 @@ func OracleTest(ctx context.Context, env *scenario.Env) error {
 		return err
 	}
 
-	oe, err := scenario.WaitForRuntimeEventUntil[*oracleEvent](ctx, ch, func(oe *oracleEvent) bool {
+	oe, err := scenario.WaitForRuntimeEventUntil(ctx, ch, func(oe *oracleEvent) bool {
 		return oe.ValueUpdated != nil
 	})
 	if err != nil {

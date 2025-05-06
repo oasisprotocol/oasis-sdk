@@ -278,7 +278,7 @@ pub struct Instance {
     pub creator: Address,
     /// Address of the administrator account.
     pub admin: Address,
-    /// Identifier of the node where the instance has been provisioned.
+    /// Identifier of the node which has accepted the instance.
     pub node_id: Option<PublicKey>,
     /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
     pub metadata: BTreeMap<String, String>,
@@ -326,8 +326,7 @@ pub enum InstanceStatus {
 }
 
 /// Descriptor of what is deployed into an instance.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(Clone, Debug, Default, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 pub struct Deployment {
     /// Identifier of the deployed ROFL app.
     pub app_id: AppId,
@@ -493,22 +492,6 @@ impl From<DeploymentUpdate> for Option<Deployment> {
     }
 }
 
-/// A request by the provider to update instance metadata.
-// TODO: Remove as it is superseded by InstanceUpdate.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct InstanceUpdateMetadata {
-    /// Provider address.
-    pub provider: Address,
-    /// Target instance identifier.
-    pub id: InstanceId,
-    /// Identifier of the node where the instance has been provisioned.
-    pub node_id: PublicKey,
-    /// Deployment to update the instance with.
-    pub deployment: Option<Deployment>,
-    /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
-    pub metadata: BTreeMap<String, String>,
-}
-
 /// A request by the provider to claim instance payment.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceClaimPayment {
@@ -560,16 +543,6 @@ pub struct QueuedCommand {
     pub id: CommandId,
     /// Scheduler-specfic command to execute.
     pub cmd: Vec<u8>,
-}
-
-/// A request by the provider to clear command queues of multiple instances.
-// TODO: Remove as it is superseded by InstanceUpdate.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-pub struct InstanceCompleteCmds {
-    /// Target provider address.
-    pub provider: Address,
-    /// A map of instances to last command identifier (inclusive) to clear.
-    pub instances: BTreeMap<InstanceId, CommandId>,
 }
 
 /// Provider-related query.
