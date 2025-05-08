@@ -84,5 +84,4 @@ jobs:
           container: rofl-dev
           keep-younger-than: 7 # days
           keep-last: 2
-          prune-untagged: true
           prune-tags-regexes: ^pr-

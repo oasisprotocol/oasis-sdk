@@ -17,17 +17,18 @@ jobs:
 
       - name: Install Oasis CLI
         env:
-          CLI_VERSION: 0.13.1
+          CLI_VERSION: 0.13.3
         run: |
           wget https://github.com/oasisprotocol/cli/releases/download/v${CLI_VERSION}/oasis_cli_${CLI_VERSION}_linux_amd64.tar.gz -O cli.tar.gz
           tar --strip-components 1 -xf cli.tar.gz
 
       - name: Build rofl-scheduler for Testnet
         working-directory: rofl-scheduler
-        run: ../oasis rofl build --deployment testnet
+        run: ../oasis rofl build --deployment testnet --offline --verify
 
       - name: Publish the release
         uses: ncipollo/release-action@v1
         with:
           artifacts: rofl-scheduler/rofl-scheduler.testnet.orc
           token: ${{ secrets.GITHUB_TOKEN }}
+          artifactErrorsFailBuild: true
