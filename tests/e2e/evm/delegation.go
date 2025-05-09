@@ -183,10 +183,29 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error { //no
 	if err = cbor.Unmarshal(infoRaw[0].([]byte), &info); err != nil {
 		return fmt.Errorf("failed to unmarshal result: %w", err)
 	}
-	shares = info.Shares.ToBigInt().Uint64()
+	sharesBigInt := info.Shares.ToBigInt()
+	shares = sharesBigInt.Uint64()
 	if shares != expectedShares {
 		return fmt.Errorf("received unexpected number of shares from delegation subcall (expected: %d got: %d)", expectedShares, shares)
 	}
+
+	// Also test the SharesToTokens subcall.
+	env.Logger.Info("calling sharesToTokens")
+	data, err = contractDelegation.ABI.Pack("sharesToTokens", rawAddress, uint8(1), sharesBigInt)
+	if err != nil {
+		return fmt.Errorf("failed to pack arguments: %w", err)
+	}
+	value = big.NewInt(0).Bytes() // Don't send any tokens.
+	result, err = evmCall(ctx, env.Client, ev, testing.Dave.Signer, contractAddr, value, data, gasPrice, nonc10l)
+	if err != nil {
+		return fmt.Errorf("failed to call contract: %w", err)
+	}
+	tokensRaw, err := contractDelegation.ABI.Unpack("sharesToTokens", result)
+	if err != nil {
+		return fmt.Errorf("failed to unpack result: %w", err)
+	}
+	tokens := tokensRaw[0].(*big.Int).Uint64() // We know the actual value is less than uint128.
+	env.Logger.Info(fmt.Sprintf("sharesToTokens: %d (%d)", tokens, len(tokensRaw)))
 
 	// Now trigger undelegation for half the shares.
 	consensusShares := quantity.NewFromUint64(5)
