@@ -80,6 +80,22 @@ secrets:
     external: true
 ```
 
+## Persistent Volumes
+
+You can create persistent volumes and bind them to containers in an arbitrary
+path in the filesystem. The volumes are created in an encrypted persistent disk.
+
+```yaml
+services:
+  test:
+    # ... other options here ...
+    volumes:
+      - my-volume:/path/to/my/volume
+
+volumes:
+  my-volume:
+```
+
 ## ROFL REST APIs
 
 Each containerized ROFL app runs a special daemon (called `rofl-appd`) that
