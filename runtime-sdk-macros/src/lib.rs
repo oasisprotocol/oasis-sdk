@@ -80,21 +80,24 @@ pub fn sdk_derive(args: TokenStream, input: TokenStream) -> TokenStream {
 /// it only marks functions that represent a paratime method handler.
 /// The permitted forms are:
 ///  - `#[handler(call = "my_module.MyCall")]`: Marks a function that handles
-///        the "my_module.MyCall" call and can be passed to
-///        oasis_runtime_sdk::module::dispatch_call.
+///    the "my_module.MyCall" call and can be passed to
+///    oasis_runtime_sdk::module::dispatch_call.
+///
 ///  - `#[handler(prefetch = "my_module.MyCall")]`: Marks a function that handles
-///        the request to prefetch any data ahead of the "my_module.MyCall" call.
-///        Its signature should be `Fn(
-///          add_prefix: &mut dyn FnMut(Prefix) -> (),
-///          body: cbor::Value,
-///          auth_info: &AuthInfo,
-///        ) -> Result<(), oasis_runtime_sdk::error::RuntimeError>`
+///    the request to prefetch any data ahead of the "my_module.MyCall" call.
+///    Its signature should be `Fn(
+///      add_prefix: &mut dyn FnMut(Prefix) -> (),
+///      body: cbor::Value,
+///      auth_info: &AuthInfo,
+///    ) -> Result<(), oasis_runtime_sdk::error::RuntimeError>`
+///
 ///  - `#[handler(query = "my_module.MyQuery")]`: Marks a function that handles
-///        the "my_module.MyQuery" query and can be passed to
-///        oasis_runtime_sdk::module::dispatch_query.
+///    the "my_module.MyQuery" query and can be passed to
+///    oasis_runtime_sdk::module::dispatch_query.
+///
 ///  - `#[handler(message_result = "my_module.MyMR")]`: Marks a function that handles
-///        the "my_module.MyMR" message result and can be passed to
-///        oasis_runtime_sdk::module::dispatch_message_result.
+///    the "my_module.MyMR" message result and can be passed to
+///    oasis_runtime_sdk::module::dispatch_message_result.
 ///
 /// Query handler can also contain the `expensive` tag. Example:
 /// `#[handler(query = "my_module.MyQuery", expensive)]`.

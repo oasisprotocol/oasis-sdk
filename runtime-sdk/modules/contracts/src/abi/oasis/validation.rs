@@ -21,7 +21,7 @@ fn check_valtype_acceptable(ty: ValType) -> Result<(), Error> {
 
 struct FloatScanner(bool);
 
-impl<'instr> Visitor<'instr> for FloatScanner {
+impl Visitor<'_> for FloatScanner {
     fn visit_const(&mut self, instr: &ir::Const) {
         match instr.value {
             Value::F32(_) | Value::F64(_) => self.0 = true,

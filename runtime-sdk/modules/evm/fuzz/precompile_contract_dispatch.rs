@@ -17,7 +17,7 @@ struct MockPrecompileHandle<'a> {
     input: &'a [u8],
 }
 
-impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
+impl PrecompileHandle for MockPrecompileHandle<'_> {
     fn call(
         &mut self,
         _to: H160,

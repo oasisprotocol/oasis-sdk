@@ -87,7 +87,7 @@ impl<T: EVMBackendExt> EVMBackendExt for &T {
     }
 }
 
-impl<'ctx, C: Context, Cfg: Config> EVMBackendExt for OasisBackend<'ctx, C, Cfg> {
+impl<C: Context, Cfg: Config> EVMBackendExt for OasisBackend<'_, C, Cfg> {
     fn random_bytes(&self, num_bytes: u64, pers: &[u8]) -> Vec<u8> {
         // Refuse to generate more than 1 KiB in one go.
         // EVM memory gas is checked only before and after calls, so we won't
@@ -277,9 +277,7 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config>
     }
 }
 
-impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> Backend
-    for OasisStackState<'ctx, 'backend, 'config, C, Cfg>
-{
+impl<C: Context, Cfg: Config> Backend for OasisStackState<'_, '_, '_, C, Cfg> {
     fn gas_price(&self) -> U256 {
         self.backend.vicinity.gas_price
     }
@@ -396,8 +394,8 @@ impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> Backend
     }
 }
 
-impl<'ctx, 'backend, 'config, C: Context, Cfg: Config> StackState<'config>
-    for OasisStackState<'ctx, 'backend, 'config, C, Cfg>
+impl<'config, C: Context, Cfg: Config> StackState<'config>
+    for OasisStackState<'_, '_, 'config, C, Cfg>
 {
     fn metadata(&self) -> &StackSubstateMetadata<'config> {
         self.substate.metadata()

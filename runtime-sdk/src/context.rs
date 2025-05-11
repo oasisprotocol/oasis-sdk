@@ -223,7 +223,7 @@ impl<'a, R: runtime::Runtime> RuntimeBatchContext<'a, R> {
     }
 }
 
-impl<'a, R: runtime::Runtime> Context for RuntimeBatchContext<'a, R> {
+impl<R: runtime::Runtime> Context for RuntimeBatchContext<'_, R> {
     type Runtime = R;
 
     fn clone(&self) -> Self {

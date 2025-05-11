@@ -67,7 +67,7 @@ where
     }
 }
 
-impl<'store, K, V, E> Iterator for TypedStoreIterator<'store, K, V>
+impl<K, V, E> Iterator for TypedStoreIterator<'_, K, V>
 where
     K: for<'k> TryFrom<&'k [u8], Error = E>,
     E: std::fmt::Display,

@@ -107,7 +107,7 @@ pub fn call_bigmodexp(handle: &mut impl PrecompileHandle) -> PrecompileResult {
         }),
         Ordering::Less => {
             let mut ret = Vec::with_capacity(mod_len);
-            ret.extend(core::iter::repeat(0).take(mod_len - bytes.len()));
+            ret.extend(core::iter::repeat_n(0, mod_len - bytes.len()));
             ret.extend_from_slice(&bytes[..]);
             Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
