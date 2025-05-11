@@ -4637,12 +4637,14 @@ dependencies = [
 
 [[package]]
 name = "rofl-containers"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
+ "byteorder",
  "cmd_lib",
  "hex",
+ "libc",
  "nix 0.29.0",
  "oasis-runtime-sdk",
  "rofl-appd",
