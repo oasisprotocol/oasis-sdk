@@ -678,7 +678,7 @@ where
             // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
             // TODO: Remove spawn once we have async MKVS.
             let verified_result = tokio::task::spawn_blocking(move || -> Result<_> {
-                let key = [&[b'T'], tx_hash.as_ref(), &[0x02]].concat();
+                let key = [b"T", tx_hash.as_ref(), &[0x02]].concat();
                 let output_artifacts = io_tree
                     .get(&key)
                     .context("failed to verify transaction result")?

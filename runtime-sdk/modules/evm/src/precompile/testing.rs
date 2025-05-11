@@ -61,7 +61,7 @@ struct MockPrecompileHandle<'a> {
     gas_used: u64,
 }
 
-impl<'a> PrecompileHandle for MockPrecompileHandle<'a> {
+impl PrecompileHandle for MockPrecompileHandle<'_> {
     fn call(
         &mut self,
         _to: H160,

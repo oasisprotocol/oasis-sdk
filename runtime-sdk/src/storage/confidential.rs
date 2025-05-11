@@ -186,7 +186,7 @@ struct ConfidentialStoreIterator<'store, S: Store> {
 }
 
 impl<'store, S: Store> ConfidentialStoreIterator<'store, S> {
-    fn new(store: &'store ConfidentialStore<S>) -> ConfidentialStoreIterator<'_, S> {
+    fn new(store: &'store ConfidentialStore<S>) -> ConfidentialStoreIterator<'store, S> {
         ConfidentialStoreIterator {
             inner: store.inner.iter(),
             store,
@@ -239,7 +239,7 @@ impl<'store, S: Store> ConfidentialStoreIterator<'store, S> {
     }
 }
 
-impl<'store, S: Store> Iterator for ConfidentialStoreIterator<'store, S> {
+impl<S: Store> Iterator for ConfidentialStoreIterator<'_, S> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -252,7 +252,7 @@ impl<'store, S: Store> Iterator for ConfidentialStoreIterator<'store, S> {
     }
 }
 
-impl<'store, S: Store> mkvs::Iterator for ConfidentialStoreIterator<'store, S> {
+impl<S: Store> mkvs::Iterator for ConfidentialStoreIterator<'_, S> {
     fn set_prefetch(&mut self, prefetch: usize) {
         self.inner.set_prefetch(prefetch)
     }

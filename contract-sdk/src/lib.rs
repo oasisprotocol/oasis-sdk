@@ -1,5 +1,4 @@
 //! Oasis Contract SDK.
-#![cfg_attr(target_arch = "wasm32", feature(wasm_abi))]
 
 #[cfg(target_arch = "wasm32")]
 pub mod abi;

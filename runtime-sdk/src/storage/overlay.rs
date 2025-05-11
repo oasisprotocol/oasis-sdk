@@ -186,7 +186,7 @@ impl<'store, S: Store> OverlayStoreIterator<'store, S> {
     }
 }
 
-impl<'store, S: Store> Iterator for OverlayStoreIterator<'store, S> {
+impl<S: Store> Iterator for OverlayStoreIterator<'_, S> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -204,7 +204,7 @@ impl<'store, S: Store> Iterator for OverlayStoreIterator<'store, S> {
     }
 }
 
-impl<'store, S: Store> mkvs::Iterator for OverlayStoreIterator<'store, S> {
+impl<S: Store> mkvs::Iterator for OverlayStoreIterator<'_, S> {
     fn set_prefetch(&mut self, prefetch: usize) {
         self.parent.set_prefetch(prefetch)
     }

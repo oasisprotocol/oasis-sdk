@@ -54,7 +54,7 @@ impl<'store> PrefixStoreIterator<'store> {
     }
 }
 
-impl<'store> Iterator for PrefixStoreIterator<'store> {
+impl Iterator for PrefixStoreIterator<'_> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -68,7 +68,7 @@ impl<'store> Iterator for PrefixStoreIterator<'store> {
     }
 }
 
-impl<'store> mkvs::Iterator for PrefixStoreIterator<'store> {
+impl mkvs::Iterator for PrefixStoreIterator<'_> {
     fn set_prefetch(&mut self, prefetch: usize) {
         self.inner.set_prefetch(prefetch)
     }
