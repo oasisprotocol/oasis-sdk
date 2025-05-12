@@ -12,12 +12,15 @@ mod signed_call;
 pub mod state;
 pub mod types;
 
+use std::collections::HashSet;
+
 use base64::prelude::*;
 use evm::{
     executor::stack::{StackExecutor, StackSubstateMetadata},
     Config as EVMConfig,
 };
-use once_cell::sync::OnceCell;
+use hex::FromHex;
+use once_cell::sync::{Lazy, OnceCell};
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -295,6 +298,23 @@ pub trait API {
         -> Result<Vec<u8>, Error>;
 }
 
+/// Whitelisted EVM storge slots.
+///
+/// These slots are public and can be queried via `evm.Storage` queries.
+static WHITELISTED_MAGIC_SLOTS: Lazy<HashSet<H256>> = Lazy::new(|| {
+    [
+        // EIP-1967: Standard Proxy Implementation Slot.
+        "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+        // EIP-1967: Beacon Proxy Implementation Slot.
+        "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50",
+        // EIP-1967: Admin Slot.
+        "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103",
+    ]
+    .iter()
+    .map(|s| H256::from(<[u8; 32]>::from_hex(&s[2..]).unwrap()))
+    .collect()
+});
+
 impl<Cfg: Config> API for Module<Cfg> {
     fn create<C: Context>(ctx: &C, value: U256, init_code: Vec<u8>) -> Result<Vec<u8>, Error> {
         let caller = Self::derive_caller()?;
@@ -353,11 +373,17 @@ impl<Cfg: Config> API for Module<Cfg> {
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
-    fn get_storage<C: Context>(_ctx: &C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
-        state::with_public_storage(&address, |store| {
-            let result: H256 = store.get(index).unwrap_or_default();
-            Ok(result.as_bytes().to_vec())
-        })
+    fn get_storage<C: Context>(ctx: &C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
+        let result: H256 = if ctx.is_confidential() && WHITELISTED_MAGIC_SLOTS.contains(&index) {
+            // If whitelisted magic slot, use confidential storage.
+            state::with_confidential_storage(ctx, &address, |store| {
+                store.get(index).unwrap_or_default()
+            })
+        } else {
+            // Otherwise only public storage.
+            state::with_public_storage(&address, |store| store.get(index).unwrap_or_default())
+        };
+        Ok(result.as_bytes().to_vec())
     }
 
     fn get_code<C: Context>(_ctx: &C, address: H160) -> Result<Vec<u8>, Error> {
@@ -724,7 +750,7 @@ impl<Cfg: Config> Module<Cfg> {
         Self::call(ctx, body.address, body.value, body.data)
     }
 
-    #[handler(query = "evm.Storage")]
+    #[handler(query = "evm.Storage", allow_private_km)]
     fn query_storage<C: Context>(ctx: &C, body: types::StorageQuery) -> Result<Vec<u8>, Error> {
         Self::get_storage(ctx, body.address, body.index)
     }

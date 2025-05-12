@@ -1063,6 +1063,100 @@ func MessageSigningTest(ctx context.Context, env *scenario.Env) error {
 	return nil
 }
 
+// MagicSlotsTest does a simple evm magic slots access tests.
+func MagicSlotsTest(ctx context.Context, env *scenario.Env) error {
+	// To generate the contract bytecode, use https://remix.ethereum.org/
+	// with the following settings:
+	//     Compiler: 0.8.7+commit.e28d00a7
+	//     EVM version: london
+	//     Enable optimization: yes, 200
+	// on the source in evm_magic_slots.sol next to the hex file.
+
+	eip1967ImplementationSlot := "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc"
+	val := "0000000000000000000000000000000000000000000000000000000000000001"
+
+	signer := testing.Dave.Signer
+	e := evm.NewV1(env.Client)
+
+	contract, err := hex.DecodeString(strings.TrimSpace(evmMagicSlotsCompiledHex))
+	if err != nil {
+		return err
+	}
+
+	zero, err := hex.DecodeString(strings.Repeat("0", 64))
+	if err != nil {
+		return err
+	}
+
+	gasPrice := uint64(2)
+
+	// Create the EVM contract.
+	contractAddr, err := evmCreate(ctx, env.Client, e, signer, zero, contract, gasPrice, c10l)
+	if err != nil {
+		return fmt.Errorf("evmCreate failed: %w", err)
+	}
+	env.Logger.Info("evmCreate finished", "contract_addr", hex.EncodeToString(contractAddr))
+
+	// Set the EIP-1967 logic slot.
+	callData := "d3607ed9" + eip1967ImplementationSlot + val
+	methodCall, err := hex.DecodeString(callData + strings.Repeat("0", ((len(callData)+63) & ^63)-len(callData)))
+	if err != nil {
+		return err
+	}
+	callResult, err := evmCall(ctx, env.Client, e, signer, contractAddr, zero, methodCall, gasPrice, c10l)
+	if err != nil {
+		return fmt.Errorf("evmCall: setSlot failed: %w", err)
+	}
+	res := hex.EncodeToString(callResult)
+	env.Logger.Info("evmCall setSlot finished", "call_result", res)
+
+	// Query the EIP-1967 logic slot.
+	raw, err := hex.DecodeString(eip1967ImplementationSlot)
+	if err != nil {
+		return err
+	}
+	slot, err := e.Storage(ctx, client.RoundLatest, contractAddr, raw)
+	if err != nil {
+		return fmt.Errorf("GetStorageAt for EIP-1967 logic slot failed: %w", err)
+	}
+	res = hex.EncodeToString(slot)
+	env.Logger.Info("evmQuery: GetStorageAt finished", "query_result", res)
+	if res != val {
+		return fmt.Errorf("GetStorageAt for EIP-1967 logic slot returned wrong value: %v (expected %v)", res, val)
+	}
+
+	// Set a non-whitelisted magic slot.
+	arbitrarySlot := "1111111111111111111111111111111111111111111111111111111111111111"
+	callData = "d3607ed9" + arbitrarySlot + val
+	methodCall, err = hex.DecodeString(callData + strings.Repeat("0", ((len(callData)+63) & ^63)-len(callData)))
+	if err != nil {
+		return err
+	}
+	callResult, err = evmCall(ctx, env.Client, e, signer, contractAddr, zero, methodCall, gasPrice, c10l)
+	if err != nil {
+		return fmt.Errorf("evmCall: setSlot failed: %w", err)
+	}
+	res = hex.EncodeToString(callResult)
+	env.Logger.Info("evmCall setSlot finished", "call_result", res)
+
+	// Query the non-whitelisted magic slot.
+	raw, err = hex.DecodeString(arbitrarySlot)
+	if err != nil {
+		return err
+	}
+	slot, err = e.Storage(ctx, client.RoundLatest, contractAddr, raw)
+	if err != nil {
+		return fmt.Errorf("GetStorageAt for non-whitelisted magic slot failed: %w", err)
+	}
+	res = hex.EncodeToString(slot)
+	env.Logger.Info("evmQuery: GetStorageAt finished", "query_result", res)
+	if res != "0000000000000000000000000000000000000000000000000000000000000000" {
+		return fmt.Errorf("GetStorageAt for non-whitelisted magic slot returned wrong value: %v (expected empty)", res)
+	}
+
+	return nil
+}
+
 // ParametersTest tests parameters methods.
 func ParametersTest(ctx context.Context, env *scenario.Env) error {
 	evm := evm.NewV1(env.Client)
