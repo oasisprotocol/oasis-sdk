@@ -1111,6 +1111,120 @@ fn test_transfer_event() {
 }
 
 #[test]
+fn test_whitelisted_magic_slots() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<ConfidentialEVMConfig>>(true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<ConfidentialEVMConfig>::migrate(&ctx);
+
+    // Give Dave some tokens.
+    Accounts::mint(
+        keys::dave::address(),
+        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+    )
+    .unwrap();
+
+    static WHITELISTED_MAGIC_VALUES_CONTRACT_CODE_HEX: &str =
+        include_str!("../../../../tests/e2e/evm/contracts/evm_magic_slots_compiled.hex");
+
+    // Create contract.
+    let dispatch_result = signer.call(
+        &ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(WHITELISTED_MAGIC_VALUES_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let contract_address = H160::from_slice(&result);
+
+    let eip_1967_implementation_slot =
+        &<[u8; 32]>::from_hex("360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            .unwrap();
+    let non_whitelisted_slot =
+        &<[u8; 32]>::from_hex("0000000000000000000000000000000000000000000000000000000000000123")
+            .unwrap();
+
+    // Call the `setSlot` method on the contract.
+    let dispatch_result = signer.call_evm_opts(
+        &ctx,
+        contract_address,
+        "setSlot",
+        &[ParamType::FixedBytes(32), ParamType::FixedBytes(32)],
+        &[
+            Token::FixedBytes(eip_1967_implementation_slot.to_vec()),
+            Token::FixedBytes(b"Hello, world!".to_vec()),
+        ],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(result.len(), 0, "result should be empty");
+
+    // Call the `setSlot` method on the contract with a non-whitelisted slot.
+    let dispatch_result = signer.call_evm_opts(
+        &ctx,
+        contract_address,
+        "setSlot",
+        &[ParamType::FixedBytes(32), ParamType::FixedBytes(32)],
+        &[
+            Token::FixedBytes(non_whitelisted_slot.to_vec()),
+            Token::FixedBytes(b"Hello, world!".to_vec()),
+        ],
+        CallOptions {
+            fee: Fee {
+                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                gas: 100_000,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    assert_eq!(result.len(), 0, "result should be empty");
+
+    // Query the storage slot for the whitelisted slot.
+    let result = signer
+        .query(
+            &ctx,
+            "evm.Storage",
+            types::StorageQuery {
+                address: contract_address,
+                index: eip_1967_implementation_slot.into(),
+            },
+        )
+        .expect("query should succeed");
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let mut expected = b"Hello, world!".to_vec();
+    expected.extend(vec![0; 32 - expected.len()]);
+    assert_eq!(result, expected, "result should be correct");
+
+    // Query the storage slot for the non-whitelisted slot.
+    let result = signer
+        .query(
+            &ctx,
+            "evm.Storage",
+            types::StorageQuery {
+                address: contract_address,
+                index: non_whitelisted_slot.into(),
+            },
+        )
+        .expect("query should succeed");
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    assert_eq!(result.len(), 32, "result should be 32 bytes");
+    assert_eq!(result, vec![0; 32], "result should be empty");
+}
+
+#[test]
 fn test_return_value_limits() {
     let mut mock = mock::Mock::default();
     let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
