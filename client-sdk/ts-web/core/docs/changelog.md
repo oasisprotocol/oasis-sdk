@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.2.0
+
+Breaking changes:
+
+- Many async functions are now sync
+
+Little things:
+
+- Replaced js-sha512 dependency with @noble/hashes
+
+- Updated NodeInternal client API:
+
+  - Added: runtimeClientGetUnconfirmedTransactions,
+    consensusGetLastRetainedHeight, consensusGetLatestHeight,
+    consensusMinGasPrice, nodeControllerAddBundle
+
+  - Removed: keyManagerGetEphemeralSecret, keyManagerGetMasterSecret,
+    keyManagerGetStatus, keyManagerGetStatuses, keyManagerWatchEphemeralSecrets,
+    keyManagerWatchMasterSecrets, keyManagerWatchStatuses,
+    consensusGetLightBlockForState
+
+  - Changed stakingTokenSymbol and stakingTokenValueExponent parameters
+
 ## v1.1.0
 
 Spotlight change:

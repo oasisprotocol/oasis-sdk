@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.2.0
+
+Breaking changes:
+
+- Many async functions are now sync
+- Removed EllipticSigner, added NobleSigner
+
+Little things:
+
+- Replaced elliptic, js-sha512, randombytes, and sha3 dependencies with
+  @noble/curves and @noble/hashes
+
 ## v1.1.0
 
 Spotlight change:
