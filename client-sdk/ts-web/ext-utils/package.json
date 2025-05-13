@@ -24,7 +24,7 @@
         "test-e2e-cy": "cypress run"
     },
     "dependencies": {
-        "@oasisprotocol/client": "^1.1.0"
+        "@oasisprotocol/client": "^1.2.0"
     },
     "devDependencies": {
         "@oasisprotocol/client-rt": "^1.1.0",
