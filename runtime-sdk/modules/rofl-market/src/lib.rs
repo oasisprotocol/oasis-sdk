@@ -793,6 +793,13 @@ impl<Cfg: Config> Module<Cfg> {
         instance.updated_at = ctx.now();
         state::set_instance(instance);
 
+        CurrentState::with(|state| {
+            state.emit_event(Event::InstanceUpdated {
+                provider: body.provider,
+                id: body.id,
+            })
+        });
+
         Ok(())
     }
 
