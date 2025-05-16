@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.1.0
+version: 0.1.1
 repository: https://github.com/oasisprotocol/oasis-sdk
 tee: tdx
 kind: raw
@@ -11,10 +11,31 @@ resources:
     size: 64
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
-  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
-  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/stage1.bin#06e12cba9b2423b4dd5916f4d84bf9c043f30041ab03aa74006f46ef9c129d22
-  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.1/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/stage1.bin#02903bd0ddfe1e3552e95767f1be17e801690d73d90bb1e800aa4879ba46c4d7
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
 deployments:
+  mainnet:
+    app_id: rofl1qr95suussttd2g9ehu3zcpgx8ewtwgayyuzsl0x2
+    network: mainnet
+    paratime: sapphire
+    admin: rofl_scheduler_admin
+    trust_root:
+      height: 24612496
+      hash: ae5b2064bb62987150c2c94821b7434b7d9d3f3b75a53a8dbe8267050ffbe09a
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+          tdx: {}
+      enclaves:
+        - id: F2BGQAScYRAn0S8+I4RA8gmRPKSv12lDMsIv7eQjWvsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: OW90gvblTearxfeELGeLmV9/95UmSzmH/qCkqzuplFYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
   testnet:
     app_id: rofl1qrqw99h0f7az3hwt2cl7yeew3wtz0fxunu7luyfg
     network: testnet
@@ -37,7 +58,11 @@ deployments:
           version: 0.1.0-pre
           description: Pre-release version of the scheduler
         - id: PE2TSgy9aMfAmxGIDgMpbjr9ejk2evb2wdzaBEkA4TMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.0
         - id: +3Sv/xqzc171KyieVot07v8H7lCGpSqIuaDelVmTE8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.0
+        - id: Eoaohc5JDzGYfxxP33pp7ktAPmdg5nPyp5JlYVey7vQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: akLPdeqNVejSkZ807J4KA8kilCv8noHqZ5KOO5RvCJIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
