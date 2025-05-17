@@ -51,3 +51,9 @@ var evmKeyDerivationCompiledHex string
 //
 //go:embed contracts/evm_message_signing_compiled.hex
 var evmMessageSigningCompiledHex string
+
+// We store the compiled EVM bytecode for the C10lEVMMagicSlotsTest in a separate
+// file (in hex) to preserve readability of this file.
+//
+//go:embed contracts/evm_magic_slots_compiled.hex
+var evmMagicSlotsCompiledHex string
