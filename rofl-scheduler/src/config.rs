@@ -1,9 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{anyhow, Result};
+use base64::prelude::*;
 
 use oasis_runtime_sdk::{
-    cbor, core::common::crypto::hash::Hash, modules::rofl::app::prelude::*, types::address::Address,
+    cbor,
+    core::common::crypto::{hash::Hash, signature::PublicKey},
+    modules::rofl::app::prelude::*,
+    types::address::Address,
 };
 use oasis_runtime_sdk_rofl_market as market;
 
@@ -38,6 +42,8 @@ struct RawLocalConfig {
     pub claim_payment_interval: Option<u64>,
     /// Timeout for pulling images during deployment (in seconds).
     pub deploy_pull_timeout: Option<u64>,
+    /// A list of node addresses to transfer the instances from.
+    pub transfer_instances_from: Vec<String>,
 }
 
 /// Resources.
@@ -101,6 +107,8 @@ pub struct LocalConfig {
     pub claim_payment_interval_secs: u64,
     /// Timeout for pulling images during deployment (in seconds).
     pub deploy_pull_timeout: u64,
+    /// A list of node addresses to transfer the instances from.
+    pub transfer_instances_from: BTreeSet<PublicKey>,
 }
 
 impl LocalConfig {
@@ -136,6 +144,19 @@ impl LocalConfig {
             .collect::<Result<BTreeSet<_>, _>>()
             .map_err(|_| anyhow!("bad allowed creators value"))?;
 
+        let transfer_instances_from = cfg
+            .transfer_instances_from
+            .into_iter()
+            .map(|raw| -> Result<PublicKey> {
+                let raw = BASE64_STANDARD.decode(raw)?;
+                if raw.len() != PublicKey::len() {
+                    return Err(anyhow!("bad node identifier"));
+                }
+                Ok(raw.into())
+            })
+            .collect::<Result<BTreeSet<_>>>()
+            .map_err(|_| anyhow!("bad transfer instances from value"))?;
+
         Ok(LocalConfig {
             provider_address,
             offers: cfg.offers,
@@ -145,6 +166,7 @@ impl LocalConfig {
             processing_interval_secs: cfg.processing_interval.unwrap_or(3),
             claim_payment_interval_secs: cfg.claim_payment_interval.unwrap_or(24) * 3600,
             deploy_pull_timeout: cfg.deploy_pull_timeout.unwrap_or(60),
+            transfer_instances_from,
         })
     }
 
@@ -167,5 +189,10 @@ impl LocalConfig {
     /// Check whether the given creator is among the allowed creators.
     pub fn is_creator_allowed(&self, address: &Address) -> bool {
         self.allowed_creators.is_empty() || self.allowed_creators.contains(address)
+    }
+
+    /// Check whether the given node identifier is among the list of nodes to transfer instances from.
+    pub fn should_transfer_instance_from(&self, node_id: &PublicKey) -> bool {
+        self.transfer_instances_from.contains(node_id)
     }
 }
