@@ -37,5 +37,6 @@ var (
 		MessageSigningTest,
 		ParametersTest,
 		EthereumTxTest,
+		MagicSlotsTest,
 	}, scenario.WithCustomFixture(RuntimeFixture))
 )
