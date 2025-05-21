@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.1.1
+version: 0.1.2
 repository: https://github.com/oasisprotocol/oasis-sdk
 tee: tdx
 kind: raw
@@ -7,7 +7,7 @@ resources:
   memory: 512
   cpus: 1
   storage:
-    kind: disk-ephemeral
+    kind: ram
     size: 64
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
@@ -31,7 +31,11 @@ deployments:
           tdx: {}
       enclaves:
         - id: F2BGQAScYRAn0S8+I4RA8gmRPKSv12lDMsIv7eQjWvsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.1
         - id: OW90gvblTearxfeELGeLmV9/95UmSzmH/qCkqzuplFYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.1
+        - id: lkRxF1Ps6zqhEypa3o8VghPtUHE5PMv4v1dPN54kuZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: qegcmpWD7YHForsxaqdAWcou+Njporf2A4tmgNQ2XuIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -62,7 +66,11 @@ deployments:
         - id: +3Sv/xqzc171KyieVot07v8H7lCGpSqIuaDelVmTE8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.1.0
         - id: Eoaohc5JDzGYfxxP33pp7ktAPmdg5nPyp5JlYVey7vQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.1
         - id: akLPdeqNVejSkZ807J4KA8kilCv8noHqZ5KOO5RvCJIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.1
+        - id: +ZT1Qg8ZVUPS77VTZDFXwqgOnz/TPcWBTX4her22GL4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: FvdH6lM8tThmGJNLYf/rC/qzU3VuplyCP5JkZ7RVejUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node

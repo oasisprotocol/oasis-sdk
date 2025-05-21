@@ -72,6 +72,17 @@ struct InstanceUpdates {
     complete_cmds: Option<market::types::CommandId>,
     deployment: Option<Option<market::types::Deployment>>,
     metadata: Option<BTreeMap<String, String>>,
+    node_id: Option<PublicKey>,
+}
+
+impl InstanceUpdates {
+    /// Whether there are any updates set.
+    fn has_updates(&self) -> bool {
+        self.complete_cmds.is_some()
+            || self.deployment.is_some()
+            || self.metadata.is_some()
+            || self.node_id.is_some()
+    }
 }
 
 struct LocalState {
@@ -171,7 +182,7 @@ impl Manager {
             }
 
             // Process any pending instances.
-            if let Err(err) = mgr.process_pending(&mut local_state).await {
+            if let Err(err) = mgr.process_pending(local_node_id, &mut local_state).await {
                 slog::error!(mgr.logger, "failed to process pending instances"; "err" => ?err);
                 continue;
             }
@@ -450,7 +461,11 @@ impl Manager {
     }
 
     /// Process pending instances.
-    async fn process_pending(self: &Arc<Self>, local_state: &mut LocalState) -> Result<()> {
+    async fn process_pending(
+        self: &Arc<Self>,
+        local_node_id: PublicKey,
+        local_state: &mut LocalState,
+    ) -> Result<()> {
         let offers = local_state.client.offers().await?;
         let instances = local_state.client.instances().await?;
 
@@ -468,13 +483,40 @@ impl Manager {
             .collect();
 
         for instance in instances {
-            if instance.status != InstanceStatus::Created {
-                continue;
+            let mut transfer_instance = false;
+            match instance.status {
+                InstanceStatus::Created => {}
+                InstanceStatus::Accepted => {
+                    // If the instance has already been accepted, check if we are not the owning
+                    // node but we should transfer from it.
+                    // NOTE: Safe to unwrap as all accepted instances must have a node set.
+                    let owning_node = instance.node_id.unwrap();
+                    if owning_node == local_node_id {
+                        continue;
+                    }
+                    if !self.cfg.should_transfer_instance_from(&owning_node) {
+                        continue;
+                    }
+
+                    transfer_instance = true;
+                }
+                _ => continue,
             }
+
+            let mut maybe_remove = || {
+                if transfer_instance {
+                    return;
+                }
+
+                local_state
+                    .maybe_remove
+                    .push((instance.id, instance.created_at))
+            };
 
             slog::info!(self.logger, "evaluating instance";
                 "id" => ?instance.id,
                 "status" => ?instance.status,
+                "transfer" => transfer_instance,
             );
 
             // Check if creator is among the allowed creators.
@@ -482,10 +524,9 @@ impl Manager {
                 slog::info!(self.logger, "creator not allowed";
                     "id" => ?instance.id,
                     "creator" => instance.creator,
+                    "transfer" => transfer_instance,
                 );
-                local_state
-                    .maybe_remove
-                    .push((instance.id, instance.created_at));
+                maybe_remove();
                 continue;
             }
 
@@ -494,10 +535,9 @@ impl Manager {
                 slog::info!(self.logger, "offer not acceptable for this instance";
                     "id" => ?instance.id,
                     "offer" => ?instance.offer,
+                    "transfer" => transfer_instance,
                 );
-                local_state
-                    .maybe_remove
-                    .push((instance.id, instance.created_at));
+                maybe_remove();
                 continue;
             }
 
@@ -507,22 +547,33 @@ impl Manager {
                 slog::info!(self.logger, "no more capacity for offer";
                     "id" => ?instance.id,
                     "offer" => ?instance.offer,
+                    "transfer" => transfer_instance,
                 );
-                local_state
-                    .maybe_remove
-                    .push((instance.id, instance.created_at));
+                maybe_remove();
                 continue;
             }
 
             slog::info!(self.logger, "instance seems acceptable";
                 "id" => ?instance.id,
                 "offer" => ?instance.offer,
+                "transfer" => transfer_instance,
             );
 
             // Instance seems acceptable.
             local_state.accept.push(instance.id);
             local_state.accepted.insert(instance.id, instance.clone());
             local_state.resources_used = new_resource_use;
+
+            // When transfering instances, queue a job to update their node ID.
+            if transfer_instance {
+                local_state
+                    .instance_updates
+                    .entry(instance.id)
+                    .or_default()
+                    .node_id = Some(local_node_id);
+            }
+
+            // Queue a job to deploy when a deployment exists.
             if let Some(deployment) = instance.deployment.clone() {
                 local_state
                     .pending_start
@@ -695,23 +746,13 @@ impl Manager {
             }
 
             // Skip updates that don't change anything.
-            let mut changed = false;
-            if updates.complete_cmds.is_some() {
-                changed = true;
-            }
-            if updates.deployment.is_some() {
-                changed = true;
-            }
-            if updates.metadata.is_some() {
-                changed = true;
+            if !updates.has_updates() {
+                continue;
             }
 
-            if changed {
-                chunk.push((instance.id, updates));
-
-                if chunk.len() >= chunk.capacity() {
-                    spawn_task_chunk(&mut chunk);
-                }
+            chunk.push((instance.id, updates));
+            if chunk.len() >= chunk.capacity() {
+                spawn_task_chunk(&mut chunk);
             }
         }
         if !chunk.is_empty() {
@@ -1295,10 +1336,10 @@ impl Manager {
             .into_iter()
             .map(|(id, update)| market::types::Update {
                 id,
+                node_id: update.node_id,
                 deployment: update.deployment.map(Into::into),
                 metadata: update.metadata,
                 last_completed_cmd: update.complete_cmds,
-                ..Default::default()
             })
             .collect();
 
