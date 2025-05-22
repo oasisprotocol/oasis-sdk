@@ -1,0 +1,102 @@
+import DocCardList from '@theme/DocCardList';
+import {findSidebarItem} from '@site/src/sidebarUtils';
+
+# Troubleshooting
+
+## Compilation
+
+### `The following target_feature flags must be set: +aes,+ssse3.`
+
+You will see the following error, if the `aes` and `ssse3` compiler flags are
+not enabled during compilation of your SGX and TDX-raw ROFL:
+
+```
+error: The following target_feature flags must be set: +aes,+ssse3.
+--> /home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/deoxysii-0.2.4/src/lib.rs:26:1
+|
+26 | compile_error!("The following target_feature flags must be set: +aes,+ssse3.");
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+We suggest that you add the following default flags to your `.cargo/config.toml`
+file:
+
+```toml
+[build]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+
+[test]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+```
+
+## Compose file
+
+### Environment variables defined are not considered
+
+Due to an upstream [`podman-compose` bug][podman-compose-env-var-bug] assigning
+environment variables inside the compose file and using it directly in the
+commands afterwards do not work:
+
+```yaml
+services:
+  oracle:
+    platform: linux/amd64
+    environment:
+      CONTRACT_ADDRESS: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+    entrypoint: /bin/sh -c 'python main.py $${CONTRACT_ADDRESS}'
+```
+
+The `CONTRACT_ADDRESS` in this case will be empty in ROFL. Injecting the
+variable value directly inside `entrypoint` seems to be the only workaround:
+
+```yaml
+services:
+  oracle:
+    platform: linux/amd64
+    entrypoint: /bin/sh -c 'python main.py 0x5FbDB2315678afecb367f032d93F642f64180aa3'
+```
+
+[podman-compose-env-var-bug]: https://github.com/containers/podman-compose/issues/264
+
+### `depends_on` is ignored
+
+Due to an upstream [`podman-compose` bug][podman-compose-depends-on-bug] waiting
+for containers to spin up in the correct order with `depends_on` directive
+doesn't work. For example, this `oracle` should spin up once the `contracts`
+service successfully deploys the contracts and finishes:
+
+```yaml
+services:
+  contracts:
+    image: "ghcr.io/foundry-rs/foundry:latest"
+    platform: linux/amd64
+    volumes:
+      - ./contracts:/contracts
+    entrypoint: /bin/sh -c 'cd contracts && forge create'
+
+  oracle:
+    platform: linux/amd64
+    entrypoint: /bin/sh -c 'python main.py'
+    restart: on-failure
+    depends_on:
+      contracts:
+        condition: service_completed_successfully
+```
+
+In ROFL the `oracle` service will be started in parallel with `contracts` and
+will ignore the `depends_on` directive.
+
+There is currently no workaround for this. You will need to implement a logic
+in your `oracle` service so that the service doesn't hang if the contracts are
+not deployed yet, but simpyl crashes. This way, the restart mechanism of the
+service will be triggered to restart `oracle` and try again.
+
+[podman-compose-depends-on-bug]: https://github.com/containers/podman-compose/issues/575
+
+## See also
+
+<DocCardList items={[
+    findSidebarItem('/node/run-your-node/troubleshooting'),
+]} />
