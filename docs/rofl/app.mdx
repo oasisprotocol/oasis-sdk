@@ -4,13 +4,21 @@ import TabItem from '@theme/TabItem';
 # Application
 
 This chapter will show you how to quickly create, build and test a minimal
-containerized ROFL app that communicated with a confidential smart contract on
-[Oasis Sapphire].
+containerized ROFL app that authenticated and communicated with a confidential
+smart contract on [Oasis Sapphire].
 
 ROFL apps come in different flavors and the right choice is a tradeoff between
-TCB size and ease of use. The easiest to use are TDX container-based apps which
-are presented in this guide and more advanced flavors with smaller TCBs are
-described separately.
+TCB size and ease of use:
+
+- **SGX ROFL**: A Rust app compiled into a single secure binary with fixed
+  memory allocation.
+- **Raw TDX ROFL:** A Rust app compiled as an init app of the operating system
+  and packed in a secure virtual machine.
+- **TDX containers ROFL (default)**: A Docker compose-based container services packed in a
+  secure virtual machine.
+
+The easiest to use are TDX container-based apps which are presented in this
+guide and more advanced flavors with smaller TCBs are described separately.
 
 [Oasis Sapphire]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/README.mdx
 
@@ -81,8 +89,8 @@ The manifest contains things like ROFL app metadata, [secrets],
 [requested resources] and can be modified either manually or by using the CLI
 commands.
 
-[secrets]: features.md#secrets
-[requested resources]: resources.md
+[secrets]: features/secrets.md
+[requested resources]: features/manifest.md#resources
 
 ## Create
 
@@ -284,7 +292,7 @@ deployment and output something like:
 ROFL app built and bundle written to 'myapp.default.orc'.
 ```
 
-[other features]: features.md
+[other features]: features/
 
 ## Update On-chain App Config
 
