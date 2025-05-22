@@ -3,14 +3,20 @@ import TabItem from '@theme/TabItem';
 
 # Application
 
-This chapter will show you how to quickly create, build and test a minimal
-containerized ROFL app that communicated with a confidential smart contract on
-[Oasis Sapphire].
-
 ROFL apps come in different flavors and the right choice is a tradeoff between
-TCB size and ease of use. The easiest to use are TDX container-based apps which
-are presented in this guide and more advanced flavors with smaller TCBs are
-described separately.
+the Trusted Computing Base (TCB) size and ease of use:
+
+- **TDX containers ROFL (default)**: A Docker compose-based container services
+  packed in a secure virtual machine.
+- **Raw TDX ROFL:** A Rust app compiled as the init process of the operating
+  system and packed in a secure virtual machine.
+- **SGX ROFL**: A Rust app with fixed memory allocation compiled and packed into
+  a single secure binary.
+
+This chapter will show you how to quickly create, build and test a minimal
+containerized ROFL app that authenticates and communicates with a confidential
+smart contract on [Oasis Sapphire]. We will build a TDX container-based ROFL
+app.
 
 [Oasis Sapphire]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/README.mdx
 
@@ -19,7 +25,7 @@ described separately.
 ![ROFL diagram](images/rofl.svg)
 
 Each ROFL app runs in its own Trusted Execution Environment (TEE) which is
-provisioned by an Oasis Node from its _bundle_ (a zip archive containing the
+provisioned by an Oasis Node from its _ORC bundle_ (a zip archive containing the
 program binaries and metadata required for execution). ROFL apps register to
 the Oasis Network in order to be able to easily authenticate to on-chain smart
 contracts and transparently gain access to the decentralized per-app key
@@ -32,7 +38,7 @@ which provides a source of rough time and integrity for verification of all
 on-chain state. The ROFL app also generates a set of ephemeral cryptographic
 keys which are used in the process of remote attestation and on-chain
 registration. These processes ensure that the ROFL app can authenticate to
-on-chain modules (e.g. smart contracts running in the [Sapphire runtime]) by
+on-chain modules (e.g. smart contracts running on [Sapphire]) by
 signing and submitting special transactions.
 
 The ROFL app can then perform arbitrary work and interact with the outside world
@@ -41,13 +47,13 @@ authenticated via HTTPS/TLS or use other methods (e.g. light clients for other
 chains).
 
 <!-- markdownlint-disable line-length -->
-[Sapphire runtime]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
+[Sapphire]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
 <!-- markdownlint-enable line-length -->
 
 ## App Directory and Manifest
 
-First we create the basic directory structure for the ROFL app using the Oasis
-CLI:
+First we create the basic directory structure for the ROFL app using the [Oasis
+CLI]:
 
 ```shell
 oasis rofl init myapp
@@ -65,11 +71,12 @@ Name:     myapp
 Version:  0.1.0
 TEE:      tdx
 Kind:     container
+Git repository initialized.
 Created manifest in 'rofl.yaml'.
 Run `oasis rofl create` to register your ROFL app and configure an app ID.
 ```
 
-The directory structure will look as follows:
+The directory structure (omitting git artifacts) will look as follows:
 
 ```
 myapp
@@ -77,12 +84,15 @@ myapp
 └── rofl.yaml           # ROFL app manifest.
 ```
 
-The manifest contains things like ROFL app metadata, [secrets],
+The [manifest] contains things like ROFL app [metadata], [secrets],
 [requested resources] and can be modified either manually or by using the CLI
 commands.
 
-[secrets]: features.md#secrets
-[requested resources]: resources.md
+[manifest]: features/manifest.md
+[metadata]: features/manifest.md#metadata
+[Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/README.md
+[secrets]: features/secrets.md
+[requested resources]: features/manifest.md#resources
 
 ## Create
 
@@ -91,9 +101,8 @@ unique identifier (the app ID) which can be used by on-chain smart contracts to
 ensure that they are talking to the right app and also gives the app access to a
 decentralized key management system.
 
-Anyone with enough funds can create an app. Currently, this threshold is 100
-TEST on Sapphire Testnet and Localnet (funded automatically). ROFL registration
-on Sapphire Mainnet is yet to be enabled.
+Anyone with enough funds can create an app. Currently, this threshold is [100
+tokens][stake-requirements].
 
 :::tip
 
@@ -156,6 +165,7 @@ You can select the app ID derivation scheme by passing the
 
 :::
 
+[stake-requirements]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/prerequisites/stake-requirements.md
 [`sapphire-localnet`]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/localnet.mdx
 [scheme-parameter]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#create
 
@@ -174,13 +184,13 @@ part can be anything from a [WASM-based smart contract] to a dedicated
 :::
 
 We have prepared a simple oracle contract for this example. You can find it by
-checking out the [prepared example project] from the Oasis SDK repository. It
-contains a simple [Oracle.sol] contract which collects observations from
-authenticated ROFL app instances, performs trivial aggregation and stores the
-final aggregated result. Read the [Sapphire quickstart] chapter to learn how to
-build and deploy Sapphire smart contracts, but to get you up and running for
-this part, simply copy the example project from above, install dependencies and
-compile the smart contract by executing:
+checking out the [prepared example project]. It contains a simple [Oracle.sol]
+contract which collects observations from authenticated ROFL app instances,
+performs trivial aggregation and stores the final aggregated result. Read the
+[Sapphire quickstart] chapter to learn how to build and deploy Sapphire smart
+contracts, but to get you up and running for this part, simply copy the example
+project from above, install dependencies and compile the smart contract by
+executing:
 
 ```shell
 npm install
@@ -208,7 +218,7 @@ next step.
 
 <!-- markdownlint-disable line-length -->
 [Oracle.sol]: https://github.com/oasisprotocol/oasis-sdk/blob/main/examples/runtime-sdk/rofl-oracle/oracle/contracts/Oracle.sol
-[prepared example project]: https://github.com/oasisprotocol/oasis-sdk/tree/main/examples/runtime-sdk/rofl-oracle/oracle
+[prepared example project]: https://github.com/oasisprotocol/demo-rofl
 [Sapphire quickstart]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/quickstart.mdx
 <!-- markdownlint-enable line-length -->
 
@@ -218,9 +228,9 @@ What the core of the ROFL app does is defined with services running in Podman
 containers defined in [the compose file]. Anything that can run as a bunch of
 containers can also be run as a ROFL app.
 
-For an easier start, we will use the `oasisprotocol/demo-rofl` container which
-is defined in [the `demo-rofl` repository] and implements [a trivial oracle] in
-a shell script.
+For an easier start, we will use the `docker.io/oasisprotocol/demo-rofl` image
+defined in [the `demo-rofl` repository] and which implements [a trivial oracle]
+in a shell script.
 
 The compose file (`compose.yaml`) looks as follows:
 
@@ -230,6 +240,7 @@ services:
     # See the 'docker' subdirectory in demo-rofl for the content of this image.
     # Note that we are using the sha256 hash of the image to ensure integrity.
     image: docker.io/oasisprotocol/demo-rofl:latest@sha256:42c32ccfe0a0c84ac5969a1399e4658bed8e8d1517cc6b26cdce67439c66c910
+    platform: linux/amd64
     environment:
       # Address of the oracle contract deployed on Sapphire Testnet.
       - CONTRACT_ADDRESS=1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
@@ -284,7 +295,7 @@ deployment and output something like:
 ROFL app built and bundle written to 'myapp.default.orc'.
 ```
 
-[other features]: features.md
+[other features]: features/
 
 ## Update On-chain App Config
 

@@ -8,6 +8,29 @@ Along the way we will meet one of the most powerful ROFL features—how to safel
 store your bot's Telegram API token inside a built-in ROFL key-store protected
 by the Trusted Execution Environment and the Oasis blockchain!
 
+:::tip TL; DR
+
+If you already have a dockerized app, you should simply run the following
+[Oasis CLI][oasis-cli-dl] commands to ROFLize it:
+
+1. [`oasis rofl init`] to initialize the ROFL manifest in the existing folder.
+2. [`oasis rofl create`] to register a new ROFL app on-chain.
+3. [`oasis rofl build`] to compile a ROFL bundle.
+4. [`oasis rofl secret set`] to encrypt and store any secrets required by your
+   app.
+5. [`oasis rofl deploy`] to rent a TDX-machine from a ROFL marketplace and
+   deploy the app there.
+
+:::
+
+<!-- markdownlint-disable line-length -->
+[`oasis rofl init`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#init
+[`oasis rofl create`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#create
+[`oasis rofl build`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#build
+[`oasis rofl secret set`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#secret
+[`oasis rofl deploy`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
+<!-- markdownlint-enable line-length -->
+
 ## Python Telegram Bot
 
 We will use a very simple [python-telegram-bot] wrapper. As a good python
