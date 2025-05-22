@@ -1,66 +1,110 @@
-# Deployment on Testnet and Mainnet
+# Deployment
 
-As a first step we need to decide which ParaTime the ROFL app will authenticate
-to. This can be any ParaTime which has the ROFL module installed. For the rest
-of this section we will be using [Sapphire Testnet][sapphire-testnet] which has
-all of the required functionality.
+ROFLs can be deployed to any ParaTime that has the ROFL module installed. In our
+case we will be using the [Sapphire Testnet][sapphire] which has all the
+required functionality.
 
-[sapphire-testnet]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
+[sapphire]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
 
-## Deploying the ROFL App Bundle
+Your ROFL app will be deployed to a *ROFL node*. This is a light Oasis Node with
+enabled support for TEE. There are two ways to deploy your app:
 
-ROFL apps are deployed through Oasis nodes running on systems that support the
-targeted TEE (e.g. Intel TDX). If you don't have a running node where you could
-deploy your ROFL app, please first make sure that you have a client node with
-the Sapphire Testnet runtime configured (see the [client node documentation] for
-instructions on setting one up).
+1. The preferred option is to rent a ROFL node using the [ROFL marketplace](#rofl-marketplace) and
+   deploy your app directly via the Oasis CLI.
+2. Alternatively, you can copy over the ROFL bundle to your private ROFL node
+   instance and configure it. In this case, consult the [ROFL node] chapter.
 
-After your node is set up, include the built `myapp.default.orc`
-[which we prepared earlier] in the `runtime` section in your configuration as
-follows:
+[ROFL node]: ../../node/run-your-node/rofl-node.mdx
 
-```yaml
-runtime:
-  # ... other options omitted ...
-  paths:
-    - /node/runtime/sapphire-paratime.orc
-    - /node/runtime/myapp.default.orc
-```
+## ROFL Marketplace
 
-Note the appropriate paths to both the latest Sapphire Testnet runtime and the
-ROFL app bundle. Before proceeding with the rest of the chapter, please make
-sure that the node is fully synchronized with Sapphire Testnet.
+The ROFL marketplace allows ROFL app developers on one side to easily and safely
+deploy their apps for a small fee. On the other side it enables ROFL node
+providers to lend their ROFL nodes for computation. The marketplace is
+integrated into the Oasis Sapphire.
 
-The node will also need to cover any transaction fees that are required to
-maintain registration of the ROFL app. First, determine the address of the node
-you are connecting to by running the following:
+![The ROFL Marketplace](./images/rofl-marketplace.svg)
+
+The Oasis CLI has built-in support for renting a machine on the ROFL marketplace
+and deploying your app to it. To list offers of the default Oasis-managed ROFL
+provider, run:
 
 ```shell
-oasis-node identity show-address -a unix:/node/data/internal.sock
+oasis rofl deploy --show-offers
 ```
 
-This should output an address like the following:
-
 ```
-oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90
+Using provider: oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz (oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz)
+
+Offers available from the selected provider:
+- playground_short [0000000000000001]
+  TEE: tdx | Memory: 4096 MiB | vCPUs: 2 | Storage: 19.53 GiB
 ```
 
-You can then [transfer some tokens] to this address on Sapphire Testnet to make
-sure it will have funds to pay for registration fees:
+You can select a different provider and offer by using the
+[`--provider`][oasis-rofl-deploy] and [`--offer`][oasis-rofl-deploy] parameters
+respectively.
+
+For now, let's just go with defaults and execute: 
 
 ```shell
-oasis account transfer 10 oasis1qp6tl30ljsrrqnw2awxxu2mtxk0qxyy2nymtsy90 \
-  --network testnet --paratime sapphire
+oasis rofl deploy
 ```
 
-[client node documentation]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/paratime-client-node.mdx#configuring-tee-paratime-client-node
-[which we prepared earlier]: app.mdx#build
-[transfer some tokens]: https://github.com/oasisprotocol/cli/blob/master/docs/account.md#transfer
+```
+Using provider: oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz (oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz)
+Pushing ROFL app to OCI repository 'rofl.sh/0ba0712d-114c-4e39-ac8e-b28edffcada8:1747909776'...
+No pre-existing machine configured, creating a new one...
+Taking offer: playground_short [0000000000000001]
+```
+
+The command above performed the following actions:
+
+1. copied over ROFL bundle .orc to an Oasis-managed OCI repository `rofl.sh`,
+2. paid an offer `playground_short` with ID `0000000000000001` at provider
+  `oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz`,
+3. obtained the machine ID and stored it to the manifest file.
+
+You can now check the status of your rented ROFL machine by invoking:
+
+```shell
+oasis rofl machine show
+```
+
+```
+Name:       default
+Provider:   oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz
+ID:         00000000000000a2
+Offer:      0000000000000001
+Status:     accepted
+Creator:    oasis1qpupfu7e2n6pkezeaw0yhj8mcem8anj64ytrayne
+Admin:      oasis1qpupfu7e2n6pkezeaw0yhj8mcem8anj64ytrayne
+Node ID:    bOlqho9R3JHP64kJk+SfMxZt5fNkYWf6gdhErWlY60E=
+Created at: 2025-05-22 15:01:47 +0000 UTC
+Updated at: 2025-05-22 15:01:59 +0000 UTC
+Paid until: 2025-05-22 16:01:47 +0000 UTC
+Resources:
+  TEE:     Intel TDX
+  Memory:  4096 MiB
+  vCPUs:   2
+  Storage: 20000 MiB
+Deployment:
+  App ID: rofl1qpjsc3qplf2szw7w3rpzrpq5rqvzv4q5x5j23msu
+  Metadata:
+    net.oasis.deployment.orc.ref: rofl.sh/0ba0712d-114c-4e39-ac8e-b28edffcada8:1747909776@sha256:77ff0dc76adf957a4a089cf7cb584aa7788fef027c7180ceb73a662ede87a217
+Commands:
+  <no queued commands>
+```
+
+This shows you, if a ROFL node was registered on-chain to execute your ROFL
+app, the expiration date, the machine provider and other details.
+
+[oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
 
 ## Checking That the ROFL App is Running
 
-In order to check that the ROFL app is running and has successfully registered
-on chain, you can use the following command:
+In order to check that the ROFL app is running and which nodes have registered
+on chain to execute it, you can use the following command:
 
 ```shell
 oasis rofl show
@@ -108,7 +152,7 @@ their registrations to ensure they don't expire.
 
 ## Checking That the Oracle is Getting Updated
 
-In order to check that the oracle is working, you can use the prepared
+To check whether the oracle is actually working, you can use the prepared
 `oracle-query` task in the Hardhat project. Simply run:
 
 ```shell

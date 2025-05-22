@@ -1,4 +1,6 @@
-# Resources
+# `rofl.yaml` Manifest File
+
+## App Resources (`resources`) {#resources}
 
 Each containerized ROFL app must define what kind of resources it needs for its
 execution. This includes the number of assigned vCPUs, amount of memory, storage
@@ -25,17 +27,17 @@ the ROFL app and will require the policy to be updated!
 
 :::
 
-## Memory (`memory`)
+### Memory (`memory`) {#resources-memory}
 
 The amount of memory is specified in megabytes. By default the this value is
 initialized to `512`.
 
-## vCPU Count (`cpus`)
+### vCPU Count (`cpus`) {#resources-cpu}
 
 The number of vCPUs allocated to the VM. By default this value is initialized to
 `1`.
 
-## Storage (`storage`)
+### Storage (`storage`) {#resources-storage}
 
 Each ROFL app can request different storage options, depending on its use case.
 The storage kind is specified in the `kind` field with the following values
