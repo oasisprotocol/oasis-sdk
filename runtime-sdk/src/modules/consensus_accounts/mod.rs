@@ -165,6 +165,9 @@ pub enum Event {
         to: Address,
         shares: u128,
         amount: token::BaseUnits,
+        // Added in runtime-sdk v0.15.0.
+        #[cbor(optional)]
+        epoch: Option<EpochTime>,
     },
 }
 
@@ -980,6 +983,7 @@ impl<Consensus: modules::consensus::API> module::BlockHandler for Module<Consens
                     to: ud.to,
                     shares: udi.shares,
                     amount,
+                    epoch: Some(ud.epoch),
                 });
             });
         }

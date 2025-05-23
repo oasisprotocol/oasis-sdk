@@ -229,6 +229,8 @@ type UndelegateDoneEvent struct {
 	To     types.Address   `json:"to"`
 	Shares types.Quantity  `json:"shares"`
 	Amount types.BaseUnits `json:"amount"`
+	// Added in runtime-sdk v0.15.0.
+	Epoch *beacon.EpochTime `json:"epoch,omitempty"`
 }
 
 // Event is a consensus account event.
