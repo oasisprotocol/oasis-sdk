@@ -143,6 +143,9 @@ pub enum Event {
         amount: token::BaseUnits,
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
+        // Added in runtime-sdk v0.15.0.
+        #[cbor(optional)]
+        shares: Option<u128>,
     },
 
     #[sdk_event(code = 4)]
@@ -740,6 +743,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
                     nonce: context.nonce,
                     to: context.to,
                     amount: context.amount,
+                    shares: None,
                     error: Some(me.into()),
                 });
             });
@@ -779,6 +783,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
                 nonce: context.nonce,
                 to: context.to,
                 amount: context.amount,
+                shares: Some(shares),
                 error: None,
             });
         });

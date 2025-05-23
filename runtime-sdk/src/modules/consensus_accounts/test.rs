@@ -808,6 +808,8 @@ fn test_api_delegate() {
         to: Address,
         amount: token::BaseUnits,
         #[cbor(optional)]
+        shares: Option<u128>,
+        #[cbor(optional)]
         error: Option<types::ConsensusError>,
     }
     let mut events: Vec<DelegateEvent> = cbor::from_slice(&tags[1].value).unwrap();
@@ -818,6 +820,7 @@ fn test_api_delegate() {
     assert_eq!(event.to, keys::bob::address());
     assert_eq!(event.amount.amount(), 1_000);
     assert_eq!(event.amount.denomination(), &denom);
+    assert_eq!(event.shares, Some(1_000));
     assert_eq!(event.error, None);
 
     // Test delegation queries.
