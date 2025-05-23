@@ -117,9 +117,24 @@ type ExtendedDelegationInfo struct {
 	Shares types.Quantity `json:"shares"`
 }
 
+// CompleteDelegationInfo is complete information about a delegation.
+type CompleteDelegationInfo struct {
+	From   types.Address  `json:"from"`
+	To     types.Address  `json:"to"`
+	Shares types.Quantity `json:"shares"`
+}
+
 // UndelegationInfo is information about an undelegation.
 type UndelegationInfo struct {
 	From   types.Address    `json:"from"`
+	Epoch  beacon.EpochTime `json:"epoch"`
+	Shares types.Quantity   `json:"shares"`
+}
+
+// CompleteUndelegationInfo is complete information about an undelegation.
+type CompleteUndelegationInfo struct {
+	From   types.Address    `json:"from"`
+	To     types.Address    `json:"to"`
 	Epoch  beacon.EpochTime `json:"epoch"`
 	Shares types.Quantity   `json:"shares"`
 }

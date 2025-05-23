@@ -26,12 +26,14 @@ var (
 	methodUndelegate = types.NewMethodName("consensus.Undelegate", Undelegate{})
 
 	// Queries.
-	methodParameters    = types.NewMethodName("consensus_accounts.Parameters", nil)
-	methodBalance       = types.NewMethodName("consensus.Balance", BalanceQuery{})
-	methodAccount       = types.NewMethodName("consensus.Account", AccountQuery{})
-	methodDelegation    = types.NewMethodName("consensus.Delegation", DelegationQuery{})
-	methodDelegations   = types.NewMethodName("consensus.Delegations", DelegationsQuery{})
-	methodUndelegations = types.NewMethodName("consensus.Undelegations", UndelegationsQuery{})
+	methodParameters       = types.NewMethodName("consensus_accounts.Parameters", nil)
+	methodBalance          = types.NewMethodName("consensus.Balance", BalanceQuery{})
+	methodAccount          = types.NewMethodName("consensus.Account", AccountQuery{})
+	methodDelegation       = types.NewMethodName("consensus.Delegation", DelegationQuery{})
+	methodDelegations      = types.NewMethodName("consensus.Delegations", DelegationsQuery{})
+	methodUndelegations    = types.NewMethodName("consensus.Undelegations", UndelegationsQuery{})
+	methodAllDelegations   = types.NewMethodName("consensus.AllDelegations", nil)
+	methodAllUndelegations = types.NewMethodName("consensus.AllUndelegations", nil)
 )
 
 // V1 is the v1 consensus accounts module interface.
@@ -65,8 +67,14 @@ type V1 interface {
 	// Delegations queries all delegation metadata originating from a given account.
 	Delegations(ctx context.Context, round uint64, query *DelegationsQuery) ([]*ExtendedDelegationInfo, error)
 
+	// AllDelegations queries all delegation metadata.
+	AllDelegations(ctx context.Context, round uint64) ([]*CompleteDelegationInfo, error)
+
 	// Undelegations queries all undelegation metadata to a given account.
 	Undelegations(ctx context.Context, round uint64, query *UndelegationsQuery) ([]*UndelegationInfo, error)
+
+	// AllUndelegations queries all undelegation metadata.
+	AllUndelegations(ctx context.Context, round uint64) ([]*CompleteUndelegationInfo, error)
 
 	// GetEvents returns all consensus accounts events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
@@ -159,6 +167,16 @@ func (a *v1) Delegations(ctx context.Context, round uint64, query *DelegationsQu
 }
 
 // Implements V1.
+func (a *v1) AllDelegations(ctx context.Context, round uint64) ([]*CompleteDelegationInfo, error) {
+	var cdis []*CompleteDelegationInfo
+	err := a.rc.Query(ctx, round, methodAllDelegations, nil, &cdis)
+	if err != nil {
+		return nil, err
+	}
+	return cdis, nil
+}
+
+// Implements V1.
 func (a *v1) Undelegations(ctx context.Context, round uint64, query *UndelegationsQuery) ([]*UndelegationInfo, error) {
 	var udis []*UndelegationInfo
 	err := a.rc.Query(ctx, round, methodUndelegations, query, &udis)
@@ -166,6 +184,16 @@ func (a *v1) Undelegations(ctx context.Context, round uint64, query *Undelegatio
 		return nil, err
 	}
 	return udis, nil
+}
+
+// Implements V1.
+func (a *v1) AllUndelegations(ctx context.Context, round uint64) ([]*CompleteUndelegationInfo, error) {
+	var cudis []*CompleteUndelegationInfo
+	err := a.rc.Query(ctx, round, methodAllUndelegations, nil, &cudis)
+	if err != nil {
+		return nil, err
+	}
+	return cudis, nil
 }
 
 // Implements V1.

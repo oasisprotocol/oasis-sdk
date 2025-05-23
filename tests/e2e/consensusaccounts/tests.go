@@ -328,6 +328,25 @@ func DelegationTest(ctx context.Context, env *scenario.Env) error { //nolint: go
 		return fmt.Errorf("expected delegation shares to be %s, got %s", amount.Amount, dis[0].Shares)
 	}
 
+	// Test AllDelegations query.
+	env.Logger.Info("testing AllDelegations query")
+	allDis, err := consAccounts.AllDelegations(ctx, client.RoundLatest)
+	if err != nil {
+		return err
+	}
+	if len(allDis) != 1 {
+		return fmt.Errorf("expected 1 delegation, got %d", len(allDis))
+	}
+	if allDis[0].From != testing.Alice.Address {
+		return fmt.Errorf("expected delegation source to be %s, got %s", testing.Alice.Address, allDis[0].From)
+	}
+	if allDis[0].To != testing.Bob.Address {
+		return fmt.Errorf("expected delegation destination to be %s, got %s", testing.Bob.Address, allDis[0].To)
+	}
+	if allDis[0].Shares.Cmp(consensusAmount) != 0 {
+		return fmt.Errorf("expected delegation shares to be %s, got %s", amount.Amount, allDis[0].Shares)
+	}
+
 	env.Logger.Info("alice delegating to alice")
 	// NOTE: The test runtime uses a scaling factor of 1000 so all balances in the runtime are
 	//       1000x larger than in the consensus layer.
@@ -404,6 +423,25 @@ func DelegationTest(ctx context.Context, env *scenario.Env) error { //nolint: go
 	}
 	if udis[0].Shares.Cmp(sharesB) != 0 {
 		return fmt.Errorf("expected undelegation shares to be %s, got %s", sharesB, udis[0].Shares)
+	}
+
+	// Test AllUndelegations query.
+	env.Logger.Info("testing AllUndelegations query")
+	allUdis, err := consAccounts.AllUndelegations(ctx, undelegateRoundB)
+	if err != nil {
+		return err
+	}
+	if len(allUdis) != 1 {
+		return fmt.Errorf("expected 1 undelegation, got %d", len(allUdis))
+	}
+	if allUdis[0].From != testing.Bob.Address {
+		return fmt.Errorf("expected undelegation source to be %s, got %s", testing.Bob.Address, allUdis[0].From)
+	}
+	if allUdis[0].Shares.Cmp(sharesB) != 0 {
+		return fmt.Errorf("expected undelegation shares to be %s, got %s", sharesB, allUdis[0].Shares)
+	}
+	if allUdis[0].To != testing.Alice.Address {
+		return fmt.Errorf("expected undelegation destination to be %s, got %s", testing.Alice.Address, allUdis[0].To)
 	}
 
 	if err = scenario.EnsureStakingEvent(env.Logger, ch, scenario.MakeReclaimEscrowCheck(staking.Address(testing.Bob.Address), scenario.RuntimeAddress, consensusAmountB)); err != nil {

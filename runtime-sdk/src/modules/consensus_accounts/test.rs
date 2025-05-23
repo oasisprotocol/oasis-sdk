@@ -844,6 +844,15 @@ fn test_api_delegate() {
     .expect("delegations query should succeed");
     assert_eq!(dis.len(), 1);
     assert_eq!(dis[0].shares, 1_000);
+
+    let ads = Module::<Consensus>::query_all_delegations(&ctx, ())
+        .expect("all delegations query should succeed");
+    assert_eq!(ads.len(), 1);
+    assert_eq!(ads[0].shares, 1_000);
+
+    let uds = Module::<Consensus>::query_all_undelegations(&ctx, ())
+        .expect("all undelegations query should succeed");
+    assert_eq!(uds.len(), 0);
 }
 
 #[test]
