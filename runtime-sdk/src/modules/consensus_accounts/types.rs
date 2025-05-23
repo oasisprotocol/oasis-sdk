@@ -173,11 +173,35 @@ pub struct ExtendedDelegationInfo {
     pub shares: u128,
 }
 
+/// Full information about a delegation.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct CompleteDelegationInfo {
+    /// Address delegating from.
+    pub from: Address,
+    /// Address delegated to.
+    pub to: Address,
+    /// The amount of owned shares.
+    pub shares: u128,
+}
+
 /// Information about an undelegation.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct UndelegationInfo {
     /// Address being undelegated from.
     pub from: Address,
+    /// Epoch when the undelegation will be complete.
+    pub epoch: EpochTime,
+    /// The amount of undelegated shares.
+    pub shares: u128,
+}
+
+/// Full information about an undelegation.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct CompleteUndelegationInfo {
+    /// Address being undelegated from.
+    pub from: Address,
+    /// Address being undelegated to.
+    pub to: Address,
     /// Epoch when the undelegation will be complete.
     pub epoch: EpochTime,
     /// The amount of undelegated shares.
