@@ -600,12 +600,28 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
         state::get_delegations(args.from)
     }
 
+    #[handler(query = "consensus.AllDelegations", expensive)]
+    fn query_all_delegations<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<Vec<types::CompleteDelegationInfo>, Error> {
+        state::get_all_delegations()
+    }
+
     #[handler(query = "consensus.Undelegations")]
     fn query_undelegations<C: Context>(
         _ctx: &C,
         args: types::UndelegationsQuery,
     ) -> Result<Vec<types::UndelegationInfo>, Error> {
         state::get_undelegations(args.to)
+    }
+
+    #[handler(query = "consensus.AllUndelegations", expensive)]
+    fn query_all_undelegations<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<Vec<types::CompleteUndelegationInfo>, Error> {
+        state::get_all_undelegations()
     }
 
     #[handler(call = "consensus.SharesToTokens", internal)]
