@@ -1137,6 +1137,8 @@ struct UndelegateDoneEvent {
     to: Address,
     shares: u128,
     amount: token::BaseUnits,
+    #[cbor(optional)]
+    epoch: Option<EpochTime>,
 }
 
 #[test]
@@ -1218,6 +1220,7 @@ fn test_api_undelegate() {
     assert_eq!(event.shares, 400);
     assert_eq!(event.amount.amount(), 410);
     assert_eq!(event.amount.denomination(), &denom);
+    assert_eq!(event.epoch, Some(mock.epoch));
 
     // Ensure runtime balance is updated.
     let balance = Accounts::get_balance(keys::alice::address(), denom.clone()).unwrap();
