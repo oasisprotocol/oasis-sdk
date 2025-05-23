@@ -199,6 +199,8 @@ type DelegateEvent struct {
 	To     types.Address   `json:"to"`
 	Amount types.BaseUnits `json:"amount"`
 	Error  *ConsensusError `json:"error,omitempty"`
+	// Added in runtime-sdk v0.15.0.
+	Shares *types.Quantity `json:"shares,omitempty"`
 }
 
 // IsSuccess checks whether the event indicates a successful operation.
