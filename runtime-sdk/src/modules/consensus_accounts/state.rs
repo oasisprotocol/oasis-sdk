@@ -131,12 +131,31 @@ pub fn get_delegations_by_destination() -> Result<BTreeMap<Address, u128>, Error
         let delegations = storage::TypedStore::new(storage::PrefixStore::new(store, &DELEGATIONS));
 
         let mut by_destination: BTreeMap<Address, u128> = BTreeMap::new();
-        for (ap, di) in delegations.iter::<AddressPair, types::DelegationInfo>() {
-            let total = by_destination.entry(ap.1).or_default();
+        for (AddressPair(_, to), di) in delegations.iter::<AddressPair, types::DelegationInfo>() {
+            let total = by_destination.entry(to).or_default();
             *total = total.checked_add(di.shares).ok_or(Error::InvalidArgument)?;
         }
 
         Ok(by_destination)
+    })
+}
+
+/// Retrive delegation metadata for all delegations.
+pub fn get_all_delegations() -> Result<Vec<types::CompleteDelegationInfo>, Error> {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let delegations = storage::TypedStore::new(storage::PrefixStore::new(store, &DELEGATIONS));
+
+        Ok(delegations
+            .iter::<AddressPair, types::DelegationInfo>()
+            .map(
+                |(AddressPair(from, to), di)| types::CompleteDelegationInfo {
+                    from,
+                    to,
+                    shares: di.shares,
+                },
+            )
+            .collect())
     })
 }
 
@@ -249,6 +268,47 @@ pub fn get_undelegations(to: Address) -> Result<Vec<types::UndelegationInfo>, Er
                     }
                 },
             )
+            .collect())
+    })
+}
+
+/// This is needed to properly iterate over the UNDELEGATIONS map.
+#[derive(Clone, PartialEq, PartialOrd, Eq, Ord)]
+struct AddressPairWithEpoch(AddressPair, EpochTime);
+
+impl TryFrom<&[u8]> for AddressPairWithEpoch {
+    type Error = anyhow::Error;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() != (2 * Address::SIZE) + 8 {
+            anyhow::bail!("incorrect address pair with epoch key size");
+        }
+        let a = Address::try_from(&bytes[..Address::SIZE])
+            .map_err(|_| anyhow::anyhow!("malformed address"))?;
+        let b = Address::try_from(&bytes[Address::SIZE..bytes.len() - 8])
+            .map_err(|_| anyhow::anyhow!("malformed address"))?;
+        let epoch = EpochTime::from_be_bytes(bytes[bytes.len() - 8..].try_into()?);
+        Ok(AddressPairWithEpoch(AddressPair(a, b), epoch))
+    }
+}
+
+/// Retrieve all undelegation metadata.
+pub fn get_all_undelegations() -> Result<Vec<types::CompleteUndelegationInfo>, Error> {
+    CurrentState::with_store(|store| {
+        let store = storage::PrefixStore::new(store, &MODULE_NAME);
+        let undelegations =
+            storage::TypedStore::new(storage::PrefixStore::new(store, &UNDELEGATIONS));
+
+        Ok(undelegations
+            .iter::<AddressPairWithEpoch, types::DelegationInfo>()
+            .map(|(AddressPairWithEpoch(AddressPair(to, from), epoch), di)| {
+                types::CompleteUndelegationInfo {
+                    from,
+                    to,
+                    epoch,
+                    shares: di.shares,
+                }
+            })
             .collect())
     })
 }

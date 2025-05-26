@@ -143,6 +143,9 @@ pub enum Event {
         amount: token::BaseUnits,
         #[cbor(optional)]
         error: Option<types::ConsensusError>,
+        // Added in runtime-sdk v0.15.0.
+        #[cbor(optional)]
+        shares: Option<u128>,
     },
 
     #[sdk_event(code = 4)]
@@ -162,6 +165,9 @@ pub enum Event {
         to: Address,
         shares: u128,
         amount: token::BaseUnits,
+        // Added in runtime-sdk v0.15.0.
+        #[cbor(optional)]
+        epoch: Option<EpochTime>,
     },
 }
 
@@ -594,12 +600,28 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
         state::get_delegations(args.from)
     }
 
+    #[handler(query = "consensus.AllDelegations", expensive)]
+    fn query_all_delegations<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<Vec<types::CompleteDelegationInfo>, Error> {
+        state::get_all_delegations()
+    }
+
     #[handler(query = "consensus.Undelegations")]
     fn query_undelegations<C: Context>(
         _ctx: &C,
         args: types::UndelegationsQuery,
     ) -> Result<Vec<types::UndelegationInfo>, Error> {
         state::get_undelegations(args.to)
+    }
+
+    #[handler(query = "consensus.AllUndelegations", expensive)]
+    fn query_all_undelegations<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<Vec<types::CompleteUndelegationInfo>, Error> {
+        state::get_all_undelegations()
     }
 
     #[handler(call = "consensus.SharesToTokens", internal)]
@@ -740,6 +762,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
                     nonce: context.nonce,
                     to: context.to,
                     amount: context.amount,
+                    shares: None,
                     error: Some(me.into()),
                 });
             });
@@ -779,6 +802,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
                 nonce: context.nonce,
                 to: context.to,
                 amount: context.amount,
+                shares: Some(shares),
                 error: None,
             });
         });
@@ -975,6 +999,7 @@ impl<Consensus: modules::consensus::API> module::BlockHandler for Module<Consens
                     to: ud.to,
                     shares: udi.shares,
                     amount,
+                    epoch: Some(ud.epoch),
                 });
             });
         }
