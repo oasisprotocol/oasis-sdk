@@ -43,7 +43,7 @@ type RuntimeClient struct {
 // Connection is the general node connection interface.
 type Connection interface {
 	// Consensus returns an interface to the consensus layer.
-	Consensus() consensus.ClientBackend
+	Consensus() consensus.Services
 
 	// Control returns an interface to the node control layer.
 	Control() control.NodeController
@@ -56,8 +56,8 @@ type connection struct {
 	conn *grpc.ClientConn
 }
 
-func (c *connection) Consensus() consensus.ClientBackend {
-	return consensus.NewClient(c.conn)
+func (c *connection) Consensus() consensus.Services {
+	return consensus.NewServicesClient(c.conn)
 }
 
 func (c *connection) Control() control.NodeController {
@@ -92,8 +92,7 @@ func Connect(ctx context.Context, net *config.Network) (Connection, error) {
 
 	// Request the chain domain separation context from the node and compare with local
 	// configuration to reject mismatches early.
-	cs := conn.Consensus()
-	chainContext, err := cs.GetChainContext(ctx)
+	chainContext, err := conn.Consensus().Core().GetChainContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve remote node's chain context: %s", err)
 	}

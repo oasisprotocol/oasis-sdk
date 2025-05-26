@@ -15,7 +15,7 @@ replace (
 
 require (
 	github.com/ethereum/go-ethereum v1.14.0
-	github.com/oasisprotocol/oasis-core/go v0.2502.0
+	github.com/oasisprotocol/oasis-core/go v0.2503.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
 

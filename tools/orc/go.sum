@@ -98,8 +98,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a h1:dlRvE5fWabOchtH7znfiFCcOvmIYgOeAS5ifBXBlh9Q=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a/go.mod h1:hVoHR2EVESiICEMbg137etN/Lx+lSrHPTD39Z/uE+2s=
-github.com/oasisprotocol/oasis-core/go v0.2502.0 h1:B/qr+3HjCF8gN0MmY9Cw9hJ8Em/Lo5Ah8bIi9pgqgDY=
-github.com/oasisprotocol/oasis-core/go v0.2502.0/go.mod h1:0wO1wYzDCNToNemyt/wF+1BjcrSBRyw6MJrWr7LvrJs=
+github.com/oasisprotocol/oasis-core/go v0.2503.0 h1:3Vs45JnvZCYbr5a7xSB9mBV7kna0uzrblJiiQWB5lnI=
+github.com/oasisprotocol/oasis-core/go v0.2503.0/go.mod h1:0wO1wYzDCNToNemyt/wF+1BjcrSBRyw6MJrWr7LvrJs=
 github.com/pelletier/go-toml/v2 v2.2.2 h1:aYUidT7k73Pcl9nb2gScu7NSrKCSHIDE89b3+6Wq+LM=
 github.com/pelletier/go-toml/v2 v2.2.2/go.mod h1:1t835xjRzz80PqgE6HHgN2JOsmgYu/h4qDAS4n929Rs=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

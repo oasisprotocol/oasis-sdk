@@ -552,25 +552,10 @@ const (
 
 var skipMethods = map[string]bool{
 	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
-	// Cleanup functions
-	"github.com/oasisprotocol/oasis-core/go/scheduler/api.Backend.Cleanup":  true,
-	"github.com/oasisprotocol/oasis-core/go/registry/api.Backend.Cleanup":   true,
-	"github.com/oasisprotocol/oasis-core/go/staking/api.Backend.Cleanup":    true,
-	"github.com/oasisprotocol/oasis-core/go/roothash/api.Backend.Cleanup":   true,
-	"github.com/oasisprotocol/oasis-core/go/governance/api.Backend.Cleanup": true,
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Cleanup":    true,
 	// getters for other APIs
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Beacon":     true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Registry":   true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Staking":    true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Scheduler":  true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Governance": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.KeyManager": true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.RootHash":   true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.State":      true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.ClientBackend.Vault":      true,
 	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         true,
 	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           true,
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.Backend.State":            true,
 	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": true,
 }
 var skipMethodsConsulted = map[string]bool{}
@@ -706,7 +691,7 @@ func main() {
 	visitClient(&internal, reflect.TypeOf((*storage.Backend)(nil)).Elem())
 	visitClientWithService(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker", "")
 	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*consensus.ClientBackend)(nil)).Elem())
+	visitClient(&internal, reflect.TypeOf((*consensus.Backend)(nil)).Elem())
 	visitClientWithService(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "Consensus", "State")
 	visitClientWithService(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController", "")
 	visitClientWithService(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController", "")

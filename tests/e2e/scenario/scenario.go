@@ -69,8 +69,8 @@ type Env struct {
 	Logger *logging.Logger
 	// Connection is the gRPC connection to the client node.
 	Connection *grpc.ClientConn
-	// Consensus is the consensus client instance connected to the client node.
-	Consensus consensus.ClientBackend
+	// Consensus is the consensus services client instance connected to the client node.
+	Consensus consensus.Services
 	// Client is the runtime client instance connected to the client node.
 	Client client.RuntimeClient
 }
@@ -495,7 +495,7 @@ func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 		Scenario:   sc,
 		Logger:     sc.Logger,
 		Connection: conn,
-		Consensus:  consensus.NewClient(conn),
+		Consensus:  consensus.NewServicesClient(conn),
 		Client:     rtc,
 	}
 
