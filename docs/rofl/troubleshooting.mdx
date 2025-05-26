@@ -3,6 +3,34 @@ import {findSidebarItem} from '@site/src/sidebarUtils';
 
 # Troubleshooting
 
+## Compilation
+
+### `The following target_feature flags must be set: +aes,+ssse3.`
+
+You will see the following error, if the `aes` and `ssse3` compiler flags are
+not enabled during compilation of your SGX and TDX-raw ROFL:
+
+```
+error: The following target_feature flags must be set: +aes,+ssse3.
+--> /home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/deoxysii-0.2.4/src/lib.rs:26:1
+|
+26 | compile_error!("The following target_feature flags must be set: +aes,+ssse3.");
+| ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+We suggest that you add the following default flags to your `.cargo/config.toml`
+file:
+
+```toml
+[build]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+
+[test]
+rustflags = ["-C", "target-feature=+aes,+ssse3"]
+rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+```
+
 ## See also
 
 <DocCardList items={[
