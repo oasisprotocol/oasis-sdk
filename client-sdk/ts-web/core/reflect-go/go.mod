@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis1
 
-require github.com/oasisprotocol/oasis-core/go v0.2502.0
+require github.com/oasisprotocol/oasis-core/go v0.2503.0
 
 require (
 	github.com/a8m/envsubst v1.4.2 // indirect

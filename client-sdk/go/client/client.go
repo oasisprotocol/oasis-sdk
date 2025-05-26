@@ -155,7 +155,7 @@ type TransactionWithResults struct {
 }
 
 type runtimeClient struct {
-	cs consensus.ClientBackend
+	cs consensus.Services
 	cc coreClient.RuntimeClient
 
 	runtimeID   common.Namespace
@@ -168,7 +168,7 @@ func (rc *runtimeClient) GetInfo(ctx context.Context) (*types.RuntimeInfo, error
 		return rc.runtimeInfo, nil
 	}
 
-	chainCtx, err := rc.cs.GetChainContext(ctx)
+	chainCtx, err := rc.cs.Core().GetChainContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch consensus layer chain context: %w", err)
 	}
@@ -480,7 +480,7 @@ func (rc *runtimeClient) State() syncer.ReadSyncer {
 // New creates a new runtime client for the specified runtime.
 func New(conn *grpc.ClientConn, runtimeID common.Namespace) RuntimeClient {
 	return &runtimeClient{
-		cs:        consensus.NewClient(conn),
+		cs:        consensus.NewServicesClient(conn),
 		cc:        coreClient.NewClient(conn),
 		runtimeID: runtimeID,
 	}
