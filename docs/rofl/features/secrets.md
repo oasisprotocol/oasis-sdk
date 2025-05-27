@@ -74,3 +74,5 @@ secrets:
   mysecret:
     external: true
 ```
+
+[container secret]: https://docs.docker.com/compose/how-tos/use-secrets/
