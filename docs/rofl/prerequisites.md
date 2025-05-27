@@ -13,10 +13,10 @@ The following is needed to build and deploy your ROFL app:
 
 [oasis-cli]: https://github.com/oasisprotocol/cli/blob/master/docs/README.md
 
-## Preferred Setup: Native Oasis CLI + Docker
+## Preferred Setup: Native Oasis CLI + Docker for building and testing
 
- We suggest that you download the native build for your OS and
-[install it locally].
+We suggest that you download the native build for your OS and [install it
+locally].
 
 The `ghcr.io/oasisprotocol/rofl-dev` Docker image mentioned above already
 contains all the tools needed to compile a ROFL app, so you can simply invoke
@@ -41,7 +41,7 @@ Alternatively, you can run the CLI inside Docker. This will require some extra
 parameters, such as bind-mounting the Oasis CLI config folder for storing your
 secrets. On Linux, this would look like:
 
-```
+```shell
 # Linux
 docker run --platform linux/amd64 --rm -v .:/src -v ~/.config/oasis:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis
 
@@ -52,6 +52,15 @@ docker run --platform linux/amd64 --rm -v .:/src -v "~/Library/Application Suppo
 docker run --platform linux/amd64 --rm -v .:/src -v %USERPROFILE%/AppData/Local/oasis/:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis
 ```
 
+You can also add command alias to your `.bashrc` (Linux) or `.bash_profile`, so
+you can always execute the Oasis CLI within docker with a simple `oasis` command
+as if it were installed locally.
+
+```shell
+# Linux
+alias oasis='docker run --platform linux/amd64 --rm -v .:/src -v ~/.config/oasis:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis'
+```
+
 :::info --platform linux/amd64
 
 You **must** always provide the `--platform linux/amd64` parameter, no matter
@@ -59,10 +68,12 @@ which processor your computer has or the operating system you're running.
 
 :::
 
-## Advanced Setup: Native Oasis CLI and ROFL build utils (`linux/amd64` only!)
+## Advanced Setup: Native Oasis CLI and ROFL build utils (`linux/amd64` only)
 
-Install the [Oasis CLI][oasis-cli] locally. Next, install tools for creating and
-encrypting partitions and QEMU. On a Debian-based Linux you can do so by running:
+Install the [Oasis CLI][oasis-cli] locally.
+
+Next, install tools for creating and encrypting partitions and QEMU. On a
+Debian-based Linux you can do so by running:
 
 ```
 sudo apt install squashfs-tools cryptsetup-bin qemu-utils
