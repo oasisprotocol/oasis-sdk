@@ -360,7 +360,7 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 	gasPrice := uint64(1)
 
 	// Check min gas price.
-	mgp, err := c.MinGasPrice(ctx)
+	mgp, err := c.MinGasPrice(ctx, client.RoundLatest)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ type V1 interface {
 	EstimateGasForCaller(ctx context.Context, round uint64, caller types.CallerAddress, tx *types.Transaction, propagateFailures bool) (uint64, error)
 
 	// MinGasPrice returns the minimum gas price.
-	MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quantity, error)
+	MinGasPrice(ctx context.Context, round uint64) (map[types.Denomination]types.Quantity, error)
 
 	// GetEvents returns all core events emitted in a given block.
 	GetEvents(ctx context.Context, round uint64) ([]*Event, error)
@@ -90,9 +90,9 @@ func (a *v1) EstimateGasForCaller(ctx context.Context, round uint64, caller type
 }
 
 // Implements V1.
-func (a *v1) MinGasPrice(ctx context.Context) (map[types.Denomination]types.Quantity, error) {
+func (a *v1) MinGasPrice(ctx context.Context, round uint64) (map[types.Denomination]types.Quantity, error) {
 	var mgp map[types.Denomination]types.Quantity
-	err := a.rc.Query(ctx, client.RoundLatest, methodMinGasPrice, nil, &mgp)
+	err := a.rc.Query(ctx, round, methodMinGasPrice, nil, &mgp)
 	if err != nil {
 		return nil, err
 	}

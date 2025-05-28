@@ -26,7 +26,7 @@ func submitEthereumTx(ctx context.Context, rtc client.RuntimeClient, txData ethT
 	c := core.NewV1(rtc)
 	ac := accounts.NewV1(rtc)
 
-	mgp, err := c.MinGasPrice(ctx)
+	mgp, err := c.MinGasPrice(ctx, client.RoundLatest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get min gas price: %w", err)
 	}
