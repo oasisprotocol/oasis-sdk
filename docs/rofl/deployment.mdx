@@ -1,3 +1,6 @@
+import DocCardList from '@theme/DocCardList';
+import {findSidebarItem} from '@site/src/sidebarUtils';
+
 # Deployment
 
 ROFLs can be deployed to any ParaTime that has the ROFL module installed. In our
@@ -9,25 +12,19 @@ required functionality.
 Your ROFL app will be deployed to a *ROFL node*. This is a light Oasis Node with
 enabled support for TEE. There are two ways to deploy your app:
 
-1. The preferred option is to rent a ROFL node using the [ROFL marketplace](#rofl-marketplace) and
-   deploy your app directly via the Oasis CLI.
-2. Alternatively, you can copy over the ROFL bundle to your private ROFL node
-   instance and configure it. In this case, consult the [ROFL node] chapter.
+1. The preferred option is to rent a ROFL node using the [ROFL
+   marketplace](#deploy-on-rofl-marketplace) and deploy your app directly via
+   the Oasis CLI.
+2. Alternatively, you can copy over the ROFL bundle to your ROFL node manually
+   and configure it. In this case, consult the [ROFL node] chapter.
 
 [ROFL node]: ../../node/run-your-node/rofl-node.mdx
 
-## ROFL Marketplace
+## Deploy on ROFL Marketplace {#deploy-on-rofl-marketplace}
 
-The ROFL marketplace allows ROFL app developers on one side to easily and safely
-deploy their apps for a small fee. On the other side it enables ROFL node
-providers to lend their ROFL nodes for computation. The marketplace is
-integrated into the Oasis Sapphire.
-
-![The ROFL Marketplace](./images/rofl-marketplace.svg)
-
-The Oasis CLI has built-in support for renting a machine on the ROFL marketplace
-and deploying your app to it. To list offers of the default Oasis-managed ROFL
-provider, run:
+The Oasis CLI has built-in support for renting a machine on the [ROFL
+marketplace] and deploying your app to it. To list offers of the default
+Oasis-managed ROFL provider, run:
 
 ```shell
 oasis rofl deploy --show-offers
@@ -99,9 +96,10 @@ Commands:
 This shows you, if a ROFL node was registered on-chain to execute your ROFL
 app, the expiration date, the machine provider and other details.
 
+[ROFL marketplace]: ./features/marketplace.mdx
 [oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
 
-## Checking That the ROFL App is Running
+## Check That the ROFL App is Running
 
 In order to check that the ROFL app is running and which nodes have registered
 on chain to execute it, you can use the following command:
@@ -150,7 +148,7 @@ node, its public runtime attestation key (RAK) and the epoch at which its
 registration will expire if not refreshed. ROFL apps must periodically refresh
 their registrations to ensure they don't expire.
 
-## Checking That the Oracle is Getting Updated
+## Check That the Oracle Contract is Getting Updated
 
 To check whether the oracle is actually working, you can use the prepared
 `oracle-query` task in the Hardhat project. Simply run:
@@ -170,3 +168,10 @@ Last update at:   656
 ```
 
 That's it! Your first ROFL oracle is running!
+
+## See also
+
+<DocCardList items={[
+    findSidebarItem('/build/rofl/features/marketplace'),
+    findSidebarItem('/node/run-your-node/rofl-node'),
+]} />
