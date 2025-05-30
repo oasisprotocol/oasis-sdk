@@ -1,0 +1,35 @@
+---
+title: Marketplace
+---
+
+import DocCard from '@theme/DocCard';
+import {findSidebarItem} from '@site/src/sidebarUtils';
+
+# The ROFL Marketplace
+
+The ROFL marketplace is an on-chain protocol that allows ROFL app developers to
+easily and safely deploy their apps for a small fee on one side and on the
+other enables ROFL node providers to lend their ROFL nodes for computation.
+
+![ROFL marketplace](../images/rofl-marketplace.svg)
+
+The ROFL marketplace consists of three entities:
+
+- **ROFL app developers**: Build a ROFL app, register it on-chain and rent a
+machine from the ROFL provider where they can deploy their ROFL to.
+- **ROFL provider**: Is an on-chain entity that bills and assigns **machines**
+to ROFL developers. Each machine has a hosting plan called an **offer**.
+- **ROFL node**: Is a server that runs the Oasis node and instantiates one or
+more **machines** which then host a ROFL app.
+
+## Instructions for ROFL app developers
+
+<DocCard item={
+    findSidebarItem('/build/rofl/deployment')
+} />
+
+## Instructions for ROFL node providers
+
+<DocCard item={
+    findSidebarItem('/node/run-your-node/rofl-node')
+} />
