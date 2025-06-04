@@ -118,6 +118,8 @@ type Registration struct {
 	Expiration beacon.EpochTime `json:"expiration"`
 	// ExtraKeys are the extra public keys to endorse (e.g. secp256k1 keys).
 	ExtraKeys []types.PublicKey `json:"extra_keys"`
+	// Metadata are arbitrary key/value pairs.
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // Parameters are the parameters for the rofl module.
