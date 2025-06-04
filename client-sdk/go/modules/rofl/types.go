@@ -65,6 +65,8 @@ type Register struct {
 	//
 	// All of these keys need to co-sign the registration transaction to prove ownership.
 	ExtraKeys []types.PublicKey `json:"extra_keys"`
+	// Metadata are arbitrary key/value pairs.
+	Metadata map[string]string `json:"metadata,omitempty"`
 }
 
 // AppQuery is an application-related query.
