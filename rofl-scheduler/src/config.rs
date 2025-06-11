@@ -1,24 +1,27 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 use anyhow::{anyhow, Result};
 use base64::prelude::*;
 
 use oasis_runtime_sdk::{
     cbor,
-    core::common::crypto::{hash::Hash, signature::PublicKey},
-    modules::rofl::app::prelude::*,
+    core::{
+        common::crypto::{hash::Hash, signature::PublicKey},
+        Protocol,
+    },
     types::address::Address,
 };
 use oasis_runtime_sdk_rofl_market as market;
-
-use crate::SchedulerApp;
 
 /// Local configuration key that contains the ROFL scheduler configuration.
 const ROFL_SCHEDULER_CONFIG_KEY: &str = "rofl_scheduler";
 
 /// Raw local configuration as serialized.
 #[derive(Clone, Debug, Default, cbor::Decode)]
-struct RawLocalConfig {
+pub struct RawLocalConfig {
     /// Address of the provider.
     pub provider_address: String,
     /// Offers that the scheduler should accept. If no offers are configured, all are accepted.
@@ -44,6 +47,24 @@ struct RawLocalConfig {
     pub deploy_pull_timeout: Option<u64>,
     /// A list of node addresses to transfer the instances from.
     pub transfer_instances_from: Vec<String>,
+    /// Domain used to serve the scheduler API endpoint. If not set, the endpoint is disabled.
+    pub api_domain: Option<String>,
+    /// Lifetime of issued JWT tokens for API access (in seconds).
+    pub api_token_lifetime: Option<u64>,
+}
+
+impl RawLocalConfig {
+    /// Create a new raw local config by parsing the CBOR provided by the host.
+    pub fn new(host: Arc<Protocol>) -> Result<Self> {
+        let cfg = host
+            .get_host_info()
+            .local_config
+            .remove(ROFL_SCHEDULER_CONFIG_KEY)
+            .map(cbor::from_value)
+            .transpose()?
+            .unwrap_or_default();
+        Ok(cfg)
+    }
 }
 
 /// Resources.
@@ -109,18 +130,21 @@ pub struct LocalConfig {
     pub deploy_pull_timeout: u64,
     /// A list of node addresses to transfer the instances from.
     pub transfer_instances_from: BTreeSet<PublicKey>,
+    /// Domain used to serve the scheduler API endpoint. If not set, the endpoint is disabled.
+    pub api_domain: Option<String>,
+    /// Lifetime of issued JWT tokens for API access (in seconds).
+    pub api_token_lifetime: u64,
 }
 
 impl LocalConfig {
-    /// Read local configuration.
-    pub fn from_env(env: Environment<SchedulerApp>) -> Result<Self> {
-        let cfg: RawLocalConfig = env
-            .untrusted_local_config()
-            .remove(ROFL_SCHEDULER_CONFIG_KEY)
-            .map(cbor::from_value)
-            .transpose()?
-            .unwrap_or_default();
+    /// Read local configuration from host.
+    pub fn from_host(host: Arc<Protocol>) -> Result<Self> {
+        let cfg = RawLocalConfig::new(host)?;
+        Self::from_raw(cfg)
+    }
 
+    /// Read given raw local configuration.
+    pub fn from_raw(cfg: RawLocalConfig) -> Result<Self> {
         let provider_address = Address::from_bech32(&cfg.provider_address)
             .map_err(|_| anyhow!("bad provider address"))?;
         let allowed_artifacts = cfg
@@ -167,6 +191,11 @@ impl LocalConfig {
             claim_payment_interval_secs: cfg.claim_payment_interval.unwrap_or(24) * 3600,
             deploy_pull_timeout: cfg.deploy_pull_timeout.unwrap_or(60),
             transfer_instances_from,
+            api_domain: cfg.api_domain,
+            api_token_lifetime: cfg
+                .api_token_lifetime
+                .unwrap_or(6 * 3600) // Default to 6 hours.
+                .clamp(60, 7 * 24 * 3600),
         })
     }
 

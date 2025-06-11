@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.1.2
+version: 0.2.0
 repository: https://github.com/oasisprotocol/oasis-sdk
 tee: tdx
 kind: raw
@@ -11,9 +11,9 @@ resources:
     size: 64
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
-  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
-  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/stage1.bin#02903bd0ddfe1e3552e95767f1be17e801690d73d90bb1e800aa4879ba46c4d7
-  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.4.2/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage1.bin#23877530413a661e9187aad2eccfc9660fc4f1a864a1fbad2f6c7d43512071ca
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
 deployments:
   mainnet:
     app_id: rofl1qr95suussttd2g9ehu3zcpgx8ewtwgayyuzsl0x2
@@ -35,7 +35,11 @@ deployments:
         - id: OW90gvblTearxfeELGeLmV9/95UmSzmH/qCkqzuplFYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.1.1
         - id: lkRxF1Ps6zqhEypa3o8VghPtUHE5PMv4v1dPN54kuZwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.2
         - id: qegcmpWD7YHForsxaqdAWcou+Njporf2A4tmgNQ2XuIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.2
+        - id: uprcd2wbFvXZ7US3vminHlONmOsbaU20Ll/XFn22U4kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: d8+W9SL9GLSjlox5EahAzQdb/ruz4Qb2al4l9+gsDfUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -70,7 +74,11 @@ deployments:
         - id: akLPdeqNVejSkZ807J4KA8kilCv8noHqZ5KOO5RvCJIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.1.1
         - id: +ZT1Qg8ZVUPS77VTZDFXwqgOnz/TPcWBTX4her22GL4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.2
         - id: FvdH6lM8tThmGJNLYf/rC/qzU3VuplyCP5JkZ7RVejUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.1.2
+        - id: 5pgjooS9Su7Ic+qAFhlBLXgVDrwmKUErrSKEOfIXWHYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: JronXGA4H36ZRJsNQn0qRpWlinNIb7wvk/MhZqKF1S4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
