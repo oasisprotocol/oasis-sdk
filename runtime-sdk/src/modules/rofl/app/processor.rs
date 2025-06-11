@@ -66,9 +66,12 @@ where
     A: App,
 {
     /// Create and start a new processor.
-    pub(super) fn start(app: A, state: &PreInitState<'_>) -> mpsc::Sender<Command> {
+    pub(super) fn start(mut app: A, state: &PreInitState<'_>) -> mpsc::Sender<Command> {
         // Create the command channel.
         let (tx, rx) = mpsc::channel(CMDQ_BACKLOG);
+
+        // Perform early application initialization.
+        app.init(state.protocol.clone());
 
         // Provision keys. Currently we provision a random key for signing transactions to avoid
         // using the RAK directly as the RAK is an Ed25519 key which cannot easily be used for EVM
