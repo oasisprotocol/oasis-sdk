@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Result};
 use tokio::sync::mpsc;
@@ -138,6 +138,7 @@ where
                 &[self.state.identity.clone(), self.env.signer()],
                 tx,
                 SubmitTxOpts {
+                    timeout: Some(Duration::from_millis(60_000)),
                     encrypt: false, // Needed for initial fee payments.
                     ..Default::default()
                 },
