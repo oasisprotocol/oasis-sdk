@@ -321,6 +321,13 @@ impl<Cfg: Config> Module<Cfg> {
         // Finally remove the provider.
         state::remove_provider(provider.address);
 
+        // Transfer stake back.
+        <C::Runtime as Runtime>::Accounts::transfer(
+            *ADDRESS_PROVIDER_STAKE_POOL,
+            provider.address,
+            &provider.stake,
+        )?;
+
         CurrentState::with(|state| {
             state.emit_event(Event::ProviderRemoved {
                 address: provider.address,
