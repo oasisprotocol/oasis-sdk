@@ -1,5 +1,7 @@
 use crate::types::token;
 
+use super::policy::EndorsementPolicyEvaluator;
+
 /// Module configuration.
 pub trait Config: 'static {
     /// Gas cost of rofl.Create call.
@@ -37,4 +39,10 @@ pub trait Config: 'static {
 
     /// Maximum key identifier length for rofl.DeriveKey call.
     const DERIVE_KEY_MAX_KEY_ID_LENGTH: usize = 128;
+
+    /// Maximum number of endorsment policy atoms.
+    const MAX_ENDORSEMENT_POLICY_ATOMS: usize = 32;
+
+    /// Endorsement policy evaluator.
+    type EndorsementPolicyEvaluator: EndorsementPolicyEvaluator;
 }
