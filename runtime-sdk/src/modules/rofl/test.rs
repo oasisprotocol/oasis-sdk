@@ -17,7 +17,10 @@ use crate::{
     Runtime, Version,
 };
 
-use super::{app_id::AppId, state, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _};
+use super::{
+    app_id::AppId, policy::BasicEndorsementPolicyEvaluator, state, types, Genesis, Module,
+    ADDRESS_APP_STAKE_POOL, API as _,
+};
 
 type Accounts = accounts::Module;
 type Core = core::Module<Config>;
@@ -28,6 +31,8 @@ impl core::Config for Config {}
 
 impl super::Config for Config {
     const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+
+    type EndorsementPolicyEvaluator = BasicEndorsementPolicyEvaluator;
 }
 
 /// Test runtime.
