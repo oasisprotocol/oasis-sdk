@@ -5,7 +5,9 @@ use digest::{typenum::Unsigned as _, Digest as _};
 use rand_core::{CryptoRng, RngCore};
 use thiserror::Error;
 
-use crate::core::common::crypto::signature::{PublicKey as CorePublicKey, Signer as CoreSigner};
+use crate::core::common::crypto::signature::{
+    PublicKey as CorePublicKey, Signature as CoreSignature, Signer as CoreSigner,
+};
 
 pub mod context;
 mod digests;
@@ -382,6 +384,12 @@ impl From<Vec<u8>> for Signature {
 impl From<Signature> for Vec<u8> {
     fn from(s: Signature) -> Vec<u8> {
         s.0
+    }
+}
+
+impl From<Signature> for CoreSignature {
+    fn from(s: Signature) -> Self {
+        s.as_ref().into()
     }
 }
 

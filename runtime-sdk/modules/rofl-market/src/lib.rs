@@ -16,6 +16,7 @@ mod config;
 mod error;
 mod event;
 mod payment;
+pub mod policy;
 pub mod state;
 #[cfg(test)]
 mod test;

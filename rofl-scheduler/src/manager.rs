@@ -24,6 +24,7 @@ use oasis_runtime_sdk::{
 };
 use oasis_runtime_sdk_rofl_market::{
     self as market,
+    policy::{ProviderLabel, LABEL_PROVIDER},
     types::{Deployment, Instance, InstanceId, InstanceStatus},
 };
 use rand::Rng;
@@ -998,6 +999,13 @@ impl Manager {
             LABEL_DEPLOYMENT_HASH.to_string(),
             deployment_hash(deployment),
         );
+
+        let provider_label = ProviderLabel {
+            provider: self.cfg.provider_address,
+            instance: instance.id,
+        };
+        let provider_label = BASE64_STANDARD.encode(cbor::to_vec(provider_label));
+        labels.insert(LABEL_PROVIDER.to_string(), provider_label);
 
         let _ = self
             .env

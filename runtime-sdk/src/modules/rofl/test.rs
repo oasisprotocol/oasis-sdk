@@ -1,10 +1,15 @@
+use anyhow::Context;
 use std::collections::BTreeMap;
 
 use crate::{
+    core::{
+        common::crypto::signature::SignatureBundle, consensus::registry::EndorsedCapabilityTEE,
+    },
     crypto, module,
     modules::{
         accounts::{self, API as _},
         core,
+        rofl::policy,
     },
     testing::{
         keys,
@@ -17,7 +22,11 @@ use crate::{
     Runtime, Version,
 };
 
-use super::{app_id::AppId, state, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _};
+use super::{
+    app_id::AppId,
+    policy::{AllowedEndorsement, BasicEndorsementPolicyEvaluator, EndorsementPolicyEvaluator},
+    state, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _,
+};
 
 type Accounts = accounts::Module;
 type Core = core::Module<Config>;
@@ -28,6 +37,8 @@ impl core::Config for Config {}
 
 impl super::Config for Config {
     const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+
+    type EndorsementPolicyEvaluator = BasicEndorsementPolicyEvaluator;
 }
 
 /// Test runtime.
@@ -477,4 +488,124 @@ fn test_key_derivation() {
     let dispatch_result = dispatch_result.result.unwrap();
     let result: types::DeriveKeyResponse = cbor::from_value(dispatch_result).unwrap();
     assert!(!result.key.is_empty());
+}
+
+#[test]
+fn test_endorsement_policy_evaluator() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    // Mock an endorsed TEE.
+    let ect = EndorsedCapabilityTEE {
+        node_endorsement: SignatureBundle {
+            public_key: keys::bob::pk_ed25519().into(), // Bob is a nice node.
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let metadata = BTreeMap::new();
+
+    let tcs = [
+        (
+            vec![Box::new(AllowedEndorsement::Provider(
+                keys::alice::address(),
+            ))],
+            false, // Basic evaluator does not support providers.
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Node(
+                keys::bob::pk_ed25519().into(),
+            ))],
+            true,
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::And(vec![
+                Box::new(AllowedEndorsement::Node(keys::alice::pk_ed25519().into())),
+                Box::new(AllowedEndorsement::Node(keys::bob::pk_ed25519().into())),
+            ]))],
+            false, // AND(Fail, Ok) = Fail
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Or(vec![
+                Box::new(AllowedEndorsement::Node(keys::alice::pk_ed25519().into())),
+                Box::new(AllowedEndorsement::Node(keys::bob::pk_ed25519().into())),
+            ]))],
+            true, // OR(Fail, Ok) = Ok
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Or(vec![
+                Box::new(AllowedEndorsement::Node(keys::alice::pk_ed25519().into())),
+                Box::new(AllowedEndorsement::Node(keys::charlie::pk_ed25519().into())),
+            ]))],
+            false, // OR(Fail, Fail) = Fail
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                AllowedEndorsement::Or(vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                    AllowedEndorsement::Node(keys::bob::pk_ed25519().into()),
+                )]))]),
+            )]))],
+            true,
+            true,
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                AllowedEndorsement::Or(vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                    AllowedEndorsement::Or(vec![Box::new(AllowedEndorsement::Node(
+                        keys::bob::pk_ed25519().into(),
+                    ))]),
+                )]))]),
+            )]))],
+            false, // Evaluation depth too large.
+            false, // Policy too deep.
+        ),
+        (
+            vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                AllowedEndorsement::Or(vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                    AllowedEndorsement::Or(vec![Box::new(AllowedEndorsement::Or(vec![Box::new(
+                        AllowedEndorsement::Node(keys::bob::pk_ed25519().into()),
+                    )]))]),
+                )]))]),
+            )]))],
+            false, // Evaluation depth too large.
+            false, // Policy too deep.
+        ),
+    ];
+
+    for (idx, tc) in tcs.iter().enumerate() {
+        let result = BasicEndorsementPolicyEvaluator::verify(&ctx, &tc.0, &ect, &metadata);
+        if tc.1 {
+            result
+                .context(format!(
+                    "test case {}: policy evaluation should succeed",
+                    idx
+                ))
+                .unwrap();
+        } else {
+            result.expect_err(&format!("test case {}: policy evaluation should fail", idx));
+        }
+
+        let policy = policy::AppAuthPolicy {
+            endorsements: tc.0.clone(),
+            ..Default::default()
+        };
+        let result = policy.validate(32);
+        if tc.2 {
+            result
+                .context(format!(
+                    "test case {}: policy validation should succeed",
+                    idx
+                ))
+                .unwrap();
+        } else {
+            result.expect_err(&format!("test case {}: policy validation should fail", idx));
+        }
+    }
 }
