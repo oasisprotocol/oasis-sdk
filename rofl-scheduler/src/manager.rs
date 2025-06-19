@@ -474,7 +474,7 @@ impl Manager {
             .filter_map(|offer| {
                 let offer_key = offer.metadata.get(METADATA_KEY_OFFER)?;
 
-                if self.cfg.offers.contains(offer_key) {
+                if self.cfg.offers.is_empty() || self.cfg.offers.contains(offer_key) {
                     Some(offer.id)
                 } else {
                     None

@@ -21,7 +21,7 @@ const ROFL_SCHEDULER_CONFIG_KEY: &str = "rofl_scheduler";
 struct RawLocalConfig {
     /// Address of the provider.
     pub provider_address: String,
-    /// Offers that the scheduler should accept.
+    /// Offers that the scheduler should accept. If no offers are configured, all are accepted.
     ///
     /// Each offer identifier is the value of the `net.oasis.scheduler.offer` metadata key.
     pub offers: BTreeSet<String>,
