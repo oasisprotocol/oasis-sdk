@@ -10,7 +10,11 @@ by the Trusted Execution Environment and the Oasis blockchain!
 
 :::tip TL; DR
 
-If you already have a dockerized app, you should simply run the following
+The ROFL bundle is a simple secure wrapper around your container:
+
+![ROFL-compose-app bundle wrapper](./images/rofl-compose-app-wrap.svg)
+
+If you already have a working containerized app, you should run the following
 [Oasis CLI][oasis-cli-dl] commands to ROFLize it:
 
 1. [`oasis rofl init`] to initialize the ROFL manifest in the existing folder.
@@ -86,7 +90,7 @@ Telegram app and send it a `/hello` message:
 
 [python-telegram-bot]: https://pypi.org/project/python-telegram-bot/
 
-## Dockerize the Bot
+## Containerize the Bot
 
 Web services are best maintained if they are run in a controlled environment
 also known as *a container*. This includes the exact version of the operating
