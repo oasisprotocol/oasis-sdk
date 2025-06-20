@@ -59,12 +59,6 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: 2OKs276ykwRIRetgtYGQJMOyfI5FyZ861qMvZGgHVikAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.1.0-pre
-          description: Pre-release version of the scheduler
-        - id: gjsdGO/HZda3cpvIVp7se/EAUHf80TCKb60IEJ+ba4EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.1.0-pre
-          description: Pre-release version of the scheduler
         - id: PE2TSgy9aMfAmxGIDgMpbjr9ejk2evb2wdzaBEkA4TMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.1.0
         - id: +3Sv/xqzc171KyieVot07v8H7lCGpSqIuaDelVmTE8IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
