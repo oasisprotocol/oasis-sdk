@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["LOCAL_RPC_ENDPOINT_LOG_MANAGER","METHOD_LOG_GET"],"struct":["LogGetRequest","LogGetResponse"],"trait":["LogManager"]};

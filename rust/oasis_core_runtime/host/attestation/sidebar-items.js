@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ATTEST_LABELS_SIGNATURE_CONTEXT","LOCAL_RPC_ENDPOINT_ATTESTATION","METHOD_ATTEST_LABELS"],"struct":["AttestLabelsRequest","AttestLabelsResponse","LabelAttestation"],"trait":["Attestation"]};
