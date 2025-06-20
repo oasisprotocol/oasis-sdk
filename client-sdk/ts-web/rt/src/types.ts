@@ -306,6 +306,7 @@ export interface MultisigSigner {
 export interface PublicKey {
     ed25519?: Uint8Array;
     secp256k1?: Uint8Array;
+    sr25519?: Uint8Array;
 }
 
 /**
@@ -798,4 +799,379 @@ export interface ContractsContractEvent {
      * Raw event data emitted by the instance.
      */
     data?: Uint8Array;
+}
+
+// Types for roflmarket module
+
+export enum RoflmarketTeeType {
+    SGX = 1,
+    TDX = 2,
+}
+
+export enum RoflmarketTerm {
+    HOUR = 1,
+    MONTH = 2,
+    YEAR = 3,
+}
+// Basic types with fixed lengths
+export type OfferID = Uint8Array & {_length?: 8};
+export type MachineID = Uint8Array & {_length?: 8};
+export type CommandID = Uint8Array & {_length?: 8};
+export type EthAddress = Uint8Array & {_length?: 20};
+export type AppID = Uint8Array & {_length?: 21};
+
+export interface RoflmarketGPUResource {
+    model?: string;
+    count: number;
+}
+
+export interface RoflmarketResources {
+    tee: RoflmarketTeeType;
+    memory: oasis.types.longnum;
+    cpus: number;
+    storage: oasis.types.longnum;
+    gpu?: RoflmarketGPUResource;
+}
+
+export interface RoflmarketPaymentAddress {
+    native?: Uint8Array;
+    eth?: EthAddress;
+}
+
+export interface RoflmarketNativePayment {
+    denomination: Uint8Array;
+    terms: Map<RoflmarketTerm, Uint8Array>;
+}
+
+export interface RoflmarketEvmContractPayment {
+    address: EthAddress;
+    data: Uint8Array;
+}
+
+export interface RoflmarketPayment {
+    native?: RoflmarketNativePayment;
+    evm?: RoflmarketEvmContractPayment;
+}
+
+export interface RoflmarketOffer {
+    id: OfferID;
+    resources: RoflmarketResources;
+    payment: RoflmarketPayment;
+    capacity: oasis.types.longnum;
+    metadata: {[key: string]: string};
+}
+
+export enum RoflmarketInstanceStatus {
+    CREATED = 0,
+    ACCEPTED = 1,
+    CANCELLED = 2,
+}
+
+export interface RoflmarketDeployment {
+    app_id: AppID;
+    manifest_hash: Uint8Array;
+    metadata: {[key: string]: string};
+}
+
+export interface RoflmarketInstance {
+    provider: Uint8Array;
+    id: MachineID;
+    offer: OfferID;
+    status: RoflmarketInstanceStatus;
+    creator: Uint8Array;
+    admin: Uint8Array;
+    node_id?: Uint8Array;
+    metadata: {[key: string]: string};
+    resources: RoflmarketResources;
+    deployment?: RoflmarketDeployment;
+    created_at: oasis.types.longnum;
+    updated_at: oasis.types.longnum;
+    paid_from: oasis.types.longnum;
+    paid_until: oasis.types.longnum;
+    payment: RoflmarketPayment;
+    payment_address: EthAddress;
+    refund_data: Uint8Array;
+    cmd_next_id: CommandID;
+    cmd_count: oasis.types.longnum;
+}
+
+export interface RoflmarketProvider {
+    address: Uint8Array;
+    nodes: PublicKey[];
+    scheduler_app: AppID;
+    payment_address: RoflmarketPaymentAddress;
+    metadata: {[key: string]: string};
+    stake: BaseUnits;
+    offers_next_id: OfferID;
+    offers_count: oasis.types.longnum;
+    instances_next_id: MachineID;
+    instances_count: oasis.types.longnum;
+    created_at: oasis.types.longnum;
+    updated_at: oasis.types.longnum;
+}
+
+export interface RoflmarketProviderCreate {
+    nodes: PublicKey[];
+    scheduler_app: AppID;
+    payment_address: RoflmarketPaymentAddress;
+    offers: RoflmarketOffer[];
+    metadata: {[key: string]: string};
+}
+
+export interface RoflmarketProviderUpdate {
+    provider: Uint8Array;
+    nodes: PublicKey[];
+    scheduler_app: AppID;
+    payment_address: RoflmarketPaymentAddress;
+    metadata: {[key: string]: string};
+}
+
+export interface RoflmarketProviderUpdateOffers {
+    provider: Uint8Array;
+    add?: RoflmarketOffer[];
+    update?: RoflmarketOffer[];
+    remove?: OfferID[];
+}
+
+export interface RoflmarketProviderRemove {
+    provider: Uint8Array;
+}
+
+export interface RoflmarketInstanceCreate {
+    provider: Uint8Array;
+    offer: OfferID;
+    admin?: Uint8Array;
+    deployment?: RoflmarketDeployment;
+    term: RoflmarketTerm;
+    term_count: oasis.types.longnum;
+}
+
+export interface RoflmarketInstanceTopUp {
+    provider: Uint8Array;
+    id: MachineID;
+    term: RoflmarketTerm;
+    term_count: oasis.types.longnum;
+}
+
+export interface RoflmarketInstanceCancel {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceExecuteCmds {
+    provider: Uint8Array;
+    id: MachineID;
+    cmds: Uint8Array[];
+}
+
+export interface RoflmarketQueuedCommand {
+    id: CommandID;
+    cmd: Uint8Array;
+}
+
+export interface RoflmarketProviderQuery {
+    provider: Uint8Array;
+}
+
+export interface RoflmarketOfferQuery {
+    provider: Uint8Array;
+    id: OfferID;
+}
+
+export interface RoflmarketInstanceQuery {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketStakeThresholds {
+    provider_create: BaseUnits;
+}
+
+export interface RoflmarketParameters {}
+
+// Event types
+export interface RoflmarketProviderCreatedEvent {
+    address: Uint8Array;
+}
+
+export interface RoflmarketProviderUpdatedEvent {
+    address: Uint8Array;
+}
+
+export interface RoflmarketProviderRemovedEvent {
+    address: Uint8Array;
+}
+
+export interface RoflmarketInstanceCreatedEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceUpdatedEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceAcceptedEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceCancelledEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceRemovedEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+export interface RoflmarketInstanceCommandQueuedEvent {
+    provider: Uint8Array;
+    id: MachineID;
+}
+
+// Types for rofl module
+
+export interface RoflQuotePolicy {
+    ias?: {
+        disabled?: boolean;
+        allowed_quote_statuses?: number[];
+        gid_blacklist?: number[];
+        min_tcb_evaluation_data_number?: number;
+    };
+    pcs?: {
+        disabled?: boolean;
+        tcb_validity_period: number;
+        min_tcb_evaluation_data_number: number;
+        fmspc_blacklist?: string[];
+        tdx?: {
+            // TDX-specific policy fields
+        };
+    };
+}
+
+export interface RoflEnclaveIdentity {
+    mr_enclave: Uint8Array;
+    mr_signer: Uint8Array;
+}
+
+export interface RoflAllowedEndorsement {
+    any?: {};
+    role_compute?: {};
+    role_observer?: {};
+    entity?: Uint8Array;
+    node?: Uint8Array;
+}
+
+export enum IdentifierScheme {
+    CreatorRoundIndex = 0,
+    CreatorNonce = 1,
+}
+
+export enum FeePolicy {
+    InstancePays = 1,
+    EndorsingNodePays = 2,
+}
+
+export interface RoflAppAuthPolicy {
+    quotes: RoflQuotePolicy;
+    enclaves: RoflEnclaveIdentity[];
+    endorsements: RoflAllowedEndorsement[];
+    fees: FeePolicy;
+    max_expiration: oasis.types.longnum;
+}
+
+export interface RoflCreate {
+    policy: RoflAppAuthPolicy;
+    scheme: IdentifierScheme;
+    metadata?: {[key: string]: string};
+}
+
+export interface RoflUpdate {
+    id: AppID;
+    policy: RoflAppAuthPolicy;
+    admin?: Uint8Array;
+    metadata?: {[key: string]: string};
+    secrets?: {[key: string]: Uint8Array};
+}
+
+export interface RoflRemove {
+    id: AppID;
+}
+
+export interface RoflEndorsedCapabilityTEE {
+    capability_tee: {
+        hardware: number;
+        rak: Uint8Array;
+        rek?: Uint8Array;
+        attestation: Uint8Array;
+    };
+    node_endorsement: {
+        public_key: Uint8Array;
+        signature: Uint8Array;
+    };
+}
+
+export interface RoflRegister {
+    app: AppID;
+    ect: RoflEndorsedCapabilityTEE;
+    expiration: oasis.types.longnum;
+    extra_keys: PublicKey[];
+    metadata?: {[key: string]: string};
+}
+
+export interface RoflAppQuery {
+    id: AppID;
+}
+
+export interface RoflAppInstanceQuery {
+    app: AppID;
+    rak: PublicKey;
+}
+
+export interface RoflAppConfig {
+    id: AppID;
+    policy: RoflAppAuthPolicy;
+    admin?: Uint8Array;
+    stake: BaseUnits;
+    metadata?: {[key: string]: string};
+    secrets?: {[key: string]: Uint8Array};
+    sek: Uint8Array;
+}
+
+export interface RoflRegistration {
+    app: AppID;
+    node_id: PublicKey;
+    entity_id?: Uint8Array;
+    rak: PublicKey;
+    rek: Uint8Array;
+    expiration: oasis.types.longnum;
+    extra_keys: PublicKey[];
+    metadata?: {[key: string]: string};
+}
+
+export interface RoflParameters {}
+
+export interface RoflStakeThresholds {
+    app_create?: BaseUnits;
+}
+
+// Event types
+export interface RoflAppCreatedEvent {
+    id: AppID;
+}
+
+export interface RoflAppUpdatedEvent {
+    id: AppID;
+}
+
+export interface RoflAppRemovedEvent {
+    id: AppID;
+}
+
+export interface RoflInstanceRegisteredEvent {
+    app_id: AppID;
+    rak: PublicKey;
 }

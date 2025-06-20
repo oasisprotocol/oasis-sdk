@@ -9,6 +9,8 @@ export * as event from './event';
 export * as evm from './evm';
 export * as mraeDeoxysii from './mrae/deoxysii';
 export * as rewards from './rewards';
+export * as rofl from './rofl';
+export * as roflmarket from './roflmarket';
 export * as signatureSecp256k1 from './signature_secp256k1';
 export * as token from './token';
 export * as transaction from './transaction';
