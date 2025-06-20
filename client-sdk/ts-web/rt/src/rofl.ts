@@ -79,7 +79,7 @@ export class Wrapper extends wrapper.Base {
     }
 
     queryParameters() {
-        return this.query<void, types.RoflParameters>(METHOD_PARAMETERS);
+        return this.query<void, void>(METHOD_PARAMETERS);
     }
 }
 
