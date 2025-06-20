@@ -1,12 +1,13 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::Write,
-    sync::{Arc, Mutex},
+    sync::{Arc, RwLock},
     time::{Instant, SystemTime},
 };
 
 use anyhow::{anyhow, Context as _};
 use backoff::backoff::Backoff;
+use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::BufMut;
 use oasis_runtime_sdk::{
     core::{
@@ -18,6 +19,7 @@ use oasis_runtime_sdk::{
         host::{bundle_manager, volume_manager},
     },
     modules::rofl::app::prelude::*,
+    types::address::Address,
 };
 use oasis_runtime_sdk_rofl_market::{
     self as market,
@@ -46,6 +48,8 @@ const METADATA_KEY_DEPLOYMENT_ORC_REF: &str = "net.oasis.deployment.orc.ref";
 const METADATA_KEY_ERROR: &str = "net.oasis.error";
 /// Maximum length of the error message.
 const METADATA_VALUE_ERROR_MAX_SIZE: usize = 1024;
+/// Metadata key used to store the scheduler instance RAK.
+const METADATA_KEY_SCHEDULER_RAK: &str = "net.oasis.scheduler.rak";
 
 /// Name of the label used to store the deployment hash.
 const LABEL_DEPLOYMENT_HASH: &str = "net.oasis.scheduler.deployment_hash";
@@ -108,8 +112,11 @@ struct LocalState {
     resources_used: Resources,
 }
 
-#[derive(Default)]
-struct InstanceState {
+/// Instance state.
+#[derive(Default, Debug, Clone)]
+pub struct InstanceState {
+    /// Address of the instance administrator.
+    admin: Address,
     /// Last deployment.
     last_deployment: Option<Deployment>,
     /// Last error message corresponding to deploying `last_deployment`.
@@ -118,6 +125,13 @@ struct InstanceState {
     ignore_start_until: Option<Instant>,
     /// Backoff associated with ignoring instance start.
     ignore_start_backoff: Option<backoff::ExponentialBackoff>,
+}
+
+impl InstanceState {
+    /// Address of the instance administrator.
+    pub fn admin(&self) -> &Address {
+        &self.admin
+    }
 }
 
 struct DeploymentInfo {
@@ -130,32 +144,37 @@ struct DeploymentInfo {
 pub struct Manager {
     env: Environment<SchedulerApp>,
     client: Arc<MarketClient>,
-    cfg: LocalConfig,
+    cfg: Arc<LocalConfig>,
 
-    instances: Mutex<BTreeMap<InstanceId, InstanceState>>,
+    instances: RwLock<BTreeMap<InstanceId, InstanceState>>,
 
     logger: slog::Logger,
 }
 
 impl Manager {
     /// Create a new manager instance.
-    pub fn new(env: Environment<SchedulerApp>, cfg: LocalConfig) -> Self {
-        Self {
+    pub fn new(env: Environment<SchedulerApp>, cfg: Arc<LocalConfig>) -> Arc<Self> {
+        Arc::new(Self {
             client: Arc::new(MarketClient::new(env.clone(), cfg.provider_address)),
             env,
             cfg,
-            instances: Mutex::new(BTreeMap::new()),
+            instances: RwLock::new(BTreeMap::new()),
             logger: get_logger("scheduler/manager"),
-        }
+        })
+    }
+
+    /// Find an instance state with the given identifier and return a copy.
+    pub fn get_instance(&self, instance_id: &InstanceId) -> Option<InstanceState> {
+        let instances = self.instances.read().unwrap();
+        instances.get(instance_id).cloned()
     }
 
     /// Main loop of the ROFL scheduler.
-    pub async fn run(self) {
-        let mgr = Arc::new(self);
-        let local_node_id = match mgr.env.host().identity().await {
+    pub async fn run(self: Arc<Self>) {
+        let local_node_id = match self.env.host().identity().await {
             Ok(local_node_id) => local_node_id,
             Err(err) => {
-                slog::error!(mgr.logger, "failed to determine local node ID";
+                slog::error!(self.logger, "failed to determine local node ID";
                     "err" => ?err,
                 );
                 process::abort();
@@ -165,13 +184,13 @@ impl Manager {
 
         loop {
             // Wait a bit before doing another pass.
-            time::sleep(time::Duration::from_secs(mgr.cfg.processing_interval_secs)).await;
+            time::sleep(time::Duration::from_secs(self.cfg.processing_interval_secs)).await;
 
             // Discover local state.
-            let mut local_state = match mgr.discover(local_node_id).await {
+            let mut local_state = match self.discover(local_node_id).await {
                 Ok(local_state) => local_state,
                 Err(err) => {
-                    slog::error!(mgr.logger, "failed to discover bundles"; "err" => ?err);
+                    slog::error!(self.logger, "failed to discover bundles"; "err" => ?err);
                     continue;
                 }
             };
@@ -182,12 +201,12 @@ impl Manager {
             }
 
             // Process any pending instances.
-            if let Err(err) = mgr.process_pending(local_node_id, &mut local_state).await {
-                slog::error!(mgr.logger, "failed to process pending instances"; "err" => ?err);
+            if let Err(err) = self.process_pending(local_node_id, &mut local_state).await {
+                slog::error!(self.logger, "failed to process pending instances"; "err" => ?err);
                 continue;
             }
 
-            slog::info!(mgr.logger, "instance status";
+            slog::info!(self.logger, "instance status";
                 "accepted" => local_state.accepted.len(),
                 "running" => local_state.running.len(),
                 "pending_start" => local_state.pending_start.len(),
@@ -199,8 +218,8 @@ impl Manager {
             );
 
             // Spawn tasks to process all jobs.
-            if let Err(err) = mgr.process_jobs(&mut local_state).await {
-                slog::error!(mgr.logger, "failed to process jobs"; "err" => ?err);
+            if let Err(err) = self.process_jobs(&mut local_state).await {
+                slog::error!(self.logger, "failed to process jobs"; "err" => ?err);
                 continue;
             }
 
@@ -214,6 +233,9 @@ impl Manager {
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_secs();
+
+        // Encode scheduler RAK so we can set it in metadata.
+        let scheduler_rak = BASE64_STANDARD.encode(self.env.identity().public_rak().as_ref());
 
         let client = self.client.queries_at_latest().await?;
         let mut local_state = LocalState {
@@ -321,6 +343,12 @@ impl Manager {
 
             local_state.accepted.insert(instance.id, instance.clone());
 
+            // Update administrator address.
+            {
+                let mut instances = self.instances.write().unwrap();
+                instances.entry(instance.id).or_default().admin = instance.admin;
+            }
+
             // Compute total provisioned resources.
             local_state.resources_used = local_state.resources_used.add(&instance.resources);
 
@@ -390,6 +418,20 @@ impl Manager {
                     .entry(instance.id)
                     .or_default()
                     .deployment = Some(desired.clone());
+            }
+
+            // Make sure that scheduler RAK is set to the correct value.
+            if instance.metadata.get(METADATA_KEY_SCHEDULER_RAK) != Some(&scheduler_rak) {
+                local_state
+                    .instance_updates
+                    .entry(instance.id)
+                    .or_default()
+                    .metadata
+                    .get_or_insert_default()
+                    .insert(
+                        METADATA_KEY_SCHEDULER_RAK.to_string(),
+                        scheduler_rak.clone(),
+                    );
             }
 
             // If the instance has been running for a while, make sure to claim payment. Use a fuzzy
@@ -474,7 +516,7 @@ impl Manager {
             .filter_map(|offer| {
                 let offer_key = offer.metadata.get(METADATA_KEY_OFFER)?;
 
-                if self.cfg.offers.contains(offer_key) {
+                if self.cfg.offers.is_empty() || self.cfg.offers.contains(offer_key) {
                     Some(offer.id)
                 } else {
                     None
@@ -687,7 +729,7 @@ impl Manager {
         self: &Arc<Self>,
         local_state: &mut LocalState,
     ) -> tokio::task::JoinSet<Result<()>> {
-        let instances = self.instances.lock().unwrap();
+        let instances = self.instances.read().unwrap();
 
         // Determine the set of instances that need to be updated. These are either ones that have
         // been explicitly requested by earlier phases or any that have errors set due to job
@@ -784,7 +826,7 @@ impl Manager {
 
         self.client.remove_instance(instance).await?;
 
-        let mut instances = self.instances.lock().unwrap();
+        let mut instances = self.instances.write().unwrap();
         instances.remove(&instance);
 
         Ok(())
@@ -826,14 +868,14 @@ impl Manager {
     }
 
     fn set_last_instance_deployment(&self, instance_id: InstanceId, deployment: &Deployment) {
-        let mut instances = self.instances.lock().unwrap();
+        let mut instances = self.instances.write().unwrap();
         let state = instances.entry(instance_id).or_default();
         state.last_deployment = Some(deployment.clone());
         state.last_error = None;
     }
 
     fn ignore_instance_start(&self, instance_id: InstanceId, reason: String) {
-        let mut instances = self.instances.lock().unwrap();
+        let mut instances = self.instances.write().unwrap();
         let state = instances.entry(instance_id).or_default();
         if state.ignore_start_backoff.is_none() {
             state.ignore_start_backoff = Some(backoff::ExponentialBackoff {
@@ -853,7 +895,7 @@ impl Manager {
     }
 
     fn should_start_instance(&self, instance_id: InstanceId, deployment: &Deployment) -> bool {
-        let mut instances = self.instances.lock().unwrap();
+        let mut instances = self.instances.write().unwrap();
         let state = instances.entry(instance_id).or_default();
 
         if let Some(last_deployment) = &state.last_deployment {
@@ -873,7 +915,7 @@ impl Manager {
     }
 
     fn allow_instance_start(&self, instance_id: InstanceId) {
-        let mut instances = self.instances.lock().unwrap();
+        let mut instances = self.instances.write().unwrap();
         if let Some(state) = instances.get_mut(&instance_id) {
             state.ignore_start_backoff = None;
             state.ignore_start_until = None;
@@ -1357,7 +1399,7 @@ impl Manager {
 }
 
 /// Generate labels for a given instance.
-fn labels_for_instance(id: InstanceId) -> BTreeMap<String, String> {
+pub fn labels_for_instance(id: InstanceId) -> BTreeMap<String, String> {
     BTreeMap::from([(
         bundle_manager::LABEL_INSTANCE_ID.to_string(),
         format!("{:x}", id),

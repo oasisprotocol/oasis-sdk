@@ -4,6 +4,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::prelude::*;
+use oasis_core_runtime::Protocol;
 use tokio::sync::mpsc;
 
 use crate::{
@@ -75,6 +76,11 @@ pub trait App: Send + Sync + 'static {
         tx
     }
 
+    /// Early application initialization.
+    fn init(&mut self, host: Arc<Protocol>) {
+        // Default implementation does nothing.
+    }
+
     /// Fetches custom app instance metadata that is included in its on-chain registration.
     ///
     /// This method is called before each registration refresh. Returning an error will not block
@@ -92,8 +98,6 @@ pub trait App: Send + Sync + 'static {
     /// Custom post-registration initialization. It runs before any image-specific scripts are
     /// called by the runtime so it can be used to do things like set up custom storage after
     /// successful registration.
-    ///
-    /// Until this function completes, no further initialization will happen.
     async fn post_registration_init(self: Arc<Self>, env: Environment<Self>)
     where
         Self: Sized,

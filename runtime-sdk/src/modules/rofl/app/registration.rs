@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Result};
 use tokio::sync::mpsc;
@@ -10,7 +10,7 @@ use crate::{
             beacon::EpochTime, state::beacon::ImmutableState as BeaconState, verifier::Verifier,
         },
     },
-    modules::rofl::types::Register,
+    modules::rofl::types::{AppInstanceQuery, Register, Registration},
 };
 
 use super::{client::SubmitTxOpts, processor, App, Environment};
@@ -102,6 +102,33 @@ where
             return Ok(());
         }
 
+        // Query our current registration and see if we need to update it.
+        let round = self.env.client().latest_round().await?;
+        if let Ok(existing) = self
+            .env
+            .client()
+            .query::<_, Registration>(
+                round,
+                "rofl.AppInstance",
+                AppInstanceQuery {
+                    app: A::id(),
+                    rak: self.state.identity.public_rak().into(),
+                },
+            )
+            .await
+        {
+            // Check if we already registered for this epoch by comparing expiration.
+            if existing.expiration >= epoch + 2 {
+                slog::info!(self.logger, "registration already refreshed"; "epoch" => epoch);
+
+                self.last_registration_epoch = Some(epoch);
+                self.env
+                    .send_command(processor::Command::RegistrationRefreshed)
+                    .await?;
+                return Ok(());
+            }
+        }
+
         slog::info!(self.logger, "refreshing registration";
             "last_registration_epoch" => self.last_registration_epoch,
             "epoch" => epoch,
@@ -138,6 +165,7 @@ where
                 &[self.state.identity.clone(), self.env.signer()],
                 tx,
                 SubmitTxOpts {
+                    timeout: Some(Duration::from_millis(60_000)),
                     encrypt: false, // Needed for initial fee payments.
                     ..Default::default()
                 },
