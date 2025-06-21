@@ -3,6 +3,7 @@ import * as oasis from '@oasisprotocol/client';
 import * as token from './token';
 import * as transaction from './transaction';
 import * as types from './types';
+import {encodeAbiParameters, fromBytes} from 'viem';
 
 export class TransactionWrapper<BODY, OK> {
     runtimeID: Uint8Array;
@@ -83,6 +84,21 @@ export class TransactionWrapper<BODY, OK> {
             data: oasis.misc.toCBOR(this.unverifiedTransaction),
         });
     }
+
+    /** Encode as eth_sendTransaction params, to use through e.g. MetaMask */
+    toSubcall(transferValue?: bigint) {
+        return {
+            to: '0x0100000000000000000000000000000000000103' as const,
+            data: encodeAbiParameters(
+                [{type: 'string'}, {type: 'bytes'}],
+                [
+                    this.transaction.call.method,
+                    fromBytes(oasis.misc.toCBOR(this.transaction.call.body), 'hex'),
+                ],
+            ),
+            value: transferValue,
+        };
+    }
 }
 
 export class QueryWrapper<ARGS, DATA> {
@@ -110,6 +126,17 @@ export class QueryWrapper<ARGS, DATA> {
     async query(nic: oasis.client.NodeInternal) {
         const response = await nic.runtimeClientQuery(this.request);
         return oasis.misc.fromCBOR(response.data) as DATA;
+    }
+
+    /** Encode as eth_call params, to use through e.g. MetaMask */
+    toSubcall() {
+        return {
+            to: '0x0100000000000000000000000000000000000103' as const,
+            data: encodeAbiParameters(
+                [{type: 'string'}, {type: 'bytes'}],
+                [this.request.method, fromBytes(this.request.args, 'hex')],
+            ),
+        };
     }
 }
 
