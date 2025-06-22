@@ -42,44 +42,54 @@ export class Wrapper extends wrapper.Base {
         super(runtimeID);
     }
 
+    /** Create a new ROFL application. */
     callCreate() {
         return this.call<types.RoflCreate, void>(METHOD_CREATE);
     }
 
+    /** Update a ROFL application. */
     callUpdate() {
         return this.call<types.RoflUpdate, void>(METHOD_UPDATE);
     }
 
+    /** Remove a ROFL application. */
     callRemove() {
         return this.call<types.RoflRemove, void>(METHOD_REMOVE);
     }
 
+    /** Register a new ROFL App instance replica. */
     callRegister() {
         return this.call<types.RoflRegister, void>(METHOD_REGISTER);
     }
 
+    /** Returns the configuration for the given ROFL application. */
     queryApp() {
         return this.query<types.RoflAppQuery, types.RoflAppConfig>(METHOD_APP);
     }
 
+    /** Returns all ROFL app configurations. */
     queryApps() {
         return this.query<void, types.RoflAppConfig[]>(METHOD_APPS);
     }
 
+    /** Returns a specific registered instance replica for the given ROFL application. */
     queryAppInstance() {
         return this.query<types.RoflAppInstanceQuery, types.RoflRegistration>(METHOD_APP_INSTANCE);
     }
 
+    /** Returns a list of all registered instances replicas for the given ROFL application. */
     queryAppInstances() {
         return this.query<types.RoflAppQuery, types.RoflRegistration[]>(METHOD_APP_INSTANCES);
     }
 
+    /** Returns the minimum stake thresholds for managing ROFL. */
     queryStakeThresholds() {
         return this.query<void, types.RoflStakeThresholds>(METHOD_STAKE_THRESHOLDS);
     }
 
+    /** Queries the module parameters */
     queryParameters() {
-        return this.query<void, types.RoflParameters>(METHOD_PARAMETERS);
+        return this.query<void, void>(METHOD_PARAMETERS);
     }
 }
 

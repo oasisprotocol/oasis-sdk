@@ -987,8 +987,6 @@ export interface RoflmarketStakeThresholds {
     provider_create: BaseUnits;
 }
 
-export interface RoflmarketParameters {}
-
 // Event types
 export interface RoflmarketProviderCreatedEvent {
     address: Uint8Array;
@@ -1034,33 +1032,10 @@ export interface RoflmarketInstanceCommandQueuedEvent {
 
 // Types for rofl module
 
-export interface RoflQuotePolicy {
-    ias?: {
-        disabled?: boolean;
-        allowed_quote_statuses?: number[];
-        gid_blacklist?: number[];
-        min_tcb_evaluation_data_number?: number;
-    };
-    pcs?: {
-        disabled?: boolean;
-        tcb_validity_period: number;
-        min_tcb_evaluation_data_number: number;
-        fmspc_blacklist?: string[];
-        tdx?: {
-            // TDX-specific policy fields
-        };
-    };
-}
-
-export interface RoflEnclaveIdentity {
-    mr_enclave: Uint8Array;
-    mr_signer: Uint8Array;
-}
-
 export interface RoflAllowedEndorsement {
-    any?: {};
-    role_compute?: {};
-    role_observer?: {};
+    any?: oasis.types.NotModeled;
+    role_compute?: oasis.types.NotModeled;
+    role_observer?: oasis.types.NotModeled;
     entity?: Uint8Array;
     node?: Uint8Array;
 }
@@ -1076,8 +1051,8 @@ export enum FeePolicy {
 }
 
 export interface RoflAppAuthPolicy {
-    quotes: RoflQuotePolicy;
-    enclaves: RoflEnclaveIdentity[];
+    quotes: oasis.types.SGXPolicy;
+    enclaves: oasis.types.SGXEnclaveIdentity[];
     endorsements: RoflAllowedEndorsement[];
     fees: FeePolicy;
     max_expiration: oasis.types.longnum;
@@ -1151,8 +1126,6 @@ export interface RoflRegistration {
     extra_keys: PublicKey[];
     metadata?: {[key: string]: string};
 }
-
-export interface RoflParameters {}
 
 export interface RoflStakeThresholds {
     app_create?: BaseUnits;
