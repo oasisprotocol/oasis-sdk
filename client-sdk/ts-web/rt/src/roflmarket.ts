@@ -45,74 +45,91 @@ export class Wrapper extends wrapper.Base {
         super(runtimeID);
     }
 
+    /** Creates a new machine provider. */
     callProviderCreate() {
         return this.call<types.RoflmarketProviderCreate, void>(METHOD_PROVIDER_CREATE);
     }
 
+    /** Updates an existing provider. */
     callProviderUpdate() {
         return this.call<types.RoflmarketProviderUpdate, void>(METHOD_PROVIDER_UPDATE);
     }
 
+    /** Updates offers for a provider. */
     callProviderUpdateOffers() {
         return this.call<types.RoflmarketProviderUpdateOffers, void>(METHOD_PROVIDER_UPDATE_OFFERS);
     }
 
+    /** Removes a provider. */
     callProviderRemove() {
         return this.call<types.RoflmarketProviderRemove, void>(METHOD_PROVIDER_REMOVE);
     }
 
+    /** Creates a new machine instance. */
     callInstanceCreate() {
         return this.call<types.RoflmarketInstanceCreate, void>(METHOD_INSTANCE_CREATE);
     }
 
+    /** Tops up a machine instance. */
     callInstanceTopUp() {
         return this.call<types.RoflmarketInstanceTopUp, void>(METHOD_INSTANCE_TOP_UP);
     }
 
+    /** Cancels a machine instance. */
     callInstanceCancel() {
         return this.call<types.RoflmarketInstanceCancel, void>(METHOD_INSTANCE_CANCEL);
     }
 
+    /** Executes commands on a machine instance. */
     callInstanceExecuteCmds() {
         return this.call<types.RoflmarketInstanceExecuteCmds, void>(METHOD_INSTANCE_EXECUTE_CMDS);
     }
 
+    /** Returns the provider descriptor. */
     queryProvider() {
         return this.query<types.RoflmarketProviderQuery, types.RoflmarketProvider>(METHOD_PROVIDER);
     }
 
+    /** Returns all provider descriptors. */
     queryProviders() {
         return this.query<void, types.RoflmarketProvider[]>(METHOD_PROVIDERS);
     }
 
+    /** Returns the specified offer. */
     queryOffer() {
         return this.query<types.RoflmarketOfferQuery, types.RoflmarketOffer>(METHOD_OFFER);
     }
 
+    /** Returns all offers of a given provider. */
     queryOffers() {
         return this.query<types.RoflmarketProviderQuery, types.RoflmarketOffer[]>(METHOD_OFFERS);
     }
 
+    /** Returns the machine instance descriptor. */
     queryInstance() {
         return this.query<types.RoflmarketInstanceQuery, types.RoflmarketInstance>(METHOD_INSTANCE);
     }
 
+    /** Returns all instances of a given provider. */
     queryInstances() {
         return this.query<types.RoflmarketProviderQuery, types.RoflmarketInstance[]>(
             METHOD_INSTANCES,
         );
     }
 
+    /** Returns all queued commands of a given machine instance. */
     queryInstanceCommands() {
         return this.query<types.RoflmarketInstanceQuery, types.RoflmarketQueuedCommand[]>(
             METHOD_INSTANCE_COMMANDS,
         );
     }
 
+    /** Returns the stake requirements. */
     queryStakeThresholds() {
         return this.query<void, types.RoflmarketStakeThresholds>(METHOD_STAKE_THRESHOLDS);
     }
 
+    /** Returns the module parameters. */
     queryParameters() {
         return this.query<void, void>(METHOD_PARAMETERS);
     }
