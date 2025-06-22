@@ -89,6 +89,43 @@ export const playground = (async function () {
     const appId = await waitForAppId(hash);
     console.log('appId', appId);
 
+    let app = await rofl
+        .queryApp()
+        .setArgs({id: oasisRT.rofl.fromBech32(appId)})
+        .query(testnetNic);
+    console.log('App', app);
+
+    hash = await client.sendTransaction(
+        rofl
+            .callUpdate()
+            .setBody({
+                id: app.id,
+                admin: app.admin,
+                policy: app.policy,
+                metadata: {
+                    ...app.metadata,
+                    'net.oasis.rofl.name': 'create through subcall updated',
+                },
+                secrets: {
+                    ...app.secrets,
+                    a: oasis.misc.fromBase64(
+                        oasisRT.rofl.encryptSecret('a', oasis.misc.fromString('secret'), app.sek),
+                    ),
+                    b: oasis.misc.fromBase64(
+                        oasisRT.rofl.encryptSecret('b', oasis.misc.fromString('secret'), app.sek),
+                    ),
+                },
+            })
+            .toSubcall(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 12_000)); // TODO: waitForTransactionReceipt({ hash });
+
+    app = await rofl
+        .queryApp()
+        .setArgs({id: oasisRT.rofl.fromBech32(appId)})
+        .query(testnetNic);
+    console.log('App', app);
+
     hash = await client.sendTransaction(
         rofl
             .callRemove()
