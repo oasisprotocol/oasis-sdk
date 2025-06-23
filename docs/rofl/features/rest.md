@@ -17,6 +17,15 @@ services:
 
 The following sections describe the available endpoints.
 
+:::info UNIX sockets and HTTP headers
+
+Although the communication with `rofl-appd` is through UNIX sockets, the REST
+service still uses the HTTP protocol. In place of a host name you can provide
+any name. In our examples, we stick to the `http://localhost/<endpoint_path>`
+format.
+
+:::
+
 [compose-volumes]: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
 
 ## App Identifier
