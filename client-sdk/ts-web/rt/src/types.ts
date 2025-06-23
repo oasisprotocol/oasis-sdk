@@ -924,6 +924,8 @@ export interface RoflmarketProviderUpdate {
     scheduler_app: AppID;
     payment_address: RoflmarketPaymentAddress;
     metadata: {[key: string]: string};
+    stake?: 'warning: attempted to pass RoflmarketProvider type into RoflmarketProviderUpdate. Extraneous fields will cause this subcall to silently fail.';
+    created_at?: 'warning: attempted to pass RoflmarketProvider type into RoflmarketProviderUpdate. Extraneous fields will cause this subcall to silently fail.';
 }
 
 export interface RoflmarketProviderUpdateOffers {
@@ -951,17 +953,20 @@ export interface RoflmarketInstanceTopUp {
     id: MachineID;
     term: RoflmarketTerm;
     term_count: oasis.types.longnum;
+    status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceTopUp. Extraneous fields will cause this subcall to silently fail.';
 }
 
 export interface RoflmarketInstanceCancel {
     provider: Uint8Array;
     id: MachineID;
+    status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceCancel. Extraneous fields will cause this subcall to silently fail.';
 }
 
 export interface RoflmarketInstanceExecuteCmds {
     provider: Uint8Array;
     id: MachineID;
     cmds: Uint8Array[];
+    status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceExecuteCmds. Extraneous fields will cause this subcall to silently fail.';
 }
 
 export interface RoflmarketQueuedCommand {
@@ -1083,6 +1088,8 @@ export interface RoflUpdate {
     admin?: Uint8Array;
     metadata?: {[key: string]: string};
     secrets?: {[key: string]: Uint8Array};
+    sek?: 'warning: attempted to pass RoflAppConfig type into RoflUpdate. Extraneous fields will cause this subcall to silently fail.';
+    stake?: 'warning: attempted to pass RoflAppConfig type into RoflUpdate. Extraneous fields will cause this subcall to silently fail.';
 }
 
 export interface RoflRemove {
