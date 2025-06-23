@@ -54,6 +54,7 @@ export const playground = (async function () {
 
     let hash;
 
+    console.log('create app?');
     const createAppTx = rofl
         .callCreate()
         .setBody({
@@ -95,24 +96,43 @@ export const playground = (async function () {
         .query(testnetNic);
     console.log('App', app);
 
+    console.log('update app with secrets?');
     hash = await client.sendTransaction(
         rofl
             .callUpdate()
             .setBody({
                 id: app.id,
                 admin: app.admin,
-                policy: app.policy,
+                policy: {
+                    ...app.policy,
+                    /*
+                    // Generated with `oasis rofl build`. Changes for every rofl app id and compose file.
+                    // Needed to deploy to a machine.
+                    enclaves: [
+                        {
+                            // split https://github.com/oasisprotocol/oasis-core/blob/113878af787d6c6f8da22d6b8a33f6a249180c8b/go/common/sgx/common.go#L209-L221
+                            mr_enclave: oasis.misc.fromBase64('r/0te+QA+OTNKVlPQHD40Y+i3cPY3/pfy7HsvldioZw'),
+                            mr_signer: oasis.misc.fromBase64('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='),
+                        },
+                        {
+                            mr_enclave: oasis.misc.fromBase64('PjMa+M4eHpME8ypBP3f93o9hY5twqe1e9h02jDQH58U'),
+                            mr_signer: oasis.misc.fromBase64('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='),
+                        },
+                    ],
+                    */
+                },
                 metadata: {
                     ...app.metadata,
                     'net.oasis.rofl.name': 'create through subcall updated',
                 },
                 secrets: {
                     ...app.secrets,
-                    a: oasis.misc.fromBase64(
-                        oasisRT.rofl.encryptSecret('a', oasis.misc.fromString('secret'), app.sek),
-                    ),
-                    b: oasis.misc.fromBase64(
-                        oasisRT.rofl.encryptSecret('b', oasis.misc.fromString('secret'), app.sek),
+                    MESSAGE: oasis.misc.fromBase64(
+                        oasisRT.rofl.encryptSecret(
+                            'MESSAGE',
+                            oasis.misc.fromString('secret'),
+                            app.sek,
+                        ),
                     ),
                 },
             })
@@ -126,6 +146,51 @@ export const playground = (async function () {
         .query(testnetNic);
     console.log('App', app);
 
+    /*
+    // Generated with `oasis rofl deploy`. Changes for every rofl app id and compose file
+    console.log('deploy app?');
+    hash = await client.sendTransaction(
+        roflmarket
+            .callInstanceCreate()
+            .setBody({
+                "provider": oasis.staking.addressFromBech32("oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz"),
+                "offer": oasis.misc.fromHex("0000000000000003"),
+                "deployment": {
+                  "app_id": oasisRT.rofl.fromBech32(appId),
+                  "manifest_hash": oasis.misc.fromHex("4bad5779f8136bb25f331f5230eaa69d3d1f3c36d7c592d0ff0125b403d9edab"),
+                  "metadata": {
+                    "net.oasis.deployment.orc.ref": "rofl.sh/9756080c-55ad-46ae-bf6e-445a558161d1:1750638297@sha256:f7e8259fb71aae7800df6e21608ecb265262cd3408c7859701fadd3bc5b06310"
+                  }
+                },
+                "term": oasisRT.types.RoflmarketTerm.HOUR,
+                "term_count": 1
+            })
+            .toSubcall(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 12_000)); // TODO: waitForTransactionReceipt({ hash });
+    */
+
+    console.log('restart app?');
+    hash = await client.sendTransaction(
+        roflmarket
+            .callInstanceExecuteCmds()
+            .setBody({
+                id: oasis.misc.fromHex('00000000000000d1'),
+                cmds: [
+                    oasis.misc.toCBOR({
+                        method: 'Restart',
+                        args: {wipe_storage: false},
+                    }),
+                ],
+                provider: oasis.staking.addressFromBech32(
+                    'oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz',
+                ),
+            })
+            .toSubcall(),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 12_000)); // TODO: waitForTransactionReceipt({ hash });
+
+    console.log('remove app?');
     hash = await client.sendTransaction(
         rofl
             .callRemove()
