@@ -96,6 +96,13 @@ export const playground = (async function () {
         .query(testnetNic);
     console.log('App', app);
 
+    // TODO: typescript should disallow:
+    // Even though this subcall would succeed it would have no effect.
+    rofl.callUpdate()
+        .setBody({...app, metadata: {}})
+        .toSubcall();
+    // Probably silently rejected due to extraneous fields present in RoflAppConfig.
+
     console.log('update app with secrets?');
     hash = await client.sendTransaction(
         rofl
