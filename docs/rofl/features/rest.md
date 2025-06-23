@@ -128,7 +128,7 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
   - Oasis SDK calls (`std`) support CBOR-serialized hex-encoded `Transaction`s
     to be specified.
 
-- `encrypted` is a boolean flag specifying whether the transaction should be
+- `encrypt` is a boolean flag specifying whether the transaction should be
   encrypted. By default this is `true`. Note that encryption is handled
   transparently for the caller using an ephemeral key and any response is first
   decrypted before being passed on.
