@@ -5,6 +5,7 @@ module.exports = {
     entry: {
         main: './src/index.js',
         consensus: './src/consensus.js',
+        subcall: './src/subcall.js',
     },
     resolve: {
         alias: {
