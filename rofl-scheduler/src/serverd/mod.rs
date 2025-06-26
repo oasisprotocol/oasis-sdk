@@ -51,7 +51,8 @@ pub async fn serve(cfg: Config<'_>) -> Result<()> {
 
     let cors = cors::CorsLayer::new()
         .allow_methods([http::Method::GET, http::Method::POST])
-        .allow_origin(cors::Any);
+        .allow_origin(cors::Any)
+        .allow_headers([http::header::CONTENT_TYPE, http::header::AUTHORIZATION]);
 
     let app = Router::new()
         .route("/rofl-scheduler/v1/auth/login", post(auth::login))
