@@ -102,13 +102,17 @@ impl AuthLoginRequest {
                     return Err(anyhow!("message is not yet valid or has expired"));
                 }
 
-                let expected_statement = format!("Provider: {}", provider.to_bech32());
+                let expected_statement = format!(
+                    "Authenticate to ROFL provider {} to manage your machines via API at {}.",
+                    provider.to_bech32(),
+                    domain,
+                );
                 if message.statement != Some(expected_statement) {
                     return Err(anyhow!("message does not have the expected statement"));
                 }
 
                 let verification_opts = siwe::VerificationOpts {
-                    domain: Some(domain.parse()?),
+                    // We currently allow any origin domain.
                     ..Default::default()
                 };
                 message.verify(&signature, &verification_opts).await?;
