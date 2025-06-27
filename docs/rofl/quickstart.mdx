@@ -18,7 +18,7 @@ If you already have a working containerized app, you should run the following
 [Oasis CLI][oasis-cli-dl] commands to ROFLize it:
 
 1. [`oasis rofl init`] to initialize the ROFL manifest in the existing folder.
-2. [`oasis rofl create`] to register a new ROFL app on-chain.
+2. [`oasis rofl create`] to register a new ROFL app on the selected chain.
 3. [`oasis rofl build`] to compile a ROFL bundle.
 4. [`oasis rofl secret set`] to encrypt and store any secrets required by your
    app.
@@ -186,7 +186,7 @@ Testnet:
 
 ```shell
 oasis rofl init
-oasis rofl create
+oasis rofl create --network testnet
 ```
 
 Now, we will build the *ROFL bundle* .orc. This file packs `compose.yaml`,
