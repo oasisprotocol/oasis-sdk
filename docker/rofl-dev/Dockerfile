@@ -1,6 +1,6 @@
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.3.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.4.x AS oasis-core-dev
 
-ARG OASIS_CLI_VERSION=0.13.3
+ARG OASIS_CLI_VERSION=0.14.0
 ARG DEBIAN_FRONTEND=noninteractive
 
 ENV RUSTFLAGS="-C target-feature=+aes,+ssse3"
