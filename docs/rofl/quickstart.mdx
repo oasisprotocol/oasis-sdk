@@ -166,12 +166,13 @@ The final step is to prepare our Docker container for execution inside the
 Oasis CLI [here][oasis-cli-dl] and install it on your computer.
 
 If you don't have an existing account on Oasis Sapphre Testnet chain, you will
-need to create or import it with the [`oasis wallet create`] or [`oasis wallet
+need to create or import it with the [`oasis wallet create <your-wallet-name>`] or [`oasis wallet
 import`] commands respectively. Then, fund the acount with ~110 TEST tokens: 100
 tokens for the ROFL registration escrow and another 10 TEST or so for paying
 different kinds of gas fees. To fund the account with TEST tokens, visit the
 official [Oasis Testnet faucet] or reach out to us on the
 [`#dev-central` channel on Discord][discord].
+To retrieve your public address where funds should be sent, run [`oasis wallet show <your-wallet-name>`].
 
 [`oasis wallet create`]: https://github.com/oasisprotocol/cli/blob/master/docs/wallet.md#create
 [`oasis wallet import`]: https://github.com/oasisprotocol/cli/blob/master/docs/wallet.md#import
@@ -184,10 +185,20 @@ Next, inside our project folder, run the following command to generate the
 initial `rofl.yaml` manifest file and to register a new ROFL app on Sapphire
 Testnet:
 
-```shell
-oasis rofl init
-oasis rofl create
-```
+<Tabs>
+    <TabItem value="Mainnet">
+        ```shell
+        oasis rofl init
+        oasis rofl create
+        ```
+    </TabItem>
+    <TabItem value="Testnet">
+        ```shell
+        oasis rofl init
+        oasis rofl create --network testnet --paratime sapphire
+        ```
+    </TabItem>
+</Tabs>
 
 Now, we will build the *ROFL bundle* .orc. This file packs `compose.yaml`,
 specific operating system components and the hash of a trusted block on the
