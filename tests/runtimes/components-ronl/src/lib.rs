@@ -28,6 +28,9 @@ impl modules::core::Config for Config {}
 impl modules::rofl::Config for Config {
     /// Stake for creating a ROFL application.
     const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+
+    /// Endorsement policy evaluator.
+    type EndorsementPolicyEvaluator = modules::rofl::policy::BasicEndorsementPolicyEvaluator;
 }
 
 impl oracle::Config for Config {
@@ -134,7 +137,7 @@ impl sdk::Runtime for Runtime {
                                     .unwrap(),
                             ),
                         ],
-                        endorsements: vec![AllowedEndorsement::ComputeRole],
+                        endorsements: vec![Box::new(AllowedEndorsement::ComputeRole)],
                         fees: FeePolicy::EndorsingNodePays,
                         max_expiration: 2,
                     },
