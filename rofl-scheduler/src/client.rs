@@ -138,6 +138,22 @@ impl MarketQueryClient {
         self.round
     }
 
+    /// Query specific instance.
+    pub async fn instance(&self, id: InstanceId) -> Result<Instance> {
+        self.parent
+            .env
+            .client()
+            .query(
+                self.round,
+                "roflmarket.Instance",
+                InstanceQuery {
+                    provider: self.parent.provider,
+                    id,
+                },
+            )
+            .await
+    }
+
     /// Query all provider's instances.
     pub async fn instances(&self) -> Result<Vec<Instance>> {
         self.parent

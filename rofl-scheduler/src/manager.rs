@@ -814,6 +814,17 @@ impl Manager {
             return Ok(());
         }
 
+        // XXX: Temporarily skip instances that cannot be removed due to a claim bug.
+        let info = self
+            .client
+            .queries_at_latest()
+            .await?
+            .instance(instance)
+            .await?;
+        if info.paid_until == info.paid_from {
+            return Ok(());
+        }
+
         self.client.remove_instance(instance).await?;
 
         let mut instances = self.instances.write().unwrap();
