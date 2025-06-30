@@ -55,7 +55,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -74,7 +75,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -93,7 +95,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -112,7 +115,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
