@@ -614,13 +614,6 @@ impl Manager {
                     .or_default()
                     .node_id = Some(local_node_id);
             }
-
-            // Queue a job to deploy when a deployment exists.
-            if let Some(deployment) = instance.deployment.clone() {
-                local_state
-                    .pending_start
-                    .push((instance, deployment.clone(), true));
-            }
         }
 
         Ok(())
