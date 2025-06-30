@@ -298,19 +298,13 @@ impl Manager {
         // Discover desired instance state.
         let instances: Vec<Instance> = local_state.client.instances().await?;
         for instance in instances {
-            // Remove known instances.
-            running_unknown.remove(&instance.id);
-
             match instance.status {
                 InstanceStatus::Created => {
                     // Instance has not yet been accepted, nothing to do.
                     continue;
                 }
                 InstanceStatus::Cancelled => {
-                    // Instance has been cancelled, make sure it is stopped if running.
-                    if local_state.running.contains_key(&instance.id) {
-                        local_state.pending_stop.push((instance.id, true));
-                    }
+                    // Instance has been cancelled.
                     local_state
                         .maybe_remove
                         .push((instance.id, instance.updated_at));
@@ -324,6 +318,9 @@ impl Manager {
                     }
                 }
             }
+
+            // Remove known instances. Any remaining unknown instances will be stopped.
+            running_unknown.remove(&instance.id);
 
             // Check if the instance is still paid for. If not, we immediately stop it and schedule
             // its removal.
