@@ -38,6 +38,7 @@ Using provider: oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz (oasis1qp2ens0hsp
 Offers available from the selected provider:
 - playground_short [0000000000000001]
   TEE: tdx | Memory: 4096 MiB | vCPUs: 2 | Storage: 19.53 GiB
+  Price: 5.0 TEST/hour
 ```
 
 You can select a different provider and offer by using the
@@ -64,7 +65,7 @@ The command above performed the following actions:
   `oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz`,
 3. obtained the machine ID and stored it to the manifest file.
 
-You can now check the status of your rented ROFL machine by invoking:
+You can check the status of your active ROFL machine by invoking:
 
 ```shell
 oasis rofl machine show
@@ -98,20 +99,32 @@ Commands:
 This shows you, if any of the ROFL nodes registered to execute your ROFL app,
 the details of the machine, the expiration date, the provider and other details.
 
+You can also fetch the logs of your app by invoking the following command and
+signing the request with app's admin account:
+
+```shell
+oasis rofl machine logs
+```
+
+:::danger Logs are not encrypted!
+
+While only app admin can access the logs they are stored **unencrypted on the
+ROFL node**. In production, make sure you never print any confidential data to
+the standard or error outputs!
+
+:::
+
 [ROFL marketplace]: ./features/marketplace.mdx
 [oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
 
 ## Check That the ROFL App is Running
 
-In order to check that the ROFL app is running and which nodes have registered
-on chain to execute it, you can use the following command:
+To check out all active ROFL app replicas regardless of the
+deployment procedure, use the following command:
 
 ```shell
 oasis rofl show
 ```
-
-This will output some information about the registered ROFL app, its policy and
-its currently live instances:
 
 ```
 App ID:        rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
