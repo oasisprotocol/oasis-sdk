@@ -1,4 +1,5 @@
-name: rofl-scheduler
+name: ROFL Scheduler
+description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 version: 0.2.3
 repository: https://github.com/oasisprotocol/oasis-sdk
 tee: tdx
