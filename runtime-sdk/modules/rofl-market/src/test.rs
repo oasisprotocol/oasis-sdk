@@ -23,7 +23,9 @@ struct Config;
 
 impl core::Config for Config {}
 
-impl rofl::Config for Config {}
+impl rofl::Config for Config {
+    type EndorsementPolicyEvaluator = rofl::policy::BasicEndorsementPolicyEvaluator;
+}
 
 impl super::Config for Config {
     type Rofl = rofl::Module<Config>;
