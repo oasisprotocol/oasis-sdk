@@ -55,7 +55,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -74,7 +75,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -93,7 +95,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -112,7 +115,8 @@ impl MarketClient {
             .env
             .client()
             .sign_and_submit_tx(self.env.signer(), tx)
-            .await?;
+            .await?
+            .ok()?;
 
         Ok(())
     }
@@ -132,6 +136,22 @@ impl MarketQueryClient {
     /// Round used for the queries.
     pub fn round(&self) -> u64 {
         self.round
+    }
+
+    /// Query specific instance.
+    pub async fn instance(&self, id: InstanceId) -> Result<Instance> {
+        self.parent
+            .env
+            .client()
+            .query(
+                self.round,
+                "roflmarket.Instance",
+                InstanceQuery {
+                    provider: self.parent.provider,
+                    id,
+                },
+            )
+            .await
     }
 
     /// Query all provider's instances.

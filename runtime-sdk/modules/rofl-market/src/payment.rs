@@ -273,7 +273,7 @@ impl PaymentMethod for Payment {
                     .checked_mul(total_amount)
                     .ok_or(Error::InvalidArgument)?
                     .checked_div(paid_time.into())
-                    .ok_or(Error::InvalidArgument)?;
+                    .unwrap_or(0);
 
                 <C::Runtime as Runtime>::Accounts::transfer(
                     instance_address,

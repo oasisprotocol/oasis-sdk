@@ -63,7 +63,7 @@ pub struct SubmitTxOpts {
 impl Default for SubmitTxOpts {
     fn default() -> Self {
         Self {
-            timeout: Some(Duration::from_millis(15_000)), // 15 seconds.
+            timeout: Some(Duration::from_millis(60_000)), // 60 seconds.
             encrypt: true,
             verify: true,
         }

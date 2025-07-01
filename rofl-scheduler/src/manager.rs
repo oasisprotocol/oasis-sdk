@@ -298,19 +298,13 @@ impl Manager {
         // Discover desired instance state.
         let instances: Vec<Instance> = local_state.client.instances().await?;
         for instance in instances {
-            // Remove known instances.
-            running_unknown.remove(&instance.id);
-
             match instance.status {
                 InstanceStatus::Created => {
                     // Instance has not yet been accepted, nothing to do.
                     continue;
                 }
                 InstanceStatus::Cancelled => {
-                    // Instance has been cancelled, make sure it is stopped if running.
-                    if local_state.running.contains_key(&instance.id) {
-                        local_state.pending_stop.push((instance.id, true));
-                    }
+                    // Instance has been cancelled.
                     local_state
                         .maybe_remove
                         .push((instance.id, instance.updated_at));
@@ -324,6 +318,9 @@ impl Manager {
                     }
                 }
             }
+
+            // Remove known instances. Any remaining unknown instances will be stopped.
+            running_unknown.remove(&instance.id);
 
             // Check if the instance is still paid for. If not, we immediately stop it and schedule
             // its removal.
@@ -614,13 +611,6 @@ impl Manager {
                     .or_default()
                     .node_id = Some(local_node_id);
             }
-
-            // Queue a job to deploy when a deployment exists.
-            if let Some(deployment) = instance.deployment.clone() {
-                local_state
-                    .pending_start
-                    .push((instance, deployment.clone(), true));
-            }
         }
 
         Ok(())
@@ -821,6 +811,17 @@ impl Manager {
         let timeout = rand::distributions::Uniform::new(75, 125);
         let max_delta = (REMOVE_INSTANCE_AFTER_SECS * rand::thread_rng().sample(timeout)) / 100;
         if now.saturating_sub(ts) < max_delta {
+            return Ok(());
+        }
+
+        // XXX: Temporarily skip instances that cannot be removed due to a claim bug.
+        let info = self
+            .client
+            .queries_at_latest()
+            .await?
+            .instance(instance)
+            .await?;
+        if info.paid_until == info.paid_from {
             return Ok(());
         }
 

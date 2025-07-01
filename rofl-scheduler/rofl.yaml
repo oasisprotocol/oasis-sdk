@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.2.2
+version: 0.2.3
 repository: https://github.com/oasisprotocol/oasis-sdk
 tee: tdx
 kind: raw
@@ -47,7 +47,11 @@ deployments:
         - id: 33R8MVGCGJg3CAYKDR87Zv2kvj65lbpcAHmZLKRA5FYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.1
         - id: Sa0PyyZJsj4UpjE6IJOyqsi92iNMrwULpRbF2tq8YmQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.2
         - id: zt08xPOoXhy1SWHNcBNalVDjf6EHAUu9x6Tvq7aOBrwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.2
+        - id: p+wMY5zEuP5geFAkuoxI7NFiszMMTJHgdGxizuCZdwkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: WbUlJcnxwoy4NGyKgKIRlYF4OL7zHuvQVQ0yhbOvYcYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -88,7 +92,11 @@ deployments:
         - id: erQlwbWIEIx3WdLCqb7C/wWsDjDQgTW5VssQb9APrKMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.1
         - id: Iq6cDWfVpHrAfgbFvaEqhnZ7YCDHfoXEWlU5n2xFnJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.2
         - id: e9QSiflGUzqJei84tKL8N81HOMKkOXLfU6X/M/p00N0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.2
+        - id: XYyfBM8gNwSOBvKutXlel9xo6g4paIhq4RiQWEBRdMkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: Etnh0TxJ4Kng2qrVe/M78OX53r0TJlPe+Ripp0n1nnAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node

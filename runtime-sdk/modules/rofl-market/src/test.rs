@@ -816,6 +816,10 @@ fn test_instance_management() {
     assert_eq!(module, "roflmarket");
     assert_eq!(code, 4); // Forbidden.
 
+    // Ensure we are after paid_until to test the claim case.
+    mock.runtime_header.timestamp = instance.paid_until + 10;
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
     // Scheduler app from the correct node should be allowed to remove instances.
     let dispatch_result = signer_dave.call(&ctx, "roflmarket.InstanceRemove", remove.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
