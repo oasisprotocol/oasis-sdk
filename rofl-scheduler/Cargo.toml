@@ -20,12 +20,13 @@ base64 = "0.22.1"
 bytes = "1.10.1"
 chrono = "0.4.41"
 cmd_lib = "1.9.5"
+futures-util = "0.3.31"
 hex = "0.4.3"
 # TODO: Use 0.8.0 once released.
 instant-acme = { git = "https://github.com/djc/instant-acme", rev = "5e59869f54e66b7dff8c2c0ea63599fbcc3595af" }
 jsonwebtoken = "9"
 nix = { version = "0.29.0", features = ["signal"] }
-oci-client = "0.14.0"
+oci-client = "0.15.0"
 qcow2-rs = "0.1.6"
 rand = "0.8.4"
 rcgen = "0.13.2"
