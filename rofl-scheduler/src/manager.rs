@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context as _};
 use backoff::backoff::Backoff;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::BufMut;
+use futures_util::StreamExt;
 use oasis_runtime_sdk::{
     core::{
         common::{
@@ -70,6 +71,13 @@ const MAX_ORC_MANIFEST_SIZE: i64 = 16 * 1024; // 16 KiB
 const MAX_ORC_LAYER_SIZE: i64 = 128 * 1024 * 1024; // 128 MiB
 /// Maximum size of all ORC layers.
 const MAX_ORC_TOTAL_SIZE: i64 = 128 * 1024 * 1024; // 128 MiB
+
+/// OCI client read timeout in seconds.
+const OCI_CLIENT_READ_TIMEOUT_SECS: u64 = 5;
+/// OCI client connect timeout in seconds.
+const OCI_CLIENT_CONNECT_TIMEOUT_SECS: u64 = 5;
+/// OCI client manifest and config pull timeout in seconds.
+const OCI_CLIENT_PULL_MANIFEST_TIMEOUT_SECS: u64 = 5;
 
 #[derive(Clone, Default)]
 struct InstanceUpdates {
@@ -1023,6 +1031,8 @@ impl Manager {
         // TODO: Perform local caching.
         let client = oci_client::Client::new(oci_client::client::ClientConfig {
             protocol: oci_client::client::ClientProtocol::Https,
+            read_timeout: Some(time::Duration::from_secs(OCI_CLIENT_READ_TIMEOUT_SECS)),
+            connect_timeout: Some(time::Duration::from_secs(OCI_CLIENT_CONNECT_TIMEOUT_SECS)),
             ..Default::default()
         });
         let bundle_ref: oci_client::Reference = deployment
@@ -1038,11 +1048,15 @@ impl Manager {
             "ref" => %bundle_ref,
         );
 
-        // Pull manifest and config.
-        let (oci_manifest, _digest, config) = client
-            .pull_manifest_and_config(&bundle_ref, &auth)
-            .await
-            .context("failed to pull OCI manifest and config")?;
+        // Pull manifest and config. We add a timeout to ensure we don't spend too much time
+        // on fetching the OCI manifest and config as they should be small.
+        let (oci_manifest, _digest, config) = time::timeout(
+            time::Duration::from_secs(OCI_CLIENT_PULL_MANIFEST_TIMEOUT_SECS),
+            client.pull_manifest_and_config(&bundle_ref, &auth),
+        )
+        .await
+        .map_err(|_| anyhow!("timed out while pulling OCI manifest and config"))?
+        .context("failed to pull OCI manifest and config")?;
 
         // Validate config and layers.
         let mut total_size: i64 = 0;
@@ -1183,6 +1197,7 @@ impl Manager {
         let layer_pull_task = tokio::spawn(async move {
             let mut zip_writer = async_zip::base::write::ZipFileWriter::with_tokio(writer);
             let mut total_storage_size = 0u64;
+            let mut total_orc_size = 0usize;
 
             // Add updated manifest.
             let opts = async_zip::ZipEntryBuilder::new(
@@ -1219,18 +1234,45 @@ impl Manager {
                     async_zip::Compression::Deflate,
                 );
                 let mut entry_writer = zip_writer.write_entry_stream(opts).await?.compat_write();
-                let mut inspect_writer =
-                    tokio_util::io::InspectWriter::new(&mut entry_writer, |data| {
-                        hasher.update(data);
+                let mut layer_stream = client.pull_blob_stream(&bundle_ref, &layer).await?;
+                let mut total_orc_layer_size = 0usize;
 
-                        if !is_qcow2 || !qcow2_hdr_buf.get_ref().has_remaining_mut() {
-                            return;
-                        }
-                        qcow2_hdr_buf.write_all(data).unwrap();
-                    });
-                client
-                    .pull_blob(&bundle_ref, &layer, &mut inspect_writer)
-                    .await?;
+                // When the server sends a Content-Length header, validate it first. Later on we
+                // also validate the actually downloaded bytes.
+                if let Some(content_length) = layer_stream.content_length {
+                    if content_length > MAX_ORC_LAYER_SIZE as u64 {
+                        return Err(anyhow!("ORC layer too big"));
+                    }
+                    if total_orc_size.saturating_add(content_length as usize)
+                        > MAX_ORC_TOTAL_SIZE as usize
+                    {
+                        return Err(anyhow!("ORC bundle too big"));
+                    }
+                }
+
+                while let Some(data) = layer_stream.next().await {
+                    let data = data?;
+
+                    // Validate layer size.
+                    total_orc_layer_size = total_orc_layer_size.saturating_add(data.len());
+                    if total_orc_layer_size > MAX_ORC_LAYER_SIZE as usize {
+                        return Err(anyhow!("ORC layer too big"));
+                    }
+                    total_orc_size = total_orc_size.saturating_add(data.len());
+                    if total_orc_size > MAX_ORC_TOTAL_SIZE as usize {
+                        return Err(anyhow!("ORC bundle too big"));
+                    }
+
+                    // Compute layer digest to compare against ORC manifest.
+                    hasher.update(&data);
+
+                    // Collect QCOW2 header when needed.
+                    if is_qcow2 && qcow2_hdr_buf.get_ref().has_remaining_mut() {
+                        qcow2_hdr_buf.write_all(&data)?;
+                    }
+
+                    entry_writer.write_all(&data).await?;
+                }
                 entry_writer.into_inner().close().await?;
 
                 // Validate qcow2 header.
@@ -1275,6 +1317,7 @@ impl Manager {
         let bundle_stream_task = tokio::spawn(async move {
             let mut create = true;
             let mut buffer = bytes::BytesMut::with_capacity(CHUNK_SIZE);
+            let mut total_bundle_size = 0usize;
 
             loop {
                 // Read from layer pull task.
@@ -1291,6 +1334,12 @@ impl Manager {
                 }
                 if buffer.is_empty() {
                     break;
+                }
+
+                // Ensure we never write oversized bundles to host.
+                total_bundle_size = total_bundle_size.saturating_add(buffer.len());
+                if total_bundle_size > MAX_ORC_TOTAL_SIZE as usize {
+                    return Err(anyhow!("ORC bundle too big"));
                 }
 
                 // Write to host.
