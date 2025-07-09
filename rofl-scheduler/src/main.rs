@@ -16,6 +16,7 @@ mod client;
 mod config;
 mod manager;
 mod manifest;
+mod qcow2;
 mod serverd;
 mod types;
 
