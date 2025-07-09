@@ -38,7 +38,7 @@ use super::{
     client::{MarketClient, MarketQueryClient},
     config::{LocalConfig, Resources},
     manifest::{self, Manifest},
-    types, SchedulerApp,
+    qcow2, types, SchedulerApp,
 };
 
 /// Metadata key used to configure the offer identifier.
@@ -1278,9 +1278,8 @@ impl Manager {
                 // Validate qcow2 header.
                 if is_qcow2 {
                     let qcow2_hdr_buf = qcow2_hdr_buf.into_inner();
-                    let qcow2_hdr = qcow2_rs::meta::Qcow2Header::from_buf(&qcow2_hdr_buf[..])
-                        .map_err(|_| anyhow!("malformed QCOW2 header"))?;
-                    total_storage_size = total_storage_size.saturating_add(qcow2_hdr.size());
+                    let qcow2_disk_size = qcow2::parse_virtual_size(&qcow2_hdr_buf[..])?;
+                    total_storage_size = total_storage_size.saturating_add(qcow2_disk_size);
                 }
 
                 // Validate layer digest.
