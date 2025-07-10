@@ -7,6 +7,7 @@ export function toBigInt(q: Uint8Array) {
 
 export function fromBigInt(bi: bigint) {
     if (bi === 0n) return new Uint8Array();
+    if (bi < 0n) throw new RangeError(`Cannot convert ${bi} to quantity`);
     let hex = bi.toString(16);
     if (hex.length % 2) {
         hex = '0' + hex;
