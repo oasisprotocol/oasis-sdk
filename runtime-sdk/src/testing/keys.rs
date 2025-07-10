@@ -1,31 +1,42 @@
 //! Module that contains known test keys.
 
-// TODO: Should be derived from seeds once implemented in the Rust version.
-
 /// Define an ed25519 test key.
 macro_rules! test_key_ed25519 {
-    ($doc:expr, $name:ident, $pk:expr) => {
+    ($doc:expr, $name:ident, $seed:expr) => {
         #[doc = " Test key "]
         #[doc=$doc]
         #[doc = "."]
         pub mod $name {
             use crate::{
-                crypto::signature::{ed25519, PublicKey},
+                core::common::crypto::hash::Hash,
+                crypto::signature::{ed25519, PublicKey, Signer},
                 types::address::{Address, SignatureAddressSpec},
             };
+
+            #[doc = " Test Ed25519 signer "]
+            #[doc=$doc]
+            #[doc = "."]
+            pub fn signer() -> ed25519::MemorySigner {
+                let seed = Hash::digest_bytes($seed.as_bytes());
+                ed25519::MemorySigner::new_from_seed(seed.as_ref()).unwrap()
+            }
 
             #[doc = " Test public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk() -> PublicKey {
-                PublicKey::Ed25519(pk_ed25519())
+                signer().public_key()
             }
 
             #[doc = " Test Ed25519 public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk_ed25519() -> ed25519::PublicKey {
-                $pk.into()
+                if let PublicKey::Ed25519(pk) = pk() {
+                    pk
+                } else {
+                    unreachable!()
+                }
             }
 
             #[doc = " Test address derivation information "]
@@ -47,28 +58,41 @@ macro_rules! test_key_ed25519 {
 
 /// Define a secp256k1 test key.
 macro_rules! test_key_secp256k1 {
-    ($doc:expr, $name:ident, $pk:expr) => {
+    ($doc:expr, $name:ident, $seed:expr) => {
         #[doc = " Test key "]
         #[doc=$doc]
         #[doc = "."]
         pub mod $name {
             use crate::{
-                crypto::signature::{secp256k1, PublicKey},
+                core::common::crypto::hash::Hash,
+                crypto::signature::{secp256k1, PublicKey, Signer},
                 types::address::{Address, SignatureAddressSpec},
             };
+
+            #[doc = " Test Secp256k1 signer "]
+            #[doc=$doc]
+            #[doc = "."]
+            pub fn signer() -> secp256k1::MemorySigner {
+                let seed = Hash::digest_bytes($seed.as_bytes());
+                secp256k1::MemorySigner::new_from_seed(seed.as_ref()).unwrap()
+            }
 
             #[doc = " Test public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk() -> PublicKey {
-                PublicKey::Secp256k1(pk_secp256k1())
+                signer().public_key()
             }
 
             #[doc = " Test Secp256k1 public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk_secp256k1() -> secp256k1::PublicKey {
-                $pk.into()
+                if let PublicKey::Secp256k1(pk) = pk() {
+                    pk
+                } else {
+                    unreachable!()
+                }
             }
 
             #[doc = " Test address derivation information "]
@@ -90,28 +114,41 @@ macro_rules! test_key_secp256k1 {
 
 /// Define an sr25519 test key.
 macro_rules! test_key_sr25519 {
-    ($doc:expr, $name:ident, $pk:expr) => {
+    ($doc:expr, $name:ident, $seed:expr) => {
         #[doc = " Test key "]
         #[doc=$doc]
         #[doc = "."]
         pub mod $name {
             use crate::{
-                crypto::signature::{sr25519, PublicKey},
+                core::common::crypto::hash::Hash,
+                crypto::signature::{sr25519, PublicKey, Signer},
                 types::address::{Address, SignatureAddressSpec},
             };
+
+            #[doc = " Test Sr25519 signer "]
+            #[doc=$doc]
+            #[doc = "."]
+            pub fn signer() -> sr25519::MemorySigner {
+                let seed = Hash::digest_bytes($seed.as_bytes());
+                sr25519::MemorySigner::new_from_seed(seed.as_ref()).unwrap()
+            }
 
             #[doc = " Test public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk() -> PublicKey {
-                PublicKey::Sr25519(pk_sr25519())
+                signer().public_key()
             }
 
             #[doc = " Test Sr25519 public key "]
             #[doc=$doc]
             #[doc = "."]
             pub fn pk_sr25519() -> sr25519::PublicKey {
-                $pk.into()
+                if let PublicKey::Sr25519(pk) = pk() {
+                    pk
+                } else {
+                    unreachable!()
+                }
             }
 
             #[doc = " Test address derivation information "]
@@ -131,10 +168,10 @@ macro_rules! test_key_sr25519 {
     };
 }
 
-test_key_ed25519!("A", alice, "NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE=");
-test_key_ed25519!("B", bob, "YgkEiVSR4SMQdfXw+ppuFYlqH0seutnCKk8KG8PyAx0=");
-test_key_ed25519!("C", charlie, "8l1AQE+ETOPLckiNJ7NOD+AfZdaPw6wguir/vSF11YI=");
-test_key_secp256k1!("D", dave, "AwF6GNjbybMzhi3XRj5R1oTiMMkO1nAwB7NZAlH1X4BE");
-test_key_secp256k1!("E", erin, "A9i0oSK+5sLSONbMYGmaFUA+Fb8zzqYEMUMspacIgO09");
-test_key_sr25519!("F", frank, "ljm9ZwdAldhlyWM2B4C+3gQZis+ceaxnt6QA4rOcP0k=");
-test_key_sr25519!("G", grace, "0MHrNhjVTOFWmsOgpWcC3L8jIX3ZatKr0/yxMPtwckc=");
+test_key_ed25519!("A", alice, "oasis-runtime-sdk/test-keys: alice");
+test_key_ed25519!("B", bob, "oasis-runtime-sdk/test-keys: bob");
+test_key_ed25519!("C", charlie, "oasis-runtime-sdk/test-keys: charlie");
+test_key_secp256k1!("D", dave, "oasis-runtime-sdk/test-keys: dave");
+test_key_secp256k1!("E", erin, "oasis-runtime-sdk/test-keys: erin");
+test_key_sr25519!("F", frank, "oasis-runtime-sdk/test-keys: frank");
+test_key_sr25519!("G", grace, "oasis-runtime-sdk/test-keys: grace");
