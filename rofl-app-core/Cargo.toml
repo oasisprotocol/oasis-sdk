@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk" }
+oasis-runtime-sdk-rofl-market = { path = "../runtime-sdk/modules/rofl-market" }
 
 # Third party.
 anyhow = "1.0.86"
