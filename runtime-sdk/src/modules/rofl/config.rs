@@ -18,6 +18,8 @@ pub trait Config: 'static {
     const GAS_COST_CALL_AUTHORIZED_ORIGIN_NODE: u64 = 2000;
     /// Gas cost of rofl.AuthorizedOriginEntity call.
     const GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY: u64 = 2000;
+    /// Gas cost of rofl.OriginApp call.
+    const GAS_COST_CALL_ORIGIN_APP: u64 = 1000;
     /// Gas cost of rofl.StakeThresholds call.
     const GAS_COST_CALL_STAKE_THRESHOLDS: u64 = 10;
     /// Gas cost of rofl.DeriveKey call.
