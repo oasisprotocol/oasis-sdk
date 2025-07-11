@@ -6,7 +6,7 @@ edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oasis-runtime-sdk = { path = "../../../runtime-sdk" }
+rofl-app-core = { path = "../../../rofl-app-core" }
 
 components-ronl = { package = "test-runtime-components-ronl", path = "../components-ronl" }
 
@@ -15,4 +15,4 @@ async-trait = "0.1.77"
 
 [features]
 # Enables mock SGX in non-SGX builds.
-debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]
+debug-mock-sgx = ["rofl-app-core/debug-mock-sgx"]

@@ -4704,6 +4704,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "rofl-app-core"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.22.1",
+ "oasis-cbor",
+ "oasis-runtime-sdk",
+ "rand 0.8.5",
+ "slog",
+ "tokio",
+]
+
+[[package]]
 name = "rofl-appd"
 version = "0.2.1"
 dependencies = [
@@ -4712,6 +4726,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
  "rocket",
+ "rofl-app-core",
  "rustc-hex",
  "serde",
  "serde_with",
@@ -4734,6 +4749,7 @@ dependencies = [
  "libc",
  "nix",
  "oasis-runtime-sdk",
+ "rofl-app-core",
  "rofl-appd",
  "tokio",
 ]
@@ -4764,6 +4780,7 @@ dependencies = [
  "oci-client",
  "rand 0.8.5",
  "rcgen",
+ "rofl-app-core",
  "rustc-hex",
  "rustls",
  "serde",
@@ -5970,7 +5987,7 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "oasis-runtime-sdk",
+ "rofl-app-core",
  "test-runtime-components-ronl",
 ]
 

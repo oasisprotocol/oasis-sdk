@@ -8,16 +8,25 @@ edition = "2021"
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
 oasis-runtime-sdk-evm = { path = "../runtime-sdk/modules/evm" }
+rofl-app-core = { path = "../rofl-app-core", features = ["tdx"] }
 
 # Third party.
 anyhow = "1.0.86"
 # TODO: Replace with a released version once it includes UNIX socket support.
-rocket = { git = "https://github.com/rwf2/Rocket", rev = "28891e8072136f4641a33fb8c3f2aafce9d88d5b", features = ["json"] }
+rocket = { git = "https://github.com/rwf2/Rocket", rev = "28891e8072136f4641a33fb8c3f2aafce9d88d5b", features = [
+    "json",
+] }
 serde = { version = "1.0", features = ["derive"] }
 serde_with = { version = "3.12.0", features = ["hex"] }
 sp800-185 = "0.2.0"
 thiserror = "1.0"
-tokio = { version = "1.38", features = ["rt", "rt-multi-thread", "sync", "time", "macros"] }
+tokio = { version = "1.38", features = [
+    "rt",
+    "rt-multi-thread",
+    "sync",
+    "time",
+    "macros",
+] }
 tokio-retry = "0.3.0"
 zeroize = "1.7"
 

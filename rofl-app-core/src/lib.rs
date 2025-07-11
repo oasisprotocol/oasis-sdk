@@ -4,17 +4,16 @@ use std::{collections::BTreeMap, sync::Arc};
 use anyhow::Result;
 use async_trait::async_trait;
 use base64::prelude::*;
-use oasis_core_runtime::Protocol;
 use tokio::sync::mpsc;
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{
         app,
         common::version,
         config::Config,
         consensus::{roothash, verifier::TrustRoot},
         dispatcher::{PostInitState, PreInitState},
-        start_runtime,
+        start_runtime, Protocol,
     },
     crypto,
     types::transaction,
@@ -29,9 +28,9 @@ mod processor;
 mod registration;
 mod watchdog;
 
-pub use crate::modules::rofl::app_id::AppId;
 pub use client::Client;
 pub use env::Environment;
+pub use oasis_runtime_sdk::modules::rofl::app_id::AppId;
 
 /// ROFL component application.
 #[allow(unused_variables)]

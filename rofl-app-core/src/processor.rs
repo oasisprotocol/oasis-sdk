@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{anyhow, Result};
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{
         common::logger::get_logger,
         consensus::{roothash, verifier::Verifier},

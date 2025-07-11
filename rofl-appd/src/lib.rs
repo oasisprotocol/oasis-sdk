@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use rocket::{figment::Figment, routes};
 
-use oasis_runtime_sdk::modules::rofl::app::{App, Environment};
+use rofl_app_core::{App, Environment};
 
 /// API server configuration.
 #[derive(Clone)]
