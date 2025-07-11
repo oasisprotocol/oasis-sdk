@@ -211,7 +211,7 @@ impl<Cfg: Config> Module<Cfg> {
             }
         }
 
-        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
+        body.policy.validate::<Cfg>()?;
 
         if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(Default::default());
@@ -310,7 +310,7 @@ impl<Cfg: Config> Module<Cfg> {
             }
         }
 
-        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
+        body.policy.validate::<Cfg>()?;
 
         let mut cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
 

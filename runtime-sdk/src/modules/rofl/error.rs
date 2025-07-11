@@ -65,6 +65,10 @@ pub enum Error {
     #[sdk_error(code = 15)]
     EndorsementPolicyTooManyAtoms(usize),
 
+    #[error("max expiration in policy set too high (max: {0})")]
+    #[sdk_error(code = 16)]
+    PolicyMaxExpirationTooHigh(u64),
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),
