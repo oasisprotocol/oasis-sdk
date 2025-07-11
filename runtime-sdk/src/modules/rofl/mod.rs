@@ -61,6 +61,14 @@ pub struct Genesis {
 
 /// Interface that can be called from other modules.
 pub trait API {
+    /// Get the identifier of the calling ROFL app in case the origin transaction is signed by a
+    /// ROFL instance. Otherwise `None` is returned.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if called outside a transaction environment.
+    fn get_origin_app() -> Option<app_id::AppId>;
+
     /// Get the Runtime Attestation Key of the ROFL app instance in case the origin transaction is
     /// signed by a ROFL instance. Otherwise `None` is returned.
     ///
@@ -114,6 +122,11 @@ pub struct Module<Cfg: Config> {
 }
 
 impl<Cfg: Config> API for Module<Cfg> {
+    fn get_origin_app() -> Option<app_id::AppId> {
+        let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())?;
+        state::get_endorser(&caller_pk).map(|kei| kei.app_id)
+    }
+
     fn get_origin_rak() -> Option<PublicKey> {
         let caller_pk = CurrentState::with_env_origin(|env| env.tx_caller_public_key())?;
 
@@ -198,7 +211,7 @@ impl<Cfg: Config> Module<Cfg> {
             }
         }
 
-        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
+        body.policy.validate::<Cfg>()?;
 
         if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(Default::default());
@@ -297,7 +310,7 @@ impl<Cfg: Config> Module<Cfg> {
             }
         }
 
-        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
+        body.policy.validate::<Cfg>()?;
 
         let mut cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
 
@@ -621,6 +634,13 @@ impl<Cfg: Config> Module<Cfg> {
 
         let registration = Self::get_origin_registration(app).ok_or(Error::UnknownInstance)?;
         Ok(registration.entity_id)
+    }
+
+    #[handler(call = "rofl.OriginApp", internal)]
+    fn internal_origin_app<C: Context>(_ctx: &C, _args: ()) -> Result<app_id::AppId, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_ORIGIN_APP)?;
+
+        Self::get_origin_app().ok_or(Error::UnknownInstance)
     }
 
     /// Returns the configuration for the given ROFL application.

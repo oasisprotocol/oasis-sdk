@@ -18,6 +18,8 @@ pub trait Config: 'static {
     const GAS_COST_CALL_AUTHORIZED_ORIGIN_NODE: u64 = 2000;
     /// Gas cost of rofl.AuthorizedOriginEntity call.
     const GAS_COST_CALL_AUTHORIZED_ORIGIN_ENTITY: u64 = 2000;
+    /// Gas cost of rofl.OriginApp call.
+    const GAS_COST_CALL_ORIGIN_APP: u64 = 1000;
     /// Gas cost of rofl.StakeThresholds call.
     const GAS_COST_CALL_STAKE_THRESHOLDS: u64 = 10;
     /// Gas cost of rofl.DeriveKey call.
@@ -42,6 +44,9 @@ pub trait Config: 'static {
 
     /// Maximum number of endorsment policy atoms.
     const MAX_ENDORSEMENT_POLICY_ATOMS: usize = 32;
+
+    /// Maximum value of the `max_expiration` field in the app policy (in epochs).
+    const MAX_POLICY_EXPIRATION_EPOCHS: u64 = 24;
 
     /// Endorsement policy evaluator.
     type EndorsementPolicyEvaluator: EndorsementPolicyEvaluator;
