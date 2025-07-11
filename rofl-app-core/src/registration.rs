@@ -39,7 +39,6 @@ where
             env,
             logger: get_logger("modules/rofl/app/registration"),
             notify: rx,
-            last_registration_epoch: None,
         };
 
         Self { imp: Some(imp), tx }
@@ -64,7 +63,6 @@ struct Impl<A: App> {
     logger: slog::Logger,
 
     notify: mpsc::Receiver<()>,
-    last_registration_epoch: Option<EpochTime>,
 }
 
 impl<A> Impl<A>
@@ -80,12 +78,26 @@ where
     async fn run(mut self) {
         slog::info!(self.logger, "starting registration task");
 
-        // TODO: Handle retries etc.
+        let mut last_registration_epoch: Option<EpochTime> = None;
+
         while self.notify.recv().await.is_some() {
-            if let Err(err) = self.refresh_registration().await {
-                slog::error!(self.logger, "failed to refresh registration";
-                    "err" => ?err,
-                );
+            let backoff = backoff::ExponentialBackoff::default();
+
+            let result = backoff::future::retry(backoff, async || {
+                let result = self.refresh_registration(last_registration_epoch).await;
+                if let Err(ref err) = result {
+                    slog::error!(self.logger, "failed to refresh registration";
+                        "err" => ?err,
+                    );
+                }
+
+                result.map_err(backoff::Error::transient)
+            })
+            .await;
+
+            match result {
+                Ok(epoch) => last_registration_epoch = Some(epoch),
+                Err(_) => continue,
             }
         }
 
@@ -93,7 +105,12 @@ where
     }
 
     /// Perform application registration refresh.
-    async fn refresh_registration(&mut self) -> Result<()> {
+    ///
+    /// On success, it returns the epoch for which the registration was refreshed.
+    async fn refresh_registration(
+        &self,
+        last_registration_epoch: Option<EpochTime>,
+    ) -> Result<EpochTime> {
         // Determine current epoch.
         let state = self.state.consensus_verifier.latest_state().await?;
         let epoch = tokio::task::spawn_blocking(move || {
@@ -103,8 +120,8 @@ where
         .await??;
 
         // Skip refresh in case epoch has not changed.
-        if self.last_registration_epoch == Some(epoch) {
-            return Ok(());
+        if last_registration_epoch == Some(epoch) {
+            return Ok(epoch);
         }
 
         // Query our current registration and see if we need to update it.
@@ -126,16 +143,15 @@ where
             if existing.expiration >= epoch + 2 {
                 slog::info!(self.logger, "registration already refreshed"; "epoch" => epoch);
 
-                self.last_registration_epoch = Some(epoch);
                 self.env
                     .send_command(processor::Command::RegistrationRefreshed)
                     .await?;
-                return Ok(());
+                return Ok(epoch);
             }
         }
 
         slog::info!(self.logger, "refreshing registration";
-            "last_registration_epoch" => self.last_registration_epoch,
+            "last_registration_epoch" => last_registration_epoch,
             "epoch" => epoch,
         );
 
@@ -185,21 +201,20 @@ where
 
         slog::info!(self.logger, "refreshed registration"; "result" => ?result);
 
-        if self.last_registration_epoch.is_none() {
+        if last_registration_epoch.is_none() {
             // If this is the first registration, notify processor that initial registration has
             // been completed so it can do other stuff.
             self.env
                 .send_command(processor::Command::InitialRegistrationCompleted)
                 .await?;
         }
-        self.last_registration_epoch = Some(epoch);
 
         // Notify about registration refresh.
         self.env
             .send_command(processor::Command::RegistrationRefreshed)
             .await?;
 
-        Ok(())
+        Ok(epoch)
     }
 
     async fn collect_provider_metadata(

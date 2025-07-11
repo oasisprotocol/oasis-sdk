@@ -4709,6 +4709,7 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "backoff",
  "base64 0.22.1",
  "oasis-cbor",
  "oasis-runtime-sdk",
