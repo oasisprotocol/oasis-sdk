@@ -57,6 +57,14 @@ pub enum Error {
     #[sdk_error(code = 13)]
     PlainCallFormatNotAllowed,
 
+    #[error("endorsement policy too deep (max depth: {0})")]
+    #[sdk_error(code = 14)]
+    EndorsementPolicyTooDeep(usize),
+
+    #[error("endorsement policy has too many atoms (max: {0})")]
+    #[sdk_error(code = 15)]
+    EndorsementPolicyTooManyAtoms(usize),
+
     #[error("core: {0}")]
     #[sdk_error(transparent)]
     Core(#[from] modules::core::Error),

@@ -5,13 +5,7 @@ use once_cell::sync::Lazy;
 
 use crate::{
     context::Context,
-    core::{
-        common::crypto::signature::PublicKey as CorePublicKey,
-        consensus::{
-            registry::{Node, RolesMask, VerifiedEndorsedCapabilityTEE},
-            state::registry::ImmutableState as RegistryImmutableState,
-        },
-    },
+    core::common::crypto::signature::PublicKey as CorePublicKey,
     crypto::signature::PublicKey,
     dispatcher, handler, keymanager, migration,
     module::{self, Module as _, Parameters as _},
@@ -39,6 +33,7 @@ const MODULE_NAME: &str = "rofl";
 pub use config::Config;
 pub use error::Error;
 pub use event::Event;
+use policy::EndorsementPolicyEvaluator;
 
 /// Parameters for the module.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
@@ -204,6 +199,8 @@ impl<Cfg: Config> Module<Cfg> {
             }
         }
 
+        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
+
         if CurrentState::with_env(|env| env.is_check_only()) {
             return Ok(Default::default());
         }
@@ -300,6 +297,8 @@ impl<Cfg: Config> Module<Cfg> {
                 return Err(Error::InvalidArgument);
             }
         }
+
+        body.policy.validate(Cfg::MAX_ENDORSEMENT_POLICY_ATOMS)?;
 
         let mut cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
 
@@ -429,7 +428,12 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // Verify allowed endorsement.
-        let node = Self::verify_endorsement(ctx, &cfg.policy, &verified_ect)?;
+        let node = Cfg::EndorsementPolicyEvaluator::verify(
+            ctx,
+            &cfg.policy.endorsements,
+            &body.ect,
+            &body.metadata,
+        )?;
 
         // Update registration.
         let registration = types::Registration {
@@ -584,79 +588,6 @@ impl<Cfg: Config> Module<Cfg> {
             )))?;
         km.get_or_create_keys(key_id)
             .map_err(|err| Error::Abort(dispatcher::Error::KeyManagerFailure(err)))
-    }
-
-    /// Verify whether the given endorsement is allowed by the application policy.
-    ///
-    /// Returns an optional endorsing node descriptor when available.
-    fn verify_endorsement<C: Context>(
-        ctx: &C,
-        app_policy: &policy::AppAuthPolicy,
-        ect: &VerifiedEndorsedCapabilityTEE,
-    ) -> Result<Option<Node>, Error> {
-        use policy::AllowedEndorsement;
-
-        let endorsing_node_id = ect.node_id.ok_or(Error::UnknownNode)?;
-
-        // Attempt to resolve the node that endorsed the enclave. It may be that the node is not
-        // even registered in the consensus layer which may be acceptable for some policies.
-        let maybe_node = || -> Result<Option<Node>, Error> {
-            let registry = RegistryImmutableState::new(ctx.consensus_state());
-            let node = registry
-                .node(&endorsing_node_id)
-                .map_err(|_| Error::UnknownNode)?;
-            let node = if let Some(node) = node {
-                node
-            } else {
-                return Ok(None);
-            };
-            // Ensure node is not expired.
-            if node.expiration < ctx.epoch() {
-                return Ok(None);
-            }
-
-            Ok(Some(node))
-        }()?;
-
-        // Ensure node is registered for this runtime.
-        let has_runtime = |node: &Node| -> bool {
-            let version = &<C::Runtime as Runtime>::VERSION;
-            node.get_runtime(ctx.runtime_id(), version).is_some()
-        };
-
-        for allowed in &app_policy.endorsements {
-            match (allowed, &maybe_node) {
-                (AllowedEndorsement::Any, _) => {
-                    // Any node is allowed.
-                    return Ok(maybe_node);
-                }
-                (AllowedEndorsement::ComputeRole, Some(node)) => {
-                    if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) && has_runtime(node) {
-                        return Ok(maybe_node);
-                    }
-                }
-                (AllowedEndorsement::ObserverRole, Some(node)) => {
-                    if node.has_roles(RolesMask::ROLE_OBSERVER) && has_runtime(node) {
-                        return Ok(maybe_node);
-                    }
-                }
-                (AllowedEndorsement::Entity(entity_id), Some(node)) => {
-                    // If a specific entity is required, it may be registered for any runtime.
-                    if &node.entity_id == entity_id {
-                        return Ok(maybe_node);
-                    }
-                }
-                (AllowedEndorsement::Node(node_id), _) => {
-                    if endorsing_node_id == *node_id {
-                        return Ok(maybe_node);
-                    }
-                }
-                _ => continue,
-            }
-        }
-
-        // If nothing matched, this node is not allowed to register.
-        Err(Error::NodeNotAllowed)
     }
 
     /// Verify whether the origin transaction is signed by an authorized ROFL instance for the given

@@ -1,14 +1,16 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use anyhow::{anyhow, Result};
+use base64::{prelude::BASE64_STANDARD, Engine};
 use tokio::sync::mpsc;
 
 use crate::{
     core::{
-        common::logger::get_logger,
+        common::{crypto::signature::Signature, logger::get_logger},
         consensus::{
             beacon::EpochTime, state::beacon::ImmutableState as BeaconState, verifier::Verifier,
         },
+        host::attestation::{AttestLabelsRequest, LabelAttestation},
     },
     modules::rofl::types::{AppInstanceQuery, Register, Registration},
 };
@@ -134,7 +136,7 @@ where
             "epoch" => epoch,
         );
 
-        let metadata = match self.state.app.clone().get_metadata(self.env.clone()).await {
+        let mut metadata = match self.state.app.clone().get_metadata(self.env.clone()).await {
             Ok(metadata) => metadata,
             Err(err) => {
                 slog::error!(self.logger, "failed to get instance metadata"; "err" => ?err);
@@ -142,6 +144,11 @@ where
                 Default::default()
             }
         };
+
+        // Include provider-specific metadata if available.
+        if let Err(err) = self.collect_provider_metadata(&mut metadata).await {
+            slog::error!(self.logger, "failed to collect provider metadata"; "err" => ?err);
+        }
 
         // Refresh registration.
         let ect = self
@@ -191,4 +198,51 @@ where
 
         Ok(())
     }
+
+    async fn collect_provider_metadata(
+        &self,
+        metadata: &mut BTreeMap<String, String>,
+    ) -> Result<()> {
+        let rsp = self
+            .env
+            .host()
+            .attestation()
+            .attest_labels(AttestLabelsRequest {
+                labels: vec![LABEL_PROVIDER.to_string()],
+            })
+            .await?;
+
+        // Decode the attestation to check if the provider label is set and skip setting
+        // metadata in case it is not.
+        let la: LabelAttestation = cbor::from_slice(&rsp.attestation)?;
+        match la.labels.get(LABEL_PROVIDER) {
+            None => return Ok(()),
+            Some(value) if value.is_empty() => return Ok(()),
+            _ => {}
+        }
+
+        let pa = ProviderAttestation {
+            label_attestation: rsp.attestation,
+            signature: rsp.signature,
+        };
+
+        let pa = BASE64_STANDARD.encode(cbor::to_vec(pa));
+        metadata.insert(METADATA_KEY_POLICY_PROVIDER_ATTESTATION.to_string(), pa);
+
+        Ok(())
+    }
+}
+
+/// Name of the ROFL app instance metadata key used to store the provider attestation.
+const METADATA_KEY_POLICY_PROVIDER_ATTESTATION: &str = "net.oasis.policy.provider";
+/// Name of the provider label set by the scheduler.
+const LABEL_PROVIDER: &str = "net.oasis.provider";
+
+/// Provider attestation metadata stored in `METADATA_KEY_POLICY_PROVIDER_ATTESTATION` label.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+struct ProviderAttestation {
+    /// A CBOR-serialized `LabelAttestation`.
+    pub label_attestation: Vec<u8>,
+    /// Signature from endorsing node.
+    pub signature: Signature,
 }

@@ -1,10 +1,22 @@
 use std::collections::BTreeMap;
 
+use anyhow::Context;
+use base64::prelude::*;
 use oasis_runtime_sdk::{
+    core::{
+        common::crypto::signature::SignatureBundle,
+        consensus::registry::EndorsedCapabilityTEE,
+        host::attestation::{LabelAttestation, ATTEST_LABELS_SIGNATURE_CONTEXT},
+    },
+    crypto::signature::Signer,
     module,
     modules::{
         accounts::{self, API as _},
-        core, rofl,
+        core,
+        rofl::{
+            self,
+            policy::{BasicEndorsementPolicyEvaluator, EndorsementPolicyEvaluator},
+        },
     },
     testing::{keys, mock},
     types::{
@@ -14,7 +26,7 @@ use oasis_runtime_sdk::{
     Runtime, Version,
 };
 
-use super::{types, ADDRESS_PROVIDER_STAKE_POOL};
+use super::{policy, state, types, ADDRESS_PROVIDER_STAKE_POOL};
 
 type Accounts = accounts::Module;
 type Core = core::Module<Config>;
@@ -23,7 +35,9 @@ struct Config;
 
 impl core::Config for Config {}
 
-impl rofl::Config for Config {}
+impl rofl::Config for Config {
+    type EndorsementPolicyEvaluator = BasicEndorsementPolicyEvaluator;
+}
 
 impl super::Config for Config {
     type Rofl = rofl::Module<Config>;
@@ -1031,4 +1045,160 @@ fn test_instance_accept_timeout() {
     assert_eq!(balance, 0);
     let balance = Accounts::get_balance(keys::charlie::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000_000);
+}
+
+#[test]
+fn test_endorsement_policy_evaluator() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    // Summary of keys used for this test:
+    //
+    // alice: provider
+    // bob: provider's node and scheduler's RAK
+    //
+
+    // Create the scheduler app.
+    let create = rofl::types::Create {
+        scheme: rofl::types::IdentifierScheme::CreatorNonce,
+        ..Default::default()
+    };
+
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "rofl.Create", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+    let scheduler_app: rofl::app_id::AppId =
+        cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+
+    // Create a provider.
+    let create = types::ProviderCreate {
+        scheduler_app,
+        nodes: vec![keys::bob::pk_ed25519().into()], // Bob seems like a nice node.
+        ..Default::default()
+    };
+
+    let dispatch_result = signer_alice.call(&ctx, "roflmarket.ProviderCreate", create.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Create a mock instance of the scheduler app.
+    let fake_registration = rofl::types::Registration {
+        app: scheduler_app,
+        node_id: keys::bob::pk_ed25519().into(), // Bob is a nice approved node.
+        rak: keys::bob::pk_ed25519().into(),     // Bob is also a nice RAK.
+        ..Default::default()
+    };
+    rofl::state::update_registration(fake_registration).unwrap();
+
+    // Create a new accepted instance directly in state.
+    let accepted_instance = types::Instance {
+        provider: keys::alice::address(),
+        status: types::InstanceStatus::Accepted,
+        node_id: Some(keys::bob::pk_ed25519().into()),
+        admin: keys::charlie::address(),
+        ..Default::default()
+    };
+    state::set_instance(accepted_instance.clone());
+
+    // Construct a composite endorsement policy evaluator.
+    type Evaluator = (
+        rofl::policy::BasicEndorsementPolicyEvaluator,
+        super::policy::ProviderEndorsementPolicyEvaluator,
+    );
+
+    // Mock an endorsed TEE with attested labels.
+    let ect = EndorsedCapabilityTEE {
+        node_endorsement: SignatureBundle {
+            public_key: keys::bob::pk_ed25519().into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let provider_label = policy::ProviderLabel {
+        provider: keys::alice::address(),
+        instance: accepted_instance.id,
+    };
+    let label_attestation = cbor::to_vec(LabelAttestation {
+        labels: BTreeMap::from([(
+            policy::LABEL_PROVIDER.to_string(),
+            BASE64_STANDARD.encode(cbor::to_vec(provider_label)),
+        )]),
+        rak: ect.capability_tee.rak,
+    });
+    let signature = keys::bob::signer()
+        .sign(ATTEST_LABELS_SIGNATURE_CONTEXT, &label_attestation)
+        .unwrap();
+    let provider_attestation = policy::ProviderAttestation {
+        label_attestation,
+        signature: signature.into(),
+    };
+    let metadata = BTreeMap::from([(
+        policy::METADATA_KEY_POLICY_PROVIDER_ATTESTATION.to_string(),
+        BASE64_STANDARD.encode(cbor::to_vec(provider_attestation)),
+    )]);
+
+    let tcs = [
+        (
+            vec![Box::new(rofl::policy::AllowedEndorsement::Provider(
+                keys::alice::address(),
+            ))],
+            true,
+        ),
+        (
+            vec![Box::new(rofl::policy::AllowedEndorsement::And(vec![
+                Box::new(rofl::policy::AllowedEndorsement::Provider(
+                    keys::alice::address(),
+                )),
+                Box::new(rofl::policy::AllowedEndorsement::Node(
+                    keys::bob::pk_ed25519().into(),
+                )),
+            ]))],
+            true,
+        ),
+        (
+            vec![Box::new(
+                rofl::policy::AllowedEndorsement::ProviderInstanceAdmin(keys::charlie::address()),
+            )],
+            true,
+        ),
+        (
+            vec![Box::new(
+                rofl::policy::AllowedEndorsement::ProviderInstanceAdmin(keys::dave::address()),
+            )],
+            false,
+        ),
+        (
+            vec![Box::new(rofl::policy::AllowedEndorsement::Provider(
+                keys::bob::address(),
+            ))],
+            false,
+        ),
+        (
+            vec![Box::new(rofl::policy::AllowedEndorsement::Provider(
+                keys::charlie::address(),
+            ))],
+            false,
+        ),
+        (
+            vec![Box::new(rofl::policy::AllowedEndorsement::And(vec![
+                Box::new(rofl::policy::AllowedEndorsement::Provider(
+                    keys::alice::address(),
+                )),
+                Box::new(rofl::policy::AllowedEndorsement::Node(
+                    keys::charlie::pk_ed25519().into(),
+                )),
+            ]))],
+            false,
+        ),
+    ];
+
+    for (idx, tc) in tcs.iter().enumerate() {
+        let result = Evaluator::verify(&ctx, &tc.0, &ect, &metadata);
+        if tc.1 {
+            result.context(format!("test case {}", idx)).unwrap();
+        } else {
+            result.unwrap_err();
+        }
+    }
 }
