@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["AllowedEndorsement","FeePolicy"],"struct":["AppAuthPolicy"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_ENDORSEMENT_POLICY_DEPTH"],"enum":["AllowedEndorsement","EndorsementPolicyOperator","FeePolicy"],"struct":["AppAuthPolicy","BasicEndorsementPolicyEvaluator"],"trait":["EndorsementPolicyEvaluator"]};

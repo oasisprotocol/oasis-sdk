@@ -57,15 +57,23 @@
 <a href=#57 id=57 data-nosnippet>57</a>    #[sdk_error(code = <span class="number">13</span>)]
 <a href=#58 id=58 data-nosnippet>58</a>    </span>PlainCallFormatNotAllowed,
 <a href=#59 id=59 data-nosnippet>59</a>
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
-<a href=#61 id=61 data-nosnippet>61</a>    #[sdk_error(transparent)]
-<a href=#62 id=62 data-nosnippet>62</a>    </span>Core(<span class="attr">#[from] </span>modules::core::Error),
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="attr">#[error(<span class="string">"endorsement policy too deep (max depth: {0})"</span>)]
+<a href=#61 id=61 data-nosnippet>61</a>    #[sdk_error(code = <span class="number">14</span>)]
+<a href=#62 id=62 data-nosnippet>62</a>    </span>EndorsementPolicyTooDeep(usize),
 <a href=#63 id=63 data-nosnippet>63</a>
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="attr">#[error(<span class="string">"accounts: {0}"</span>)]
-<a href=#65 id=65 data-nosnippet>65</a>    #[sdk_error(transparent)]
-<a href=#66 id=66 data-nosnippet>66</a>    </span>Accounts(<span class="attr">#[from] </span>modules::accounts::Error),
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="attr">#[error(<span class="string">"endorsement policy has too many atoms (max: {0})"</span>)]
+<a href=#65 id=65 data-nosnippet>65</a>    #[sdk_error(code = <span class="number">15</span>)]
+<a href=#66 id=66 data-nosnippet>66</a>    </span>EndorsementPolicyTooManyAtoms(usize),
 <a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="attr">#[error(<span class="string">"{0}"</span>)]
-<a href=#69 id=69 data-nosnippet>69</a>    #[sdk_error(transparent, abort)]
-<a href=#70 id=70 data-nosnippet>70</a>    </span>Abort(<span class="attr">#[source] </span>dispatcher::Error),
-<a href=#71 id=71 data-nosnippet>71</a>}</code></pre></div></section></main></body></html>
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="attr">#[error(<span class="string">"core: {0}"</span>)]
+<a href=#69 id=69 data-nosnippet>69</a>    #[sdk_error(transparent)]
+<a href=#70 id=70 data-nosnippet>70</a>    </span>Core(<span class="attr">#[from] </span>modules::core::Error),
+<a href=#71 id=71 data-nosnippet>71</a>
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="attr">#[error(<span class="string">"accounts: {0}"</span>)]
+<a href=#73 id=73 data-nosnippet>73</a>    #[sdk_error(transparent)]
+<a href=#74 id=74 data-nosnippet>74</a>    </span>Accounts(<span class="attr">#[from] </span>modules::accounts::Error),
+<a href=#75 id=75 data-nosnippet>75</a>
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="attr">#[error(<span class="string">"{0}"</span>)]
+<a href=#77 id=77 data-nosnippet>77</a>    #[sdk_error(transparent, abort)]
+<a href=#78 id=78 data-nosnippet>78</a>    </span>Abort(<span class="attr">#[source] </span>dispatcher::Error),
+<a href=#79 id=79 data-nosnippet>79</a>}</code></pre></div></section></main></body></html>

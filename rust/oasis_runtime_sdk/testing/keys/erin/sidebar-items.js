@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["address","pk","pk_secp256k1","sigspec"]};
+window.SIDEBAR_ITEMS = {"fn":["address","pk","pk_secp256k1","signer","sigspec"]};
