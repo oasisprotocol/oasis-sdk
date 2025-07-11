@@ -8,7 +8,8 @@ use std::{
 use anyhow::Result;
 use cmd_lib::run_cmd;
 
-use oasis_runtime_sdk::{core::common::logger::get_logger, modules::rofl::app::prelude::*};
+use oasis_runtime_sdk::core::common::logger::get_logger;
+use rofl_app_core::prelude::*;
 use rofl_appd::services::{self, kms::OpenSecretRequest};
 
 /// Initialize secrets available to containers.

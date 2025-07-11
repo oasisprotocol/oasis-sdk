@@ -17,6 +17,7 @@ members = [
     "contract-sdk-macros",
 
     # ROFL.
+    "rofl-app-core",
     "rofl-utils",
     "rofl-appd",
     "rofl-containers",

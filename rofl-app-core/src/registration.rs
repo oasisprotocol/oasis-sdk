@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use base64::{prelude::BASE64_STANDARD, Engine};
 use tokio::sync::mpsc;
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{
         common::{crypto::signature::Signature, logger::get_logger},
         consensus::{

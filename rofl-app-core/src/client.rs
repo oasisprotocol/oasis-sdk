@@ -11,7 +11,7 @@ use anyhow::{anyhow, Context as _, Result};
 use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{
         common::crypto::{hash::Hash, mrae::deoxysii},
         consensus::{

@@ -19,7 +19,6 @@ use oasis_runtime_sdk::{
         },
         host::{bundle_manager, volume_manager},
     },
-    modules::rofl::app::prelude::*,
     types::address::Address,
 };
 use oasis_runtime_sdk_rofl_market::{
@@ -28,6 +27,7 @@ use oasis_runtime_sdk_rofl_market::{
     types::{Deployment, Instance, InstanceId, InstanceStatus},
 };
 use rand::Rng;
+use rofl_app_core::prelude::*;
 use sha2::{Digest, Sha512_256};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},

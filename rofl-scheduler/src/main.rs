@@ -4,13 +4,11 @@
 
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::{
-    core::{
-        common::{logger::get_logger, process},
-        Protocol,
-    },
-    modules::rofl::app::prelude::*,
+use oasis_runtime_sdk::core::{
+    common::{logger::get_logger, process},
+    Protocol,
 };
+use rofl_app_core::prelude::*;
 
 mod client;
 mod config;

@@ -3,8 +3,9 @@ use std::{collections::BTreeSet, sync::Arc};
 use rocket::{http::Status, serde::json::Json, State};
 use serde_with::serde_as;
 
-use oasis_runtime_sdk::{modules::rofl::app::client::SubmitTxOpts, types::transaction};
+use oasis_runtime_sdk::types::transaction;
 use oasis_runtime_sdk_evm as evm;
+use rofl_app_core::client::SubmitTxOpts;
 
 use crate::state::Env;
 

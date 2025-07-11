@@ -11,7 +11,8 @@ use cmd_lib::run_cmd;
 use libc::{c_int, size_t};
 use nix::{ioctl_read, ioctl_read_bad, ioctl_write_ptr, request_code_none};
 
-use oasis_runtime_sdk::{core::common::logger::get_logger, modules::rofl::app::prelude::*};
+use oasis_runtime_sdk::core::common::logger::get_logger;
+use rofl_app_core::prelude::*;
 use rofl_appd::services::{
     self,
     kms::{GenerateRequest, KeyKind},
