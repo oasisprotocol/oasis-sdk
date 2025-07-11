@@ -20,7 +20,7 @@ use crate::{
     Context, Runtime,
 };
 
-use super::error::Error;
+use super::{error::Error, Config};
 
 /// Maximum depth when evaluating an endorsement policy.
 pub const MAX_ENDORSEMENT_POLICY_DEPTH: usize = 4;
@@ -42,10 +42,18 @@ pub struct AppAuthPolicy {
 
 impl AppAuthPolicy {
     /// Validate the application policy for basic correctness.
-    pub fn validate(&self, max_endorsement_atoms: usize) -> Result<(), Error> {
+    pub fn validate<Cfg: Config>(&self) -> Result<(), Error> {
         let atom_count = Self::count_endorsement_atoms(&self.endorsements, 1)?;
-        if atom_count > max_endorsement_atoms {
-            return Err(Error::EndorsementPolicyTooManyAtoms(max_endorsement_atoms));
+        if atom_count > Cfg::MAX_ENDORSEMENT_POLICY_ATOMS {
+            return Err(Error::EndorsementPolicyTooManyAtoms(
+                Cfg::MAX_ENDORSEMENT_POLICY_ATOMS,
+            ));
+        }
+
+        if self.max_expiration > Cfg::MAX_POLICY_EXPIRATION_EPOCHS {
+            return Err(Error::PolicyMaxExpirationTooHigh(
+                Cfg::MAX_POLICY_EXPIRATION_EPOCHS,
+            ));
         }
 
         Ok(())

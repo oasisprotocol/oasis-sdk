@@ -25,7 +25,7 @@ use crate::{
 use super::{
     app_id::AppId,
     policy::{AllowedEndorsement, BasicEndorsementPolicyEvaluator, EndorsementPolicyEvaluator},
-    state, types, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _,
+    state, types, Error, Genesis, Module, ADDRESS_APP_STAKE_POOL, API as _,
 };
 
 type Accounts = accounts::Module;
@@ -596,7 +596,7 @@ fn test_endorsement_policy_evaluator() {
             endorsements: tc.0.clone(),
             ..Default::default()
         };
-        let result = policy.validate(32);
+        let result = policy.validate::<Config>();
         if tc.2 {
             result
                 .context(format!(
@@ -608,4 +608,14 @@ fn test_endorsement_policy_evaluator() {
             result.expect_err(&format!("test case {}: policy validation should fail", idx));
         }
     }
+}
+
+#[test]
+fn test_policy_validate() {
+    let policy = policy::AppAuthPolicy {
+        max_expiration: 64,
+        ..Default::default()
+    };
+    let result = policy.validate::<Config>();
+    assert!(matches!(result, Err(Error::PolicyMaxExpirationTooHigh(24))));
 }

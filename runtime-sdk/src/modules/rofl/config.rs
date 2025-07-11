@@ -45,6 +45,9 @@ pub trait Config: 'static {
     /// Maximum number of endorsment policy atoms.
     const MAX_ENDORSEMENT_POLICY_ATOMS: usize = 32;
 
+    /// Maximum value of the `max_expiration` field in the app policy (in epochs).
+    const MAX_POLICY_EXPIRATION_EPOCHS: u64 = 24;
+
     /// Endorsement policy evaluator.
     type EndorsementPolicyEvaluator: EndorsementPolicyEvaluator;
 }
