@@ -4712,6 +4712,7 @@ dependencies = [
  "base64 0.22.1",
  "oasis-cbor",
  "oasis-runtime-sdk",
+ "oasis-runtime-sdk-rofl-market",
  "rand 0.8.5",
  "slog",
  "tokio",
