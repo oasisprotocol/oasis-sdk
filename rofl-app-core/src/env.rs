@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use anyhow::{anyhow, Result};
 use tokio::sync::mpsc;
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{common::namespace::Namespace, host::Host, identity::Identity, protocol::Protocol},
     crypto::signature::Signer,
 };

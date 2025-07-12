@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use tokio::sync::mpsc;
 
-use crate::core::common::logger::get_logger;
+use oasis_runtime_sdk::core::common::logger::get_logger;
 
 use super::{processor, App, Environment};
 

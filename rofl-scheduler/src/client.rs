@@ -2,7 +2,7 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use oasis_runtime_sdk::{modules::rofl::app::prelude::*, types::address::Address};
+use oasis_runtime_sdk::types::address::Address;
 use oasis_runtime_sdk_rofl_market::{
     self as market,
     types::{
@@ -10,6 +10,7 @@ use oasis_runtime_sdk_rofl_market::{
         ProviderQuery, QueuedCommand, Update,
     },
 };
+use rofl_app_core::prelude::*;
 
 use super::SchedulerApp;
 

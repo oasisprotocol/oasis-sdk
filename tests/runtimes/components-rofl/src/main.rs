@@ -1,11 +1,11 @@
-use oasis_runtime_sdk::modules::rofl::app::prelude::*;
+use rofl_app_core::prelude::*;
 
 struct TestApp;
 
 #[async_trait]
 impl App for TestApp {
     /// Application version.
-    const VERSION: Version = sdk::version_from_cargo!();
+    const VERSION: Version = Version::new(0, 2, 0);
 
     /// Identifier of the application (used for registrations).
     ///

@@ -1,8 +1,5 @@
-use oasis_runtime_sdk::{
-    crypto::signature::Signer,
-    modules::rofl::app::{client::SubmitTxOpts, prelude::*},
-    types::transaction,
-};
+use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
+use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 
 /// ROFL app environment.
 #[async_trait]

@@ -6,8 +6,9 @@ use std::{
 
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
-use oasis_runtime_sdk::{core::common::logger::get_logger, modules::rofl::app::prelude::*};
+use oasis_runtime_sdk::core::common::logger::get_logger;
 use rcgen::{KeyPair, PKCS_ECDSA_P256_SHA256};
+use rofl_app_core::prelude::*;
 use rustls::{pki_types::pem::PemObject, sign::CertifiedKey};
 
 /// Metadata key used to signal the used TLS public key. The value is `Base64(DER(pk))`.

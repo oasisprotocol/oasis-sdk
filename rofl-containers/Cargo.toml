@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 # Oasis SDK.
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
+rofl-app-core = { path = "../rofl-app-core", features = ["tdx"] }
 rofl-appd = { path = "../rofl-appd" }
 
 # Third party.

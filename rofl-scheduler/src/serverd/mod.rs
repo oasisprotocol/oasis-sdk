@@ -11,7 +11,8 @@ use axum::{http, routing::post, Router};
 use tower::ServiceBuilder;
 use tower_http::cors;
 
-use oasis_runtime_sdk::{modules::rofl::app::prelude::*, types::address::Address};
+use oasis_runtime_sdk::types::address::Address;
+use rofl_app_core::prelude::*;
 
 use crate::{config::LocalConfig, manager::Manager, SchedulerApp};
 

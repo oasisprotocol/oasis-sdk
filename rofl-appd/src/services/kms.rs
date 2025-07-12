@@ -14,8 +14,8 @@ use oasis_runtime_sdk::{
     },
     crypto::signature::{ed25519, secp256k1, Signer},
     modules,
-    modules::rofl::app::{client::DeriveKeyRequest, prelude::*},
 };
+use rofl_app_core::{client::DeriveKeyRequest, prelude::*};
 
 use crate::types::SecretEnvelope;
 
