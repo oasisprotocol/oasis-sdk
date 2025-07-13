@@ -14,8 +14,8 @@ use base64::prelude::*;
 use oasis_runtime_sdk::{
     cbor,
     core::common::{logger::get_logger, process},
-    modules::rofl::app::prelude::*,
 };
+use rofl_app_core::prelude::*;
 use rofl_appd::services;
 
 mod containers;

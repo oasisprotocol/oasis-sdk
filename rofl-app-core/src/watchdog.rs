@@ -1,7 +1,7 @@
 use anyhow::Result;
 use tokio::{sync::mpsc, time};
 
-use crate::core::common::{logger::get_logger, process};
+use oasis_runtime_sdk::core::common::{logger::get_logger, process};
 
 /// Interval in which at least one keep-alive must be delivered to avoid the watchdog from
 /// terminating the application.

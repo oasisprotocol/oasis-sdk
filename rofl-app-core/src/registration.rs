@@ -4,15 +4,18 @@ use anyhow::{anyhow, Result};
 use base64::{prelude::BASE64_STANDARD, Engine};
 use tokio::sync::mpsc;
 
-use crate::{
+use oasis_runtime_sdk::{
     core::{
-        common::{crypto::signature::Signature, logger::get_logger},
+        common::logger::get_logger,
         consensus::{
             beacon::EpochTime, state::beacon::ImmutableState as BeaconState, verifier::Verifier,
         },
         host::attestation::{AttestLabelsRequest, LabelAttestation},
     },
     modules::rofl::types::{AppInstanceQuery, Register, Registration},
+};
+use oasis_runtime_sdk_rofl_market::policy::{
+    ProviderAttestation, LABEL_PROVIDER, METADATA_KEY_POLICY_PROVIDER_ATTESTATION,
 };
 
 use super::{client::SubmitTxOpts, processor, App, Environment};
@@ -231,18 +234,4 @@ where
 
         Ok(())
     }
-}
-
-/// Name of the ROFL app instance metadata key used to store the provider attestation.
-const METADATA_KEY_POLICY_PROVIDER_ATTESTATION: &str = "net.oasis.policy.provider";
-/// Name of the provider label set by the scheduler.
-const LABEL_PROVIDER: &str = "net.oasis.provider";
-
-/// Provider attestation metadata stored in `METADATA_KEY_POLICY_PROVIDER_ATTESTATION` label.
-#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-struct ProviderAttestation {
-    /// A CBOR-serialized `LabelAttestation`.
-    pub label_attestation: Vec<u8>,
-    /// Signature from endorsing node.
-    pub signature: Signature,
 }

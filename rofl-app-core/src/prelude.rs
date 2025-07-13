@@ -5,6 +5,6 @@ pub use anyhow::Result;
 pub use async_trait::async_trait;
 pub use slog;
 
-pub use crate::{self as sdk, core::consensus::verifier::TrustRoot, Version};
+pub use oasis_runtime_sdk::{self as sdk, core::consensus::verifier::TrustRoot, Version};
 
 pub use super::{App, AppId, Environment};
