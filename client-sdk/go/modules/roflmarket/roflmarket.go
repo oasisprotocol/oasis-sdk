@@ -17,6 +17,7 @@ var (
 	methodProviderUpdateOffers = types.NewMethodName("roflmarket.ProviderUpdateOffers", ProviderUpdateOffers{})
 	methodProviderRemove       = types.NewMethodName("roflmarket.ProviderRemove", ProviderRemove{})
 	methodInstanceCreate       = types.NewMethodName("roflmarket.InstanceCreate", InstanceCreate{})
+	methodInstanceChangeAdmin  = types.NewMethodName("roflmarket.InstanceChangeAdmin", InstanceChangeAdmin{})
 	methodInstanceTopUp        = types.NewMethodName("roflmarket.InstanceTopUp", InstanceTopUp{})
 	methodInstanceCancel       = types.NewMethodName("roflmarket.InstanceCancel", InstanceCancel{})
 	methodInstanceExecuteCmds  = types.NewMethodName("roflmarket.InstanceExecuteCmds", InstanceExecuteCmds{})
@@ -301,6 +302,11 @@ func NewProviderRemoveTx(fee *types.Fee, body *ProviderRemove) *types.Transactio
 // NewInstanceCreateTx generates a new roflmarket.InstanceCreate transaction.
 func NewInstanceCreateTx(fee *types.Fee, body *InstanceCreate) *types.Transaction {
 	return types.NewTransaction(fee, methodInstanceCreate, body)
+}
+
+// NewInstanceChangeAdmin generates a new roflmarket.InstanceChangeAdmin transaction.
+func NewInstanceChangeAdmin(fee *types.Fee, body *InstanceChangeAdmin) *types.Transaction {
+	return types.NewTransaction(fee, methodInstanceChangeAdmin, body)
 }
 
 // NewInstanceTopUpTx generates a new roflmarket.InstanceTopUp transaction.

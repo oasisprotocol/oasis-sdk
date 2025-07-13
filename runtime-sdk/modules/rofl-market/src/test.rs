@@ -919,6 +919,132 @@ fn test_instance_management() {
 }
 
 #[test]
+fn test_instance_change_admin() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    // Create a provider.
+    let create = types::ProviderCreate {
+        offers: vec![types::Offer {
+            payment: types::Payment::Native {
+                denomination: Denomination::NATIVE,
+                terms: BTreeMap::from([(types::Term::Month, 10_000)]),
+            },
+            resources: types::Resources {
+                tee: types::TeeType::TDX,
+                memory: 512,
+                cpus: 1,
+                storage: 1024,
+                gpu: None,
+            },
+            capacity: 1,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "roflmarket.ProviderCreate", create.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Create an instance.
+    let create = types::InstanceCreate {
+        provider: keys::alice::address(),
+        offer: 0.into(),
+        admin: None, // Caller.
+        deployment: None,
+        term: types::Term::Month,
+        term_count: 1,
+    };
+
+    let mut signer_charlie = mock::Signer::new(0, keys::charlie::sigspec());
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure instance has the correct admin set.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.admin, keys::charlie::address());
+
+    // Transfer instance to a new admin and then back again.
+    let change_admin = types::InstanceChangeAdmin {
+        provider: keys::alice::address(),
+        id: 0.into(),
+        admin: keys::erin::address(),
+    };
+
+    // Only the current instance admin should be allowed to change the admin.
+    let mut signer_erin = mock::Signer::new(0, keys::erin::sigspec());
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
+    assert!(!dispatch_result.result.is_success(), "call should fail");
+    println!("{:?}", dispatch_result);
+    let (module, code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(module, "roflmarket");
+    assert_eq!(code, 4); // Forbidden.
+
+    // Instance admin should be allowed to change the admin of an instance.
+    let dispatch_result =
+        signer_charlie.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure instance has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.admin, keys::erin::address());
+
+    // Change the instance back.
+    let change_admin = types::InstanceChangeAdmin {
+        provider: keys::alice::address(),
+        id: 0.into(),
+        admin: keys::charlie::address(),
+    };
+
+    // Old admin should not be allowed to change.
+    let dispatch_result =
+        signer_charlie.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
+    assert!(!dispatch_result.result.is_success(), "call should fail");
+    let (module, code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(module, "roflmarket");
+    assert_eq!(code, 4); // Forbidden.
+
+    // Instance admin should be allowed to transfer the instance back.
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure instance has been correctly updated.
+    let instance: types::Instance = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instance",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instance.admin, keys::charlie::address());
+}
+
+#[test]
 fn test_instance_accept_timeout() {
     let mut mock = mock::Mock::default();
     mock.epoch = 42;

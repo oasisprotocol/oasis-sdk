@@ -411,6 +411,19 @@ pub struct InstanceCreate {
     pub term_count: u64,
 }
 
+/// A request by the existing instance admin to change the admin.
+///
+/// Only an instance admin can call this method.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct InstanceChangeAdmin {
+    /// Provider address.
+    pub provider: Address,
+    /// Target instance identifier.
+    pub id: InstanceId,
+    /// New administrator address.
+    pub admin: Address,
+}
+
 /// A request to top-up an instance.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceTopUp {
@@ -502,6 +515,8 @@ pub struct InstanceClaimPayment {
 }
 
 /// A request by the admin to cancel an instance.
+///
+/// Only an instance admin can call this method.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceCancel {
     /// Target provider address.
@@ -523,6 +538,8 @@ pub struct InstanceRemove {
 }
 
 /// Queue commands to be executed on an instance.
+///
+/// Only an instance admin can call this method.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceExecuteCmds {
     /// Target provider address.
