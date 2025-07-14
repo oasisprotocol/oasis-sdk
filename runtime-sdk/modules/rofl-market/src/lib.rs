@@ -405,6 +405,35 @@ impl<Cfg: Config> Module<Cfg> {
         Ok(instance_id)
     }
 
+    #[handler(call = "roflmarket.InstanceChangeAdmin")]
+    fn tx_instance_change_admin<C: Context>(
+        ctx: &C,
+        body: types::InstanceChangeAdmin,
+    ) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_CHANGE_ADMIN)?;
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(());
+        }
+
+        let mut instance =
+            state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
+        Self::ensure_caller_is_instance_admin(&instance)?;
+
+        instance.admin = body.admin;
+        instance.updated_at = ctx.now();
+        state::set_instance(instance);
+
+        CurrentState::with(|state| {
+            state.emit_event(Event::InstanceUpdated {
+                provider: body.provider,
+                id: body.id,
+            })
+        });
+
+        Ok(())
+    }
+
     #[handler(call = "roflmarket.InstanceTopUp")]
     fn tx_instance_topup<C: Context>(ctx: &C, body: types::InstanceTopUp) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_TOPUP)?;

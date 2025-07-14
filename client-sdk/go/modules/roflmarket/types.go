@@ -329,6 +329,18 @@ type InstanceCreate struct {
 	TermCount uint64 `json:"term_count"`
 }
 
+// InstanceChangeAdmin is the body of roflmarket.InstanceChangeAdmin method.
+//
+// Only an instance admin can call this method.
+type InstanceChangeAdmin struct {
+	// Provider is the provider address.
+	Provider types.Address `json:"provider"`
+	// ID is the target instance identifier.
+	ID InstanceID `json:"id"`
+	// Admin is the new administrator address.
+	Admin types.Address `json:"admin"`
+}
+
 // InstanceTopUp is the body of roflmarket.InstanceTopUp method.
 type InstanceTopUp struct {
 	// Provider is the provider address.
@@ -342,6 +354,8 @@ type InstanceTopUp struct {
 }
 
 // InstanceCancel is the body of roflmarket.InstanceCancel method.
+//
+// Only an instance admin can call this method.
 type InstanceCancel struct {
 	// Provider is the provider address.
 	Provider types.Address `json:"provider"`
@@ -350,6 +364,8 @@ type InstanceCancel struct {
 }
 
 // InstanceExecuteCmds is the body of roflmarket.InstanceExecuteCmds method.
+//
+// Only an instance admin can call this method.
 type InstanceExecuteCmds struct {
 	// Provider is the provider address.
 	Provider types.Address `json:"provider"`
