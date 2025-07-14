@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/quote"
+	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
 // AppAuthPolicy is the per-application ROFL policy.
@@ -37,6 +38,18 @@ type AllowedEndorsement struct {
 	Entity *signature.PublicKey `json:"entity,omitempty" yaml:"entity,omitempty"`
 	// Node specifies that a specific node can endorse the enclave.
 	Node *signature.PublicKey `json:"node,omitempty" yaml:"node,omitempty"`
+	// Provider specifies that any node from a specific provider can endorse the enclave.
+	Provider *types.Address `json:"provider,omitempty" yaml:"provider,omitempty"`
+	// ProviderInstanceAdmin specifies that any provider instance where the given address is currently
+	// the admin can endorse the enclave.
+	ProviderInstanceAdmin *types.Address `json:"provider_instance_admin,omitempty" yaml:"provider_instance_admin,omitempty"`
+
+	// And evaluates all of the child endorsement policies and allows in case all accept the
+	// endorsement.
+	And []*AllowedEndorsement `json:"and,omitempty" yaml:"and,omitempty"`
+	// Or evaluates all of the child endorsement policies and allows in case any accept the
+	// endorsement.
+	Or []*AllowedEndorsement `json:"or,omitempty" yaml:"or,omitempty"`
 }
 
 // FeePolicy is a gas fee payment policy.
