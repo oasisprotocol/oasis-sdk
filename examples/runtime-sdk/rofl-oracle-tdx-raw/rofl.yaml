@@ -1,0 +1,37 @@
+name: rofl-oracle-tdx-raw
+version: 0.1.0
+tee: tdx
+kind: raw
+resources:
+  memory: 512
+  cpus: 1
+  storage:
+    kind: disk-persistent
+    size: 512
+artifacts:
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage1.bin#23877530413a661e9187aad2eccfc9660fc4f1a864a1fbad2f6c7d43512071ca
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
+deployments:
+  testnet:
+    app_id: rofl1qzxxvcstj3upfxfrf7l32quzd2cuvkqsvsa2huu3
+    network: testnet
+    paratime: sapphire
+    admin: dave
+    trust_root:
+      height: 27512977
+      hash: 202066c13513069cf50c4b24fd3a6c7d6ec2134780781310975034995c69f24c
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+          tdx: {}
+      enclaves:
+        - id: qzAcTlNHoJLLIYOUkI2MkCIxbSqtrl6tgmjepoKpeBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: 2ix2fpJND5LSx3oKQBPu5EyOkKQ7+sf8VDnQBJj/HPYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
