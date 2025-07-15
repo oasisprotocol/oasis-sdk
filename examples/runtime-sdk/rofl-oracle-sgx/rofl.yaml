@@ -1,0 +1,29 @@
+name: rofl-oracle-sgx
+version: 0.1.0
+tee: sgx
+kind: raw
+resources:
+  memory: 512
+  cpus: 1
+artifacts:
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
+deployments:
+  default:
+    app_id: rofl1qpp0rk6zwnqjjapj20wwr4fmnx806rzm6uqtf3fx
+    network: testnet
+    paratime: sapphire
+    admin: dave
+    trust_root:
+      height: 27512901
+      hash: 8b91500bf57697794d2c922abe63659d49ac8b473321501de6e12b37f5204342
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+      enclaves:
+        - id: QN/c3Y84cUrHEg0RuPcY92IYdI0OkyfWDSnoOOYN+uiJCcKRtplpAECy13q8vMtc6pR4SqvG7uYUAYn10Jtq2w==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
