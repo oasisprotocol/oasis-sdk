@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.2.5
+version: 0.3.0
 repository: https://github.com/oasisprotocol/oasis-sdk
 description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 tee: tdx
@@ -52,7 +52,11 @@ deployments:
         - id: FTu9d6JtwzLUwkyW5YwOxmxCmzz3uvn6/jI7iFan0d8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.4
         - id: fxPwJH4cORkye0xbxxosfnr+WGonbHW7NzNhV5n5MwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.5
         - id: v356Ki5kxEwBc7pbwmrRdIGf+g40h6PvYFs2Xa+6MgoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.5
+        - id: 4SSJB1hpKRpTkYl244GSqXh2EegoQfRdXFyInsZtXUcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: gt3ATFEOud1vByy7uhB6MoBuEkPHqhmekm49lYAb2I0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -93,7 +97,11 @@ deployments:
         - id: FLB2DbPWOH5FAhW7swxjdA0czQiGBnVSEK9GRj6pAxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.4
         - id: PrrMd3pK+l/zL64LiRpZzyshlRIHajHSpWcHcriEllcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.5
         - id: SB3/sv5IGderOxKZT3dLdFehD6EIKiL7pe/IxmMzw50AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.2.5
+        - id: yjwpJ22sHTIJWQgmdKUpJGp/bkwQts76SC2nVwKt5xEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: IVXe0YbOdkNd+tBEBs5qu78lDxiVWPHsE8MdypaOta0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
