@@ -14,14 +14,15 @@ use crate::{
     core::common::quantity::Quantity,
     handler, migration,
     module::{self, FeeProxyHandler, Module as _, Parameters as _},
-    modules,
-    modules::core::{Error as CoreError, API as _},
+    modules::{
+        self,
+        core::{Error as CoreError, API as _},
+    },
     runtime::Runtime,
     sdk_derive,
     sender::SenderMeta,
-    state::CurrentState,
-    storage,
-    storage::Prefix,
+    state::{CurrentState, Mode},
+    storage::{self, Prefix},
     types::{
         address::{Address, SignatureAddressSpec},
         token,
@@ -39,7 +40,7 @@ const MODULE_NAME: &str = "accounts";
 
 /// Maximum delta that the transaction nonce can be in the future from the current nonce to still
 /// be accepted during transaction checks.
-const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 0; // Increase once supported in Oasis Core.
+const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 5;
 
 /// Errors emitted by the accounts module.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
@@ -690,8 +691,7 @@ impl API for Module {
         _ctx: &C,
         auth_info: &AuthInfo,
     ) -> Result<Address, modules::core::Error> {
-        let is_pre_schedule = CurrentState::with_env(|env| env.is_pre_schedule());
-        let is_check_only = CurrentState::with_env(|env| env.is_check_only());
+        let mode = CurrentState::with_env(|env| env.mode());
 
         // TODO: Optimize the check/update pair so that the accounts are
         // fetched only once.
@@ -728,23 +728,23 @@ impl API for Module {
                     }
                     Ordering::Equal => {} // Ok.
                     Ordering::Greater => {
+                        // In the future.
+                        match mode {
+                            Mode::Check => {}
+                            Mode::PreSchedule => {
+                                // Reject with a separate error that will make
+                                // the scheduler skip the transaction.
+                                return Err(modules::core::Error::FutureNonce);
+                            }
+                            _ => {
+                                return Err(modules::core::Error::InvalidNonce);
+                            }
+                        }
+
                         // If too much in the future, reject.
                         if si.nonce - account.nonce > MAX_CHECK_NONCE_FUTURE_DELTA {
                             return Err(modules::core::Error::InvalidNonce);
                         }
-
-                        // If in the future and this is before scheduling, reject with separate error
-                        // that will make the scheduler skip the transaction.
-                        if is_pre_schedule {
-                            return Err(modules::core::Error::FutureNonce);
-                        }
-
-                        // If in the future and this is during execution, reject.
-                        if !is_check_only {
-                            return Err(modules::core::Error::InvalidNonce);
-                        }
-
-                        // If in the future and this is during checks, accept.
                     }
                 }
             }
@@ -755,7 +755,7 @@ impl API for Module {
         // Configure the sender.
         let sender = sender.expect("at least one signer is always present");
         let sender_address = sender.address;
-        if is_check_only {
+        if mode == Mode::Check {
             <C::Runtime as Runtime>::Core::set_sender_meta(sender);
         }
 
