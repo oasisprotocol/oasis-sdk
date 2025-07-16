@@ -7,7 +7,7 @@ use std::{
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
 use oasis_runtime_sdk::core::common::logger::get_logger;
-use rcgen::{KeyPair, PKCS_ECDSA_P256_SHA256};
+use rcgen::{KeyPair, PublicKeyData, PKCS_ECDSA_P256_SHA256};
 use rofl_app_core::prelude::*;
 use rustls::{pki_types::pem::PemObject, sign::CertifiedKey};
 
@@ -43,7 +43,7 @@ impl Identity {
     pub fn metadata(&self) -> BTreeMap<String, String> {
         BTreeMap::from([(
             METADATA_KEY_TLS_PK.to_string(),
-            BASE64_STANDARD.encode(self.key.public_key_der()),
+            BASE64_STANDARD.encode(self.key.subject_public_key_info()),
         )])
     }
 }
@@ -84,16 +84,18 @@ impl CertificateProvisioner {
         let mut acme = None;
         while acme.is_none() {
             // TODO: Support saving/loading the account information.
-            let result = instant_acme::Account::create(
-                &instant_acme::NewAccount {
-                    contact: &[],
-                    terms_of_service_agreed: true,
-                    only_return_existing: false,
-                },
-                instant_acme::LetsEncrypt::Production.url().to_owned(),
-                None,
-            )
-            .await;
+            let result = instant_acme::Account::builder()
+                .unwrap()
+                .create(
+                    &instant_acme::NewAccount {
+                        contact: &[],
+                        terms_of_service_agreed: true,
+                        only_return_existing: false,
+                    },
+                    instant_acme::LetsEncrypt::Production.url().to_owned(),
+                    None,
+                )
+                .await;
             match result {
                 Ok((acct, _)) => acme = Some(acct),
                 Err(err) => {
@@ -196,7 +198,9 @@ impl CertificateProvisioner {
 
         // Exponentially back off until the order becomes ready or invalid.
         slog::info!(self.logger, "waiting for order to become ready");
-        let status = order.poll(5, Duration::from_millis(250)).await?;
+        let status = order
+            .poll_ready(&instant_acme::RetryPolicy::default())
+            .await?;
         if status != instant_acme::OrderStatus::Ready {
             return Err(anyhow::anyhow!("unexpected order status: {status:?}"));
         }
@@ -214,12 +218,9 @@ impl CertificateProvisioner {
         let key_pair = Identity::global()?.key();
         let csr = params.serialize_request(key_pair)?;
         order.finalize_csr(csr.der()).await?;
-        let cert_chain_pem = loop {
-            match order.certificate().await? {
-                Some(cert_chain_pem) => break cert_chain_pem,
-                None => tokio::time::sleep(Duration::from_secs(1)).await,
-            }
-        };
+        let cert_chain_pem = order
+            .poll_certificate(&instant_acme::RetryPolicy::default())
+            .await?;
 
         let key_pair = rustls::pki_types::PrivateKeyDer::Pkcs8(
             rustls::pki_types::PrivatePkcs8KeyDer::from(key_pair.serialize_der()),
