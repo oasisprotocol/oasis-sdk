@@ -1033,11 +1033,24 @@ export interface RoflmarketInstanceCommandQueuedEvent {
 // Types for rofl module
 
 export interface RoflAllowedEndorsement {
+    /** Any node can endorse the enclave. */
     any?: oasis.types.NotModeled;
+    /** Compute node for the current runtime can endorse the enclave. */
     role_compute?: oasis.types.NotModeled;
+    /** Observer node for the current runtime can endorse the enclave. */
     role_observer?: oasis.types.NotModeled;
+    /** Registered node from a specific entity can endorse the enclave. */
     entity?: Uint8Array;
+    /** Specific node can endorse the enclave. */
     node?: Uint8Array;
+    /** Any node from a specific provider can endorse the enclave. */
+    provider?: Uint8Array;
+    /** Any provider instance where the given address is currently the admin. */
+    provider_instance_admin?: Uint8Array;
+    /** Evaluate all of the child endorsement policies and allow in case all accept the node. */
+    and?: RoflAllowedEndorsement[];
+    /** Evaluate all of the child endorsement policies and allow in case any accepts the node. */
+    or?: RoflAllowedEndorsement[];
 }
 
 export enum IdentifierScheme {
