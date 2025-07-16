@@ -14,14 +14,10 @@ in the `compose.yaml` file are automatically stored to persistent storage. This
 way they are fetched only the first time a ROFL app is deployed, otherwise
 a cached version is considered.
 
-Additionally, a ROFL developer can also take advantage of the persistent
-storage. Any folder residing inside the `/storage` folder on the host will be
-made persistent.
-
-In the example below, we use the [short syntax for Compose
-volumes][compose-volumes] to make the `.ollama` home folder persistent. This way
-we avoid downloading ollama models each time a machine hosting the ROFL app is
-restarted:
+All non-external container volumes will automatically reside in persistent
+storage. In the example below, we [define a new volume] called `my-volume` and
+make `.ollama` in the home folder persistent. This way we avoid downloading
+ollama models each time a machine hosting the ROFL app is restarted:
 
 ```yaml title="compose.yaml"
 services:
@@ -30,8 +26,11 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - /storage/ollama:/root/.ollama
+      - my-volume:/root/.ollama
     entrypoint: ["/usr/bin/bash", "-c", "/bin/ollama serve & sleep 5; ollama pull deepseek-r1:1.5b; wait"]
+
+volumes:
+  my-volume:
 ```
 
-[compose-volumes]: https://docs.docker.com/reference/compose-file/services/#short-syntax-5
+[define a new volume]: https://docs.docker.com/reference/compose-file/volumes/
