@@ -59,8 +59,9 @@ export function toHex(u8: Uint8Array) {
     return hex;
 }
 
-export function fromHex(hex: string) {
-    let byteLength = hex.length >> 1;
+export function fromHex(_hex: string | `0x${string}`) {
+    const hex = _hex.replace('0x', '');
+    const byteLength = hex.length >> 1;
     const u8 = new Uint8Array(byteLength);
     for (let i = 0; i < byteLength; i++) {
         u8[i] = parseInt(hex.substring(2 * i, 2 * i + 2), 16);
