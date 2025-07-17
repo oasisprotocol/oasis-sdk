@@ -80,7 +80,12 @@ export class Wrapper extends wrapper.Base {
         return this.call<types.RoflmarketInstanceCancel, void>(METHOD_INSTANCE_CANCEL);
     }
 
-    /** Executes commands on a machine instance. */
+    /**
+     * Executes commands on a machine instance.
+     *
+     * https://github.com/oasisprotocol/oasis-sdk/blob/4fdb76f/rofl-scheduler/src/types.rs
+     * https://github.com/oasisprotocol/cli/blob/b6894a1/build/rofl/scheduler/commands.go#L9-L42
+     */
     callInstanceExecuteCmds() {
         return this.call<types.RoflmarketInstanceExecuteCmds, void>(METHOD_INSTANCE_EXECUTE_CMDS);
     }
