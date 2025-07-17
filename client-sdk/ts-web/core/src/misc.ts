@@ -61,6 +61,7 @@ export function toHex(u8: Uint8Array) {
 
 export function fromHex(_hex: string | `0x${string}`) {
     const hex = _hex.replace('0x', '');
+    if (!/^[0-9a-f]+$/i.test(hex)) throw new Error(`invalid hex ${_hex}`);
     const byteLength = hex.length >> 1;
     const u8 = new Uint8Array(byteLength);
     for (let i = 0; i < byteLength; i++) {
