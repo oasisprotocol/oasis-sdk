@@ -34,9 +34,16 @@ export const EVENT_INSTANCE_REGISTERED_CODE = 4;
 
 export const ADDRESS_PREFIX = 'rofl';
 export function toBech32(appID: types.AppID) {
+    if (appID.length !== 21) {
+        throw new Error(`wrong address length: ${appID}`);
+    }
     return oasis.address.toBech32(ADDRESS_PREFIX, appID);
 }
 export function fromBech32(str: string): types.AppID {
+    if (str.length !== 41 + ADDRESS_PREFIX.length) {
+        // prevent e.g. rofl1qqqqqqqtwy44z
+        throw new Error(`wrong address length: ${str}`);
+    }
     return oasis.address.fromBech32(ADDRESS_PREFIX, str);
 }
 
