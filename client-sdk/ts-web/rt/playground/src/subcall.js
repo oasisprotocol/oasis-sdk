@@ -96,6 +96,13 @@ export const playground = (async function () {
         .query(testnetNic);
     console.log('App', app);
 
+    // Type-only test:
+    // Even though this subcall would successfully submit it would have no effect.
+    rofl.callUpdate()
+        // @ts-expect-error Expect typescript to warn about extraneous fields
+        .setBody({...app, metadata: {}})
+        .toSubcall();
+
     console.log('update app with secrets?');
     hash = await client.sendTransaction(
         rofl
