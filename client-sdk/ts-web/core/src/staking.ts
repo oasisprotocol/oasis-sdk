@@ -208,10 +208,17 @@ export function addressFromRuntimeID(id: Uint8Array) {
 }
 
 export function addressToBech32(addr: Uint8Array) {
+    if (addr.length !== 21) {
+        throw new Error(`wrong address length: ${addr}`);
+    }
     return address.toBech32(ADDRESS_PREFIX, addr);
 }
 
 export function addressFromBech32(str: string) {
+    if (str.length !== 41 + ADDRESS_PREFIX.length) {
+        // prevent e.g. oasis1qqqqqqqq4hsye4
+        throw new Error(`wrong address length: ${str}`);
+    }
     return address.fromBech32(ADDRESS_PREFIX, str);
 }
 
