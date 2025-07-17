@@ -63,7 +63,7 @@ export function fromHex(hex: string) {
     let byteLength = hex.length >> 1;
     const u8 = new Uint8Array(byteLength);
     for (let i = 0; i < byteLength; i++) {
-        u8[i] = parseInt(hex.substr(2 * i, 2), 16);
+        u8[i] = parseInt(hex.substring(2 * i, 2 * i + 2), 16);
     }
     return u8;
 }
