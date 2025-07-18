@@ -135,8 +135,30 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
 
 **Example response:**
 
-```json
-{
-  "data": "f6"
-}
-```
+Inside `data` the JSON response contains a CBOR-serialized hex-encoded
+[call result]. To investigate it you will need to deserialize it first.
+
+For example:
+
+- Successful call result:
+
+  ```json
+  {
+    "data": "a1626f6b40"
+  }
+  ```
+  
+  deserialized as `{"ok": ''}`.
+
+- Unsusccessful call result:
+
+  ```json
+  {
+    "data": "a1646661696ca364636f646508666d6f64756c656365766d676d6573736167657272657665727465643a20614a416f4c773d3d"
+  }
+  ```
+  
+  deserialized as
+  `{"fail": {"code": 8, "module": "evm", "message": "reverted: aJAoLw=="}}`.
+
+[call result]: https://api.docs.oasis.io/rust/oasis_runtime_sdk/types/transaction/enum.CallResult.html
