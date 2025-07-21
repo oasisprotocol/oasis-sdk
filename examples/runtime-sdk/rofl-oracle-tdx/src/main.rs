@@ -3,7 +3,11 @@ use oasis_runtime_sdk::modules::rofl::app::prelude::*;
 /// Address where the oracle contract is deployed.
 // #region oracle-contract-address
 const ORACLE_CONTRACT_ADDRESS: &str = "0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20"; // TODO: Replace with your contract address.
-                                                                                    // #endregion oracle-contract-address
+// #endregion oracle-contract-address
+
+/// Type of the submitObservation function inside the contract.
+const SUBMIT_OBSERVATION: solabi::FunctionEncoder<(u128,), (bool,)> =
+    solabi::FunctionEncoder::new(solabi::selector!("submitObservation(uint128)"));
 
 struct OracleApp;
 
@@ -73,12 +77,7 @@ impl OracleApp {
             module_evm::types::Call {
                 address: ORACLE_CONTRACT_ADDRESS.parse().unwrap(),
                 value: 0.into(),
-                data: [
-                    ethabi::short_signature("submitObservation", &[ethabi::ParamType::Uint(128)])
-                        .to_vec(),
-                    ethabi::encode(&[ethabi::Token::Uint(observation.into())]),
-                ]
-                .concat(),
+                data: SUBMIT_OBSERVATION.encode_params(&(observation,)),
             },
         );
         tx.set_fee_gas(200_000);
