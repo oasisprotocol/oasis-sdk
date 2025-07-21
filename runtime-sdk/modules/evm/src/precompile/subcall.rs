@@ -1,4 +1,3 @@
-use ethabi::{ParamType, Token};
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
     ExitError, ExitSucceed,
@@ -45,28 +44,19 @@ pub(super) fn call_subcall<B: EVMBackendExt>(
         });
     }
 
-    let mut call_args = ethabi::decode(
-        &[
-            ParamType::Bytes, // method
-            ParamType::Bytes, // body (CBOR)
-        ],
-        handle.input(),
-    )
-    .map_err(|e| PrecompileFailure::Error {
-        exit_status: ExitError::Other(e.to_string().into()),
-    })?;
-
-    // Parse raw arguments.
-    let body = call_args.pop().unwrap().into_bytes().unwrap();
-    let method = call_args.pop().unwrap().into_bytes().unwrap();
+    // Decode arguments.
+    let (method, body): (solabi::Bytes<Vec<u8>>, solabi::Bytes<Vec<u8>>) =
+        solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
+            exit_status: ExitError::Other(e.to_string().into()),
+        })?;
 
     // Parse body as CBOR.
-    let body = cbor::from_slice(&body).map_err(|_| PrecompileFailure::Error {
+    let body = cbor::from_slice(body.as_bytes()).map_err(|_| PrecompileFailure::Error {
         exit_status: ExitError::Other("body is malformed".into()),
     })?;
 
     // Parse method.
-    let method = String::from_utf8(method).map_err(|_| PrecompileFailure::Error {
+    let method = String::from_utf8(method.to_vec()).map_err(|_| PrecompileFailure::Error {
         exit_status: ExitError::Other("method is malformed".into()),
     })?;
 
@@ -94,17 +84,17 @@ pub(super) fn call_subcall<B: EVMBackendExt>(
     match result.call_result {
         CallResult::Ok(value) => Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            output: ethabi::encode(&[
-                Token::Uint(0.into()),             // status_code
-                Token::Bytes(cbor::to_vec(value)), // response
-            ]),
+            output: solabi::encode(&(
+                0_u64,                              // status_code
+                solabi::Bytes(cbor::to_vec(value)), // response
+            )),
         }),
         CallResult::Failed { code, module, .. } => Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            output: ethabi::encode(&[
-                Token::Uint(code.into()),    // status_code
-                Token::Bytes(module.into()), // response
-            ]),
+            output: solabi::encode(&(
+                code,                             // status_code
+                solabi::Bytes(module.as_bytes()), // response
+            )),
         }),
         CallResult::Aborted(_) => {
             // TODO: Should propagate abort.
@@ -118,7 +108,6 @@ pub(super) fn call_subcall<B: EVMBackendExt>(
 #[cfg(test)]
 mod test {
     use base64::prelude::*;
-    use ethabi::{ParamType, Token};
 
     use oasis_runtime_sdk::{
         module::{self, Module as _},
@@ -161,18 +150,14 @@ mod test {
         let dispatch_result = signer.call_evm(
             &ctx,
             contract_address.into(),
-            "test",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test(bytes,bytes)"),
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 })),
-            ],
+            ),
         );
         assert!(
             !dispatch_result.result.is_success(),
@@ -197,18 +182,14 @@ mod test {
         let dispatch_result = signer.call_evm_opts(
             &ctx,
             contract_address.into(),
-            "test",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test(bytes,bytes)"),
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(1_000, Denomination::NATIVE),
                 })),
-            ],
+            ),
             CallOptions {
                 fee: Fee {
                     amount: BaseUnits::new(100, Denomination::NATIVE),
@@ -268,18 +249,14 @@ mod test {
         let dispatch_result = signer.call_evm(
             &ctx,
             contract_address.into(),
-            "test_delegatecall",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test_delegatecall(bytes,bytes)"),
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(0, Denomination::NATIVE),
                 })),
-            ],
+            ),
         );
         if let module::CallResult::Failed {
             module,
@@ -308,30 +285,24 @@ mod test {
         let dispatch_result = signer.call_evm(
             &ctx,
             contract_address.into(),
-            "test",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("evm.Call".into()),
-                Token::Bytes(cbor::to_vec(evm::types::Call {
+            solabi::selector!("test(bytes,bytes)"),
+            &(
+                solabi::Bytes("evm.Call".as_bytes()),
+                solabi::Bytes(cbor::to_vec(evm::types::Call {
                     address: contract_address.into(),
                     value: 0.into(),
-                    data: [
-                        ethabi::short_signature("test", &[ParamType::Bytes, ParamType::Bytes])
-                            .to_vec(),
-                        ethabi::encode(&[
-                            Token::Bytes("accounts.Transfer".into()),
-                            Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+                    data: solabi::encode_with_selector(
+                        solabi::selector!("test(bytes,bytes)"),
+                        &(
+                            solabi::Bytes("accounts.Transfer".as_bytes()),
+                            solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                                 to: keys::alice::address(),
                                 amount: BaseUnits::new(0, Denomination::NATIVE),
                             })),
-                        ]),
-                    ]
-                    .concat(),
+                        ),
+                    ),
                 })),
-            ],
+            ),
         );
         if let module::CallResult::Failed {
             module,
@@ -368,18 +339,14 @@ mod test {
         let dispatch_result = signer.call_evm_opts(
             &ctx,
             contract_address.into(),
-            "test",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test(bytes,bytes)"),
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(0, Denomination::NATIVE),
                 })),
-            ],
+            ),
             CallOptions {
                 fee: Fee {
                     gas: 130_000,
@@ -398,18 +365,14 @@ mod test {
         let dispatch_result = signer.call_evm_opts(
             &ctx,
             contract_address.into(),
-            "test",
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test(bytes,bytes)"),
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(0, Denomination::NATIVE),
                 })),
-            ],
+            ),
             CallOptions {
                 fee: Fee {
                     gas: 120_000,
@@ -450,18 +413,14 @@ mod test {
         let dispatch_result = signer.call_evm_opts(
             &ctx,
             contract_address.into(),
-            "test_spin", // Version that spins, wasting gas, after the subcall.
-            &[
-                ParamType::Bytes, // method
-                ParamType::Bytes, // body
-            ],
-            &[
-                Token::Bytes("accounts.Transfer".into()),
-                Token::Bytes(cbor::to_vec(accounts::types::Transfer {
+            solabi::selector!("test_spin(bytes,bytes)"), // Version that spins, wasting gas, after the subcall.
+            &(
+                solabi::Bytes("accounts.Transfer".as_bytes()),
+                solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
                     amount: BaseUnits::new(0, Denomination::NATIVE),
                 })),
-            ],
+            ),
             CallOptions {
                 fee: Fee {
                     gas: 127_710,
