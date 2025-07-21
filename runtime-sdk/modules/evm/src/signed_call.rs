@@ -116,8 +116,8 @@ fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
         Token::Address(query.caller.0.into()),
         Token::Address(query.address.unwrap_or_default().0.into()),
         Token::Uint(query.gas_limit.into()),
-        Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
-        Token::Uint(ethabi::ethereum_types::U256(query.value.0)),
+        Token::Uint(primitive_types::U256(query.gas_price.0)),
+        Token::Uint(primitive_types::U256(query.value.0)),
         encode_bytes(&query.data),
         Token::Uint(hash_leash(leash).into()),
     ])
