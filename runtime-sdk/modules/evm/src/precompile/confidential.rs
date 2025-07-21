@@ -1,7 +1,6 @@
 //! Implements the confidential precompiles.
 use std::{collections::HashMap, convert::TryInto};
 
-use ethabi::{ParamType, Token};
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
     ExitError, ExitRevert, ExitSucceed,
@@ -82,16 +81,17 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     handle: &mut impl PrecompileHandle,
     backend: &B,
 ) -> PrecompileResult {
-    let mut call_args = ethabi::decode(&[ParamType::Uint(256), ParamType::Bytes], handle.input())
-        .map_err(|e| PrecompileFailure::Error {
-        exit_status: ExitError::Other(e.to_string().into()),
-    })?;
-    let pers_str = call_args.pop().unwrap().into_bytes().unwrap();
-    let num_bytes_big = call_args.pop().unwrap().into_uint().unwrap();
-    let num_bytes = num_bytes_big
+    let (num_bytes_big, pers_str): (solabi::U256, solabi::Bytes<Vec<u8>>) =
+        solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
+            exit_status: ExitError::Other(e.to_string().into()),
+        })?;
+
+    let pers_str = pers_str.as_bytes();
+    let num_bytes: u64 = num_bytes_big
         .try_into()
         .unwrap_or(u64::MAX)
         .min(RNG_MAX_BYTES);
+
     // This operation shouldn't be too cheap to start since it invokes a key manager.
     // Each byte is generated using hashing, so it's neither expensive nor cheap.
     // Thus:
@@ -104,7 +104,7 @@ pub(super) fn call_random_bytes<B: EVMBackendExt>(
     record_multilinear_cost(handle, num_bytes, pers_str.len() as u64, 240, 60, 10_000)?;
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        output: backend.random_bytes(num_bytes, &pers_str),
+        output: backend.random_bytes(num_bytes, pers_str),
     })
 }
 
@@ -171,27 +171,24 @@ pub(super) fn call_x25519_derive(handle: &mut impl PrecompileHandle) -> Precompi
 fn decode_deoxysii_call_args(
     input: &[u8],
 ) -> Result<([u8; KEY_SIZE], [u8; NONCE_SIZE], Vec<u8>, Vec<u8>), PrecompileFailure> {
-    let mut call_args = ethabi::decode(
-        &[
-            ParamType::FixedBytes(32), // key
-            ParamType::FixedBytes(32), // nonce
-            ParamType::Bytes,          // plain or ciphertext
-            ParamType::Bytes,          // associated data
-        ],
-        input,
-    )
-    .map_err(|e| PrecompileFailure::Error {
+    let (key, nonce, text, ad): (
+        solabi::Bytes<[u8; 32]>, // key
+        solabi::Bytes<[u8; 32]>, // nonce
+        solabi::Bytes<Vec<u8>>,  // plain or ciphertext
+        solabi::Bytes<Vec<u8>>,  // associated data
+    ) = solabi::decode(input).map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
     })?;
-    let ad = call_args.pop().unwrap().into_bytes().unwrap();
-    let text = call_args.pop().unwrap().into_bytes().unwrap();
-    let nonce_bytes = call_args.pop().unwrap().into_fixed_bytes().unwrap();
-    let key_bytes = call_args.pop().unwrap().into_fixed_bytes().unwrap();
+
+    let key_bytes = key.as_bytes();
+    let nonce_bytes = nonce.as_bytes();
+    let text = text.to_vec();
+    let ad = ad.to_vec();
 
     let mut nonce = [0u8; NONCE_SIZE];
     nonce.copy_from_slice(&nonce_bytes[..NONCE_SIZE]);
     let mut key = [0u8; KEY_SIZE];
-    key.copy_from_slice(&key_bytes);
+    key.copy_from_slice(key_bytes);
 
     Ok((key, nonce, text, ad))
 }
@@ -239,27 +236,16 @@ pub(super) fn call_deoxysii_open(handle: &mut impl PrecompileHandle) -> Precompi
 }
 
 pub(super) fn call_keypair_generate(handle: &mut impl PrecompileHandle) -> PrecompileResult {
-    let mut call_args = ethabi::decode(
-        &[
-            ParamType::Uint(256), // method
-            ParamType::Bytes,     // seed
-        ],
-        handle.input(),
-    )
-    .map_err(|e| PrecompileFailure::Error {
+    let (method, seed): (
+        solabi::U256,           // method
+        solabi::Bytes<Vec<u8>>, // seed
+    ) = solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
     })?;
 
-    let seed = call_args.pop().unwrap().into_bytes().unwrap();
-    let method: usize = call_args
-        .pop()
-        .unwrap()
-        .into_uint()
-        .unwrap()
-        .try_into()
-        .map_err(|_| PrecompileFailure::Error {
-            exit_status: ExitError::Other("method identifier out of bounds".into()),
-        })?;
+    let method: usize = method.try_into().map_err(|_| PrecompileFailure::Error {
+        exit_status: ExitError::Other("method identifier out of bounds".into()),
+    })?;
 
     let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
         .map_err(|_| PrecompileFailure::Error {
@@ -281,46 +267,38 @@ pub(super) fn call_keypair_generate(handle: &mut impl PrecompileHandle) -> Preco
         0,
     )?;
 
-    let signer = signature::MemorySigner::new_from_seed(sig_type, &seed).map_err(|err| {
-        PrecompileFailure::Error {
-            exit_status: ExitError::Other(format!("error creating signer: {err}").into()),
-        }
-    })?;
+    let signer =
+        signature::MemorySigner::new_from_seed(sig_type, seed.as_bytes()).map_err(|err| {
+            PrecompileFailure::Error {
+                exit_status: ExitError::Other(format!("error creating signer: {err}").into()),
+            }
+        })?;
     let public = signer.public_key().as_bytes().to_vec();
     let private = signer.to_bytes();
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        output: ethabi::encode(&[Token::Bytes(public), Token::Bytes(private)]),
+        output: solabi::encode(&(solabi::Bytes(public), solabi::Bytes(private))),
     })
 }
 
 pub(super) fn call_sign(handle: &mut impl PrecompileHandle) -> PrecompileResult {
-    let mut call_args = ethabi::decode(
-        &[
-            ParamType::Uint(256), // signature type
-            ParamType::Bytes,     // private key
-            ParamType::Bytes,     // context or precomputed hash bytes
-            ParamType::Bytes,     // message; should be zero-length if precomputed hash given
-        ],
-        handle.input(),
-    )
-    .map_err(|e| PrecompileFailure::Error {
+    #[allow(clippy::type_complexity)]
+    let (typ, pk, ctx, msg): (
+        solabi::U256,           // signature type
+        solabi::Bytes<Vec<u8>>, // private key
+        solabi::Bytes<Vec<u8>>, // context or precomputed hash bytes
+        solabi::Bytes<Vec<u8>>, // message; should be zero-length if precomputed hash given
+    ) = solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
     })?;
 
-    let message = call_args.pop().unwrap().into_bytes().unwrap();
-    let ctx_or_hash = call_args.pop().unwrap().into_bytes().unwrap();
-    let pk = call_args.pop().unwrap().into_bytes().unwrap();
-    let method = call_args
-        .pop()
-        .unwrap()
-        .into_uint()
-        .unwrap()
-        .try_into()
-        .map_err(|_| PrecompileFailure::Error {
-            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
-        })?;
+    let message = msg.as_bytes();
+    let ctx_or_hash = ctx.as_bytes();
+    let pk = pk.as_bytes();
+    let method: usize = typ.try_into().map_err(|_| PrecompileFailure::Error {
+        exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+    })?;
 
     let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
         .map_err(|_| PrecompileFailure::Error {
@@ -338,13 +316,13 @@ pub(super) fn call_sign(handle: &mut impl PrecompileHandle) -> PrecompileResult 
         })?;
     record_linear_cost(handle, handle.input().len() as u64, costs.0, costs.1)?;
 
-    let signer = signature::MemorySigner::from_bytes(sig_type, &pk).map_err(|e| {
+    let signer = signature::MemorySigner::from_bytes(sig_type, pk).map_err(|e| {
         PrecompileFailure::Error {
             exit_status: ExitError::Other(format!("error creating signer: {e}").into()),
         }
     })?;
 
-    let result = signer.sign_by_type(sig_type, &ctx_or_hash, &message);
+    let result = signer.sign_by_type(sig_type, ctx_or_hash, message);
     let result = result.map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(format!("error signing message: {e}").into()),
     })?;
@@ -356,33 +334,24 @@ pub(super) fn call_sign(handle: &mut impl PrecompileHandle) -> PrecompileResult 
 }
 
 pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResult {
-    let mut call_args = ethabi::decode(
-        &[
-            ParamType::Uint(256), // signature type
-            ParamType::Bytes,     // public key
-            ParamType::Bytes,     // context or precomputed hash bytes
-            ParamType::Bytes,     // message; should be zero-length if precomputed hash given
-            ParamType::Bytes,     // signature
-        ],
-        handle.input(),
-    )
-    .map_err(|e| PrecompileFailure::Error {
+    #[allow(clippy::type_complexity)]
+    let (typ, pk, ctx, msg, sig): (
+        solabi::U256,           // signature type
+        solabi::Bytes<Vec<u8>>, // public key
+        solabi::Bytes<Vec<u8>>, // context or precomputed hash bytes
+        solabi::Bytes<Vec<u8>>, // message; should be zero-length if precomputed hash given
+        solabi::Bytes<Vec<u8>>, // signature
+    ) = solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
         exit_status: ExitError::Other(e.to_string().into()),
     })?;
 
-    let signature = call_args.pop().unwrap().into_bytes().unwrap();
-    let message = call_args.pop().unwrap().into_bytes().unwrap();
-    let ctx_or_hash = call_args.pop().unwrap().into_bytes().unwrap();
-    let pk = call_args.pop().unwrap().into_bytes().unwrap();
-    let method = call_args
-        .pop()
-        .unwrap()
-        .into_uint()
-        .unwrap()
-        .try_into()
-        .map_err(|_| PrecompileFailure::Error {
-            exit_status: ExitError::Other("signature type identifier out of bounds".into()),
-        })?;
+    let signature = sig.to_vec();
+    let message = msg.as_bytes();
+    let ctx_or_hash = ctx.as_bytes();
+    let pk = pk.as_bytes();
+    let method: usize = typ.try_into().map_err(|_| PrecompileFailure::Error {
+        exit_status: ExitError::Other("signature type identifier out of bounds".into()),
+    })?;
 
     let sig_type: SignatureType = <usize as TryInto<u8>>::try_into(method)
         .map_err(|_| PrecompileFailure::Error {
@@ -402,15 +371,15 @@ pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResul
 
     let signature: signature::Signature = signature.into();
     let public_key =
-        signature::PublicKey::from_bytes(sig_type, &pk).map_err(|_| PrecompileFailure::Error {
+        signature::PublicKey::from_bytes(sig_type, pk).map_err(|_| PrecompileFailure::Error {
             exit_status: ExitError::Other("error reading public key".into()),
         })?;
 
-    let result = public_key.verify_by_type(sig_type, &ctx_or_hash, &message, &signature);
+    let result = public_key.verify_by_type(sig_type, ctx_or_hash, message, &signature);
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        output: ethabi::encode(&[Token::Bool(result.is_ok())]),
+        output: solabi::encode(&(result.is_ok(),)),
     })
 }
 
@@ -418,7 +387,6 @@ pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResul
 mod test {
     extern crate test;
 
-    use ethabi::{ParamType, Token};
     use rand::rngs::OsRng;
     use test::Bencher;
 
@@ -541,12 +509,12 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
             ]),
-            &ethabi::encode(&[
-                Token::FixedBytes(key.to_vec()),
-                Token::FixedBytes(nonce.to_vec()),
-                Token::Bytes(plaintext.to_vec()),
-                Token::Bytes(ad.to_vec()),
-            ]),
+            &solabi::encode(&(
+                solabi::Bytes(key.to_vec()),
+                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes(plaintext.to_vec()),
+                solabi::Bytes(ad.to_vec()),
+            )),
             10_000_000,
         )
         .expect("call should return something")
@@ -557,12 +525,12 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
             ]),
-            &ethabi::encode(&[
-                Token::FixedBytes(key.to_vec()),
-                Token::FixedBytes(nonce.to_vec()),
-                Token::Bytes(ret_ct.output),
-                Token::Bytes(ad.to_vec()),
-            ]),
+            &solabi::encode(&(
+                solabi::Bytes(key.to_vec()),
+                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes(ret_ct.output.to_vec()),
+                solabi::Bytes(ad.to_vec()),
+            )),
             10_000_000,
         )
         .expect("call should return something")
@@ -576,7 +544,7 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
             ]),
-            &ethabi::encode(&[Token::Uint(4.into()), Token::Bytes(vec![0xbe, 0xef])]),
+            &solabi::encode(&(solabi::U256::new(4_u128), solabi::Bytes(vec![0xbe, 0xef]))),
             10_560,
         )
         .unwrap();
@@ -594,12 +562,12 @@ mod test {
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
-                &ethabi::encode(&[
-                    Token::FixedBytes(key.to_vec()),
-                    Token::FixedBytes(nonce.to_vec()),
-                    Token::Bytes(plaintext.to_vec()),
-                    Token::Bytes(ad.to_vec()),
-                ]),
+                &solabi::encode(&(
+                    solabi::Bytes(key.to_vec()),
+                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes(plaintext.to_vec()),
+                    solabi::Bytes(ad.to_vec()),
+                )),
                 10_000_000,
             )
             .expect("call should return something")
@@ -618,12 +586,12 @@ mod test {
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
-                &ethabi::encode(&[
-                    Token::FixedBytes(key.to_vec()),
-                    Token::FixedBytes(nonce.to_vec()),
-                    Token::Bytes(plaintext.to_vec()),
-                    Token::Bytes(ad.to_vec()),
-                ]),
+                &solabi::encode(&(
+                    solabi::Bytes(key.to_vec()),
+                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes(plaintext.to_vec()),
+                    solabi::Bytes(ad.to_vec()),
+                )),
                 10_000_000,
             )
             .expect("call should return something")
@@ -669,10 +637,10 @@ mod test {
     #[test]
     fn test_keypair_generate() {
         // Invalid method.
-        let params = ethabi::encode(&[
-            Token::Uint(50.into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(50_u128),
+            solabi::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ));
         call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -684,10 +652,10 @@ mod test {
         .expect_err("call should fail");
 
         // Working test.
-        let params = ethabi::encode(&[
-            Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(SignatureType::Ed25519_Oasis.as_int().into()),
+            solabi::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ));
         let output1 = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -700,10 +668,10 @@ mod test {
         .output;
 
         // Again, should be repeatable.
-        let params = ethabi::encode(&[
-            Token::Uint(SignatureType::Ed25519_Oasis.as_int().into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(SignatureType::Ed25519_Oasis.as_int().into()),
+            solabi::Bytes(b"01234567890123456789012345678901".to_vec()),
+        ));
         let output2 = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -724,10 +692,10 @@ mod test {
         } else {
             4
         });
-        let params = ethabi::encode(&[
-            Token::Uint(signature_type.as_int().into()),
-            Token::Bytes(seed),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(signature_type.as_int().into()),
+            solabi::Bytes(seed),
+        ));
         b.iter(|| {
             call_contract(
                 H160([
@@ -780,7 +748,10 @@ mod test {
             }
 
             // Generate key pair from a fixed seed.
-            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed.to_vec())]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.into()),
+                solabi::Bytes(seed.to_vec()),
+            ));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -792,18 +763,18 @@ mod test {
             .unwrap()
             .output;
 
-            let mut call_output =
-                ethabi::decode(&[ParamType::Bytes, ParamType::Bytes], &output).unwrap();
-            let private_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
-            let public_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+            let (public_key, private_key): (solabi::Bytes<Vec<u8>>, solabi::Bytes<Vec<u8>>) =
+                solabi::decode(&output).expect("decode should succeed");
+            let public_key = public_key.as_bytes();
+            let private_key = private_key.as_bytes();
 
             // Sign message.
-            let params = ethabi::encode(&[
-                Token::Uint(method.into()),
-                Token::Bytes(private_key),
-                Token::Bytes(context.to_vec()),
-                Token::Bytes(message.to_vec()),
-            ]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.into()),
+                solabi::Bytes(private_key),
+                solabi::Bytes(context.to_vec()),
+                solabi::Bytes(message.to_vec()),
+            ));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
@@ -818,13 +789,13 @@ mod test {
             let signature = output.to_vec();
 
             // Verify signature.
-            let params = ethabi::encode(&[
-                Token::Uint(method.into()),
-                Token::Bytes(public_key),
-                Token::Bytes(context.to_vec()),
-                Token::Bytes(message.to_vec()),
-                Token::Bytes(signature),
-            ]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.into()),
+                solabi::Bytes(public_key),
+                solabi::Bytes(context.to_vec()),
+                solabi::Bytes(message.to_vec()),
+                solabi::Bytes(signature),
+            ));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
@@ -835,12 +806,7 @@ mod test {
             .unwrap()
             .unwrap()
             .output;
-            let status = ethabi::decode(&[ParamType::Bool], &output)
-                .unwrap()
-                .pop()
-                .unwrap()
-                .into_bool()
-                .unwrap();
+            let status: bool = solabi::decode(&output).expect("decode should succeed");
             assert_eq!(status, true);
         }
     }
@@ -884,7 +850,7 @@ mod test {
             });
 
             // Generate key pair from a fixed seed.
-            let params = ethabi::encode(&[Token::Uint(method.into()), Token::Bytes(seed)]);
+            let params = solabi::encode(&(solabi::U256::new(method.into()), solabi::Bytes(seed)));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x05,
@@ -896,18 +862,18 @@ mod test {
             .unwrap()
             .output;
 
-            let mut call_output =
-                ethabi::decode(&[ParamType::Bytes, ParamType::Bytes], &output).unwrap();
-            let private_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
-            let public_key = call_output.pop().unwrap().into_bytes().unwrap().to_vec();
+            let (public_key, private_key): (solabi::Bytes<Vec<u8>>, solabi::Bytes<Vec<u8>>) =
+                solabi::decode(&output).expect("decode should succeed");
+            let public_key = public_key.as_bytes();
+            let private_key = private_key.as_bytes();
 
             // Sign message.
-            let params = ethabi::encode(&[
-                Token::Uint(method.into()),
-                Token::Bytes(private_key),
-                Token::Bytes(hasher(message)),
-                Token::Bytes(Vec::new()),
-            ]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.into()),
+                solabi::Bytes(private_key),
+                solabi::Bytes(hasher(message)),
+                solabi::Bytes(Vec::new()),
+            ));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
@@ -922,13 +888,13 @@ mod test {
             let signature = output.to_vec();
 
             // Verify signature.
-            let params = ethabi::encode(&[
-                Token::Uint(method.into()),
-                Token::Bytes(public_key),
-                Token::Bytes(hasher(message)),
-                Token::Bytes(Vec::new()),
-                Token::Bytes(signature),
-            ]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.into()),
+                solabi::Bytes(public_key),
+                solabi::Bytes(hasher(message)),
+                solabi::Bytes(Vec::new()),
+                solabi::Bytes(signature),
+            ));
             let output = call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
@@ -939,12 +905,7 @@ mod test {
             .unwrap()
             .unwrap()
             .output;
-            let status = ethabi::decode(&[ParamType::Bool], &output)
-                .unwrap()
-                .pop()
-                .unwrap()
-                .into_bool()
-                .unwrap();
+            let status: bool = solabi::decode(&output).expect("decode should succeed");
             assert_eq!(status, true);
         }
     }
@@ -972,12 +933,12 @@ mod test {
                 SignatureType::Ed25519_Oasis.as_int()
             };
 
-            let params = ethabi::encode(&[
-                Token::Uint(method.unwrap_or(ctx_method).into()),
-                Token::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
-                Token::Bytes(context.unwrap_or(def_ctx).to_vec()),
-                Token::Bytes(message.unwrap_or(def_msg).to_vec()),
-            ]);
+            let params = solabi::encode(&(
+                solabi::U256::new(method.unwrap_or(ctx_method).into()),
+                solabi::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
+                solabi::Bytes(context.unwrap_or(def_ctx).to_vec()),
+                solabi::Bytes(message.unwrap_or(def_msg).to_vec()),
+            ));
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x06,
@@ -1033,12 +994,12 @@ mod test {
             )
         };
 
-        let params = ethabi::encode(&[
-            Token::Uint(signature_type.as_int().into()),
-            Token::Bytes(signer.to_bytes()),
-            Token::Bytes(context),
-            Token::Bytes(message),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(signature_type.as_int().into()),
+            solabi::Bytes(signer.to_bytes()),
+            solabi::Bytes(context),
+            solabi::Bytes(message),
+        ));
 
         b.iter(|| {
             call_contract(
@@ -1139,17 +1100,17 @@ mod test {
             let def_ctx = b"default context";
             let def_msg = b"default message";
 
-            let params = ethabi::encode(&[
-                Token::Uint(
+            let params = solabi::encode(&(
+                solabi::U256::new(
                     method
                         .unwrap_or(SignatureType::Ed25519_Oasis.as_int())
                         .into(),
                 ),
-                Token::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
-                Token::Bytes(context.unwrap_or(def_ctx).to_vec()),
-                Token::Bytes(message.unwrap_or(def_msg).to_vec()),
-                Token::Bytes(signature.unwrap_or(def_sig.as_ref()).to_vec()),
-            ]);
+                solabi::Bytes(pk.map(|o| o.to_vec()).unwrap_or(def_pk)),
+                solabi::Bytes(context.unwrap_or(def_ctx).to_vec()),
+                solabi::Bytes(message.unwrap_or(def_msg).to_vec()),
+                solabi::Bytes(signature.unwrap_or(def_sig.as_ref()).to_vec()),
+            ));
             call_contract(
                 H160([
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x07,
@@ -1171,15 +1132,8 @@ mod test {
             .expect("call should succeed")
             .output;
         // Verification should have failed.
-        assert_eq!(
-            ethabi::decode(&[ParamType::Bool], &output)
-                .unwrap()
-                .pop()
-                .unwrap()
-                .into_bool()
-                .unwrap(),
-            false
-        );
+        let status: bool = solabi::decode(&output).expect("decode should succeed");
+        assert_eq!(status, false);
 
         // Invalid signature.
         let long_zeroes: Vec<u8> = vec![0; 64];
@@ -1188,30 +1142,16 @@ mod test {
             .expect("call should succeed")
             .output;
         // Verification should have failed.
-        assert_eq!(
-            ethabi::decode(&[ParamType::Bool], &output)
-                .unwrap()
-                .pop()
-                .unwrap()
-                .into_bool()
-                .unwrap(),
-            false
-        );
+        let status: bool = solabi::decode(&output).expect("decode should succeed");
+        assert_eq!(status, false);
 
         // All ok.
         output = push_all_and_test(None, None, None, None, None)
             .expect("call should return something")
             .expect("call should succeed")
             .output;
-        assert_eq!(
-            ethabi::decode(&[ParamType::Bool], &output)
-                .unwrap()
-                .pop()
-                .unwrap()
-                .into_bool()
-                .unwrap(),
-            true
-        );
+        let status: bool = solabi::decode(&output).expect("decode should succeed");
+        assert_eq!(status, true);
     }
 
     fn bench_verification(
@@ -1245,13 +1185,13 @@ mod test {
         };
         let signature = signer.sign(&context, &message).unwrap();
 
-        let params = ethabi::encode(&[
-            Token::Uint(signature_type.as_int().into()),
-            Token::Bytes(signer.public_key().as_bytes().to_vec()),
-            Token::Bytes(context),
-            Token::Bytes(message),
-            Token::Bytes(signature.as_ref().to_vec()),
-        ]);
+        let params = solabi::encode(&(
+            solabi::U256::new(signature_type.as_int().into()),
+            solabi::Bytes(signer.public_key().as_bytes().to_vec()),
+            solabi::Bytes(context),
+            solabi::Bytes(message),
+            solabi::Bytes(signature.as_ref().to_vec()),
+        ));
 
         b.iter(|| {
             call_contract(

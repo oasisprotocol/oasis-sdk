@@ -43,12 +43,29 @@ pub trait PaymentMethod {
     ) -> Result<(), Error>;
 }
 
-/// Name of the method invoked for the `pay` action for `Payment::EvmContract`.
-const EVM_CONTRACT_PAY: &str = "rmpPay";
-/// Name of the method invoked for the `refund` action for `Payment::EvmContract`.
-const EVM_CONTRACT_REFUND: &str = "rmpRefund";
-/// Name of the method invoked for the `claim` action for `Payment::EvmContract`.
-const EVM_CONTRACT_CLAIM: &str = "rmpClaim";
+/// Type of the method invoked for the `pay` action for `Payment::EvmContract`.
+/// rmpPay(term, termCount, from, data)
+#[allow(clippy::type_complexity)]
+const EVM_CONTRACT_PAY: solabi::FunctionEncoder<
+    (u8, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (bool,),
+> = solabi::FunctionEncoder::new(solabi::selector!("rmpPay(uint8,uint64,address,bytes)"));
+
+/// Type of the method invoked for the `refund` action for `Payment::EvmContract`.
+/// rmpRefund(to, data)
+#[allow(clippy::type_complexity)]
+const EVM_CONTRACT_REFUND: solabi::FunctionEncoder<
+    (solabi::Address, solabi::Bytes<Vec<u8>>),
+    (bool,),
+> = solabi::FunctionEncoder::new(solabi::selector!("rmpRefund(address,bytes)"));
+
+/// Type of the method invoked for the `claim` action for `Payment::EvmContract`.
+/// rmpClaim(claimableTime, paidTime, to, data)
+#[allow(clippy::type_complexity)]
+const EVM_CONTRACT_CLAIM: solabi::FunctionEncoder<
+    (u64, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (bool,),
+> = solabi::FunctionEncoder::new(solabi::selector!("rmpClaim(uint64,uint64,address,bytes)"));
 
 impl PaymentMethod for Payment {
     fn pay<C: Context>(
@@ -96,25 +113,12 @@ impl PaymentMethod for Payment {
                         body: cbor::to_value(oasis_runtime_sdk_evm::types::Call {
                             address: *address,
                             value: 0.into(),
-                            data: [
-                                ethabi::short_signature(
-                                    EVM_CONTRACT_PAY,
-                                    &[
-                                        ethabi::ParamType::Uint(8),  // term
-                                        ethabi::ParamType::Uint(64), // termCount
-                                        ethabi::ParamType::Address,  // from
-                                        ethabi::ParamType::Bytes,    // data
-                                    ],
-                                )
-                                .to_vec(),
-                                ethabi::encode(&[
-                                    ethabi::Token::Uint(term.as_u8().into()),
-                                    ethabi::Token::Uint(term_count.into()),
-                                    ethabi::Token::Address(from.into()),
-                                    ethabi::Token::Bytes(data.clone()),
-                                ]),
-                            ]
-                            .concat(),
+                            data: EVM_CONTRACT_PAY.encode_params(&(
+                                term.as_u8(),
+                                term_count,
+                                solabi::Address(from.into()),
+                                solabi::Bytes(data.clone()),
+                            )),
                         }),
                         max_depth: 8,
                         max_gas: remaining_gas,
@@ -179,7 +183,7 @@ impl PaymentMethod for Payment {
             Self::EvmContract { address, data } => {
                 // EVM contract call that handles the refund. This requires that the caller is a
                 // compatible address.
-                use ethabi::ethereum_types::H160;
+                use oasis_runtime_sdk_evm::types::H160;
 
                 let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
                 if instance.refund_data.len() != H160::len_bytes() {
@@ -195,21 +199,10 @@ impl PaymentMethod for Payment {
                         body: cbor::to_value(oasis_runtime_sdk_evm::types::Call {
                             address: *address,
                             value: 0.into(),
-                            data: [
-                                ethabi::short_signature(
-                                    EVM_CONTRACT_REFUND,
-                                    &[
-                                        ethabi::ParamType::Address, // to
-                                        ethabi::ParamType::Bytes,   // data
-                                    ],
-                                )
-                                .to_vec(),
-                                ethabi::encode(&[
-                                    ethabi::Token::Address(refund_address),
-                                    ethabi::Token::Bytes(data.clone()),
-                                ]),
-                            ]
-                            .concat(),
+                            data: EVM_CONTRACT_REFUND.encode_params(&(
+                                solabi::Address(refund_address.into()),
+                                solabi::Bytes(data.clone()),
+                            )),
                         }),
                         max_depth: 8,
                         max_gas: remaining_gas,
@@ -282,8 +275,8 @@ impl PaymentMethod for Payment {
                 )?;
             }
             Self::EvmContract { address, data } => {
-                let provider_address = match provider.payment_address {
-                    PaymentAddress::Eth(address) => address.into(),
+                let provider_address: solabi::Address = match provider.payment_address {
+                    PaymentAddress::Eth(address) => solabi::Address(address),
                     _ => {
                         return Err(Error::PaymentFailed(
                             "incompatible payment address".to_string(),
@@ -300,25 +293,12 @@ impl PaymentMethod for Payment {
                         body: cbor::to_value(oasis_runtime_sdk_evm::types::Call {
                             address: *address,
                             value: 0.into(),
-                            data: [
-                                ethabi::short_signature(
-                                    EVM_CONTRACT_CLAIM,
-                                    &[
-                                        ethabi::ParamType::Uint(64), // claimableTime
-                                        ethabi::ParamType::Uint(64), // paidTime
-                                        ethabi::ParamType::Address,  // to
-                                        ethabi::ParamType::Bytes,    // data
-                                    ],
-                                )
-                                .to_vec(),
-                                ethabi::encode(&[
-                                    ethabi::Token::Uint(claimable_time.into()),
-                                    ethabi::Token::Uint(paid_time.into()),
-                                    ethabi::Token::Address(provider_address),
-                                    ethabi::Token::Bytes(data.clone()),
-                                ]),
-                            ]
-                            .concat(),
+                            data: EVM_CONTRACT_CLAIM.encode_params(&(
+                                u64::try_from(claimable_time).unwrap(),
+                                paid_time,
+                                provider_address,
+                                solabi::Bytes(data.clone()),
+                            )),
                         }),
                         max_depth: 8,
                         max_gas: remaining_gas,
