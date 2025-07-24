@@ -1083,6 +1083,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ethaddr"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ecbcc1770d1b2e3fb83915c80c47a10efbe1964544a40e0211fe40274f8363c8"
+dependencies = [
+ "serde",
+ "sha3",
+]
+
+[[package]]
 name = "ethbloom"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1094,6 +1104,16 @@ dependencies = [
  "impl-rlp",
  "scale-info",
  "tiny-keccak 2.0.2",
+]
+
+[[package]]
+name = "ethdigest"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cadad23be1ff9cf970f84a87e8e9666c19b4a4393c1acf89a1790d727ae11cc"
+dependencies = [
+ "serde",
+ "sha3",
 ]
 
 [[package]]
@@ -1145,6 +1165,26 @@ dependencies = [
  "primitive-types",
  "scale-info",
  "uint",
+]
+
+[[package]]
+name = "ethnum"
+version = "1.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca81e6b4777c89fd810c25a4be2b1bd93ea034fbe58e6a75216a34c6b82c539b"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "ethprim"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3d5d08a4d724b4d10c7f5db832f45298c7418629acf0b17cc265f3f35a00bd79"
+dependencies = [
+ "ethaddr",
+ "ethdigest",
+ "ethnum",
 ]
 
 [[package]]
@@ -2884,11 +2924,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "ethabi",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
  "rofl-utils",
  "serde_json",
+ "solabi",
  "tokio",
 ]
 
@@ -3390,6 +3430,16 @@ checksum = "e22376abed350d73dd1cd119b57ffccad95b4e585a7cda43e286245ce23c0678"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "solabi"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a05e216e6d7e93fcd8bda50df6c57960998b22bd926638fd9aa14b786bc53bf2"
+dependencies = [
+ "ethprim",
+ "serde",
 ]
 
 [[package]]
