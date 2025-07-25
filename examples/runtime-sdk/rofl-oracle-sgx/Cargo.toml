@@ -1,13 +1,14 @@
 [package]
-name = "rofl-oracle"
-version = "0.1.0"
+name = "rofl-oracle-sgx"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
 # Oasis SDK.
-oasis-runtime-sdk = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.9.6" }
-module-evm = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "runtime-sdk/v0.9.6", package = "oasis-runtime-sdk-evm" }
-rofl-utils = { git = "https://github.com/oasisprotocol/oasis-sdk", tag = "rofl-utils/v0.1.1" }
+oasis-runtime-sdk = { path = "../../../runtime-sdk" }
+rofl-app-core = { path = "../../../rofl-app-core" }
+module-evm = { path = "../../../runtime-sdk/modules/evm", package = "oasis-runtime-sdk-evm" }
+rofl-utils = { path = "../../../rofl-utils" }
 
 # Third-party dependencies.
 anyhow = "1.0"

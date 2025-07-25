@@ -1,0 +1,46 @@
+name: rofl-oracle-sgx
+version: 0.1.0
+tee: sgx
+kind: raw
+resources:
+  memory: 512
+  cpus: 1
+artifacts:
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
+deployments:
+  testnet:
+    app_id: rofl1qpp0rk6zwnqjjapj20wwr4fmnx806rzm6uqtf3fx
+    network: testnet
+    paratime: sapphire
+    admin: dave
+    trust_root:
+      height: 27512901
+      hash: 8b91500bf57697794d2c922abe63659d49ac8b473321501de6e12b37f5204342
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+      enclaves:
+        - id: UUqOqMPSIdfMFhFDa2KaM9wLpjz/tuwc4GIeBX+GVt5XDa2H4mU04nHCHTCxzO6y5uAPE0NhwEzOUNLmTkGKQA==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
+  localnet:
+    app_id: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+    network: localnet
+    paratime: sapphire
+    admin: test:bob
+    debug: true
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+      enclaves:
+        - id: SN0hcQ6wPuQ7s2i7R0tGHFWGF+JOM2u8IX+e7rnFVuK0nbyMmQ7Q1qpb0zOGF9yjJxXNM6wb87l2RdNIKxVkZw==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
