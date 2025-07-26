@@ -948,6 +948,12 @@ export interface RoflmarketInstanceCreate {
     term_count: oasis.types.longnum;
 }
 
+export interface RoflmarketInstanceChangeAdmin {
+    provider: Uint8Array;
+    id: MachineID;
+    admin: Uint8Array;
+}
+
 export interface RoflmarketInstanceTopUp {
     provider: Uint8Array;
     id: MachineID;
@@ -956,10 +962,40 @@ export interface RoflmarketInstanceTopUp {
     status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceTopUp. Extraneous fields will cause this subcall to silently fail.';
 }
 
+export interface RoflmarketInstanceAccept {
+    provider: Uint8Array;
+    ids: MachineID[];
+    metadata: {[key: string]: string};
+}
+
+export interface RoflmarketInstanceUpdate {
+    provider: Uint8Array;
+    updates: RoflmarketInstanceUpdateItem[];
+}
+
+export interface RoflmarketInstanceUpdateItem {
+    id: MachineID;
+    node_id?: Uint8Array;
+    deployment?: RoflmarketDeploymentUpdate;
+    metadata?: {[key: string]: string};
+    last_completed_cmd?: CommandID;
+}
+
+// TODO: check if this is correct
+export interface RoflmarketDeploymentUpdate {
+    clear?: {};
+    set?: RoflmarketDeployment;
+}
+
 export interface RoflmarketInstanceCancel {
     provider: Uint8Array;
     id: MachineID;
     status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceCancel. Extraneous fields will cause this subcall to silently fail.';
+}
+
+export interface RoflmarketInstanceRemove {
+    provider: Uint8Array;
+    id: MachineID;
 }
 
 export interface RoflmarketInstanceExecuteCmds {
@@ -967,6 +1003,11 @@ export interface RoflmarketInstanceExecuteCmds {
     id: MachineID;
     cmds: Uint8Array[];
     status?: 'warning: attempted to pass RoflmarketInstance type into RoflmarketInstanceExecuteCmds. Extraneous fields will cause this subcall to silently fail.';
+}
+
+export interface RoflmarketInstanceClaimPayment {
+    provider: Uint8Array;
+    instances: MachineID[];
 }
 
 export interface RoflmarketQueuedCommand {
