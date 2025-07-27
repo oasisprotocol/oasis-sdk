@@ -121,19 +121,20 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
     let mut arg_decls: Vec<TokenStream> = Vec::new();
     for (i, evm_ty) in sig.args.iter().enumerate() {
         let arg_name = format_ident!("arg_{}", i);
+        let field_index = syn::Index::from(i);
         call_args.push(arg_name.clone());
         match evm_ty.as_str() {
             "address" => {
-                decoder_list.push(quote!(::ethabi::ParamType::Address));
+                decoder_list.push(quote!(H160));
                 arg_decls.push(quote! {
-                    let #arg_name = decoded_args[#i].clone().into_address().unwrap();
+                    let #arg_name = decoded_args.#field_index.clone();
                 });
             }
             "uint256" => {
-                decoder_list.push(quote!(::ethabi::ParamType::Uint(256)));
+                decoder_list.push(quote!(U256));
                 let temp_name = format_ident!("{}_uint", arg_name);
                 arg_decls.push(quote! {
-                    let #temp_name = decoded_args[#i].clone().into_uint().unwrap();
+                    let #temp_name = decoded_args.#field_index.clone();
                     if #temp_name.bits() > (u128::BITS as usize) {
                         return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                             exit_status: ::evm::ExitError::Other("integer overflow".into()),
@@ -153,7 +154,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
     }
     let method_name = sig.name.clone();
     Some(quote! { {
-        let decoded_args = match ::ethabi::decode(&[#(#decoder_list),*], &handle.input()[#SELECTOR_LENGTH..]) {
+        let decoded_args = match ::solabi::decode(&handle.input()[#SELECTOR_LENGTH..]) {
             Err(e) => return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                 exit_status: ::evm::ExitError::Other("invalid argument".into()),
             })),
@@ -329,7 +330,7 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
     let topics: Vec<TokenStream> = fields.iter().filter_map(|f| {
         if f.indexed.is_present() {
             let name = f.ident.as_ref().unwrap();
-            Some(quote! { ::primitive_types::H256::from_slice(::ethabi::encode(&[self.#name.clone()]).as_slice()) })
+            Some(quote! { ::primitive_types::H256::from_slice(::solabi::encode(&[self.#name.clone()]).as_slice()) })
         } else {
             None
         }
@@ -350,7 +351,7 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
         quote! { vec![] }
     } else {
         quote! {
-            ::ethabi::encode(&[
+            ::solabi::encode(&[
                 #(#data ,)*
             ])
         }
@@ -408,7 +409,7 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                 "address" => {
                     // The tuple field for this should be a primitive_types::H160.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::Address(*#field_ident)
+                        H160(*#field_ident)
                     });
                 }
                 "uint256" => {
@@ -439,7 +440,7 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
         } else {
             (
                 quote! { Self::#ident(#(#match_fields,)*) },
-                quote! { output.extend(::ethabi::encode(&[#(#abi_tokens,)*]).as_slice()); },
+                quote! { output.extend(::solabi::encode(&[#(#abi_tokens,)*]).as_slice()); },
             )
         };
         variant_encoders.push(quote! {
@@ -467,5 +468,79 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::quote;
+    use syn::parse_quote;
+
+    #[test]
+    fn test_generate_method_call_address_uint256() {
+        let attr = EvmMethod {
+            signature: SpannedValue::new("transfer(address,uint256)".to_string(), proc_macro2::Span::call_site()),
+            convert: Flag::present(),
+        };
+        
+        let sig = Signature {
+            selector: [0xa9, 0x05, 0x9c, 0xbb], // transfer selector
+            name: parse_quote!(transfer),
+            convert: true,
+            args: vec!["address".to_string(), "uint256".to_string()],
+        };
+
+        let result = generate_method_call(&attr, &sig).unwrap();
+        let result2 = generate_method_call_2(&attr, &sig).unwrap();
+
+        print!("\nGenerated method call:\n{}\n", result);
+        // print!("\nGenerated method call 2:\n{}\n", result2);
+
+        // assert_eq!(result.to_string(), result2.to_string());
+       
+    }
+
+    #[test]
+    fn test_derive_evm_contract() {
+        let input: ItemImpl = parse_quote! {
+            impl MyContract {
+                #[evm_contract_address]
+                fn address() -> H160 {
+                    T::address()
+                }
+
+                #[evm_method(signature = "transfer(address,uint256)", convert)]
+                fn transfer(
+                    handle: &mut impl PrecompileHandle,
+                    to: H160,
+                    value: u128,
+                ) -> PrecompileResult {
+                    // Implementation here
+                    Ok(PrecompileOutput::succeed(vec![]))
+                }
+            }
+        };
+
+        let output = derive_evm_contract(input);
+
+        println!("Generated EVM contract code:\n{}", output);
+        
+        // Parse and format the output to see what was generated
+        match syn::parse2::<syn::File>(output.clone()) {
+            Ok(parsed) => {
+                let formatted = prettyplease::unparse(&parsed);
+                println!("Generated EVM contract code:\n{}", formatted);
+            }
+            Err(e) => {
+                println!("Generated code has syntax errors: {}", e);
+                println!("Raw generated code:\n{}", output.to_string());
+            }
+        }
+        
+        // Basic assertions
+        let output_str = output.to_string();
+        assert!(output_str.contains("StaticContract"));
+        assert!(output_str.contains("dispatch_call"));
     }
 }
