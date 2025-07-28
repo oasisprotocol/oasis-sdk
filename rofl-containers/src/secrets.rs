@@ -1,9 +1,4 @@
-use std::{
-    collections::BTreeSet,
-    fs::{self, File},
-    io::Write,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use anyhow::Result;
 use cmd_lib::run_cmd;
@@ -11,6 +6,8 @@ use cmd_lib::run_cmd;
 use oasis_runtime_sdk::core::common::logger::get_logger;
 use rofl_app_core::prelude::*;
 use rofl_appd::services::{self, kms::OpenSecretRequest};
+
+use crate::containers;
 
 /// Initialize secrets available to containers.
 pub async fn init<A: App>(
@@ -22,20 +19,16 @@ pub async fn init<A: App>(
     // Query own app cfg to get encrypted secrets.
     let encrypted_secrets = env.client().app_cfg().await?.secrets;
 
-    // Also generate secrets in an environment file.
-    fs::create_dir_all("/run/podman")?;
-    let mut secrets_env = File::create("/run/podman/secrets.env")?;
-
     // Ensure all secrets are removed.
     run_cmd!(podman secret rm --all)?;
     // Create all requested secrets.
-    let mut existing_env_vars = BTreeSet::new();
     for (pub_name, value) in encrypted_secrets {
         // Decrypt and authenticate secret. In case of failures, the secret is skipped.
         let (name, value) = match kms
             .open_secret(&OpenSecretRequest {
                 name: &pub_name,
                 value: &value,
+                context: None,
             })
             .await
         {
@@ -51,10 +44,7 @@ pub async fn init<A: App>(
         let _ = run_cmd!(echo -n $value | podman secret create --driver-opts file=/run/podman/secrets --replace $name -);
 
         // Also store in the secrets environment file.
-        if !existing_env_vars.contains(&name_upper) {
-            writeln!(&mut secrets_env, "{name_upper}={value}")?;
-            existing_env_vars.insert(name_upper);
-        }
+        containers::env().set(&name_upper, &value);
 
         slog::info!(logger, "provisioned secret"; "pub_name" => pub_name);
     }

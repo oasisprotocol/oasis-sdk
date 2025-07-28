@@ -1,0 +1,41 @@
+[package]
+name = "rofl-proxy"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+cbor = { version = "0.5.1", package = "oasis-cbor" }
+oasis-runtime-sdk = { path = "../runtime-sdk" }
+
+# Third party.
+anyhow = "1.0.86"
+backoff = { version = "0.4", features = ["tokio"] }
+base64 = "0.22.1"
+byteorder = "1"
+defguard_wireguard_rs = "0.7.5"
+instant-acme = "0.8.2"
+ptrie = "0.7.2"
+rcgen = "0.14.2"
+rustls = "0.23.27"
+slog = "2.7.0"
+tokio = { version = "1.38", features = [
+    "rt",
+    "rt-multi-thread",
+    "sync",
+    "time",
+    "macros",
+    "net",
+    "io-util",
+] }
+tokio-io-timeout = "1.2.1"
+tokio-rustls = "0.26.2"
+x509-parser = "0.17.0"
+zeroize = "1.8.1"
+
+# Fuzzing.
+honggfuzz = "0.5"
+
+[[bin]]
+name = "fuzz-sni"
+path = "fuzz/sni.rs"
