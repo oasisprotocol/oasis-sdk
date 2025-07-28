@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     sync::{Arc, Mutex, OnceLock},
     time::Duration,
 };
@@ -8,8 +8,8 @@ use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
 use oasis_runtime_sdk::core::common::logger::get_logger;
 use rcgen::{KeyPair, PublicKeyData, PKCS_ECDSA_P256_SHA256};
-use rofl_app_core::prelude::*;
 use rustls::{pki_types::pem::PemObject, sign::CertifiedKey};
+use tokio::sync::mpsc;
 
 /// Metadata key used to signal the used TLS public key. The value is `Base64(DER(pk))`.
 const METADATA_KEY_TLS_PK: &str = "net.oasis.tls.pk";
@@ -48,36 +48,71 @@ impl Identity {
     }
 }
 
+/// Internal provisioner command.
+enum Command {
+    AddDomain(String),
+}
+
+#[derive(Clone)]
+pub struct CertificateProvisionerHandle {
+    cmd_tx: mpsc::Sender<Command>,
+}
+
+impl CertificateProvisionerHandle {
+    /// Add a new domain to this TLS provisioner.
+    pub async fn add_domain(&self, sni: &str) {
+        let _ = self.cmd_tx.send(Command::AddDomain(sni.to_string())).await;
+    }
+}
+
 /// Provisioner of TLS certificates via ACME/Let's Encrypt.
 pub struct CertificateProvisioner {
     resolver: Arc<CertificateResolver>,
-    domain: String,
     logger: slog::Logger,
+    cmd_rx: Option<mpsc::Receiver<Command>>,
+    handle: CertificateProvisionerHandle,
 }
 
 impl CertificateProvisioner {
     /// Create a new certificate provisioner for the given domain.
-    pub fn new(domain: &str) -> Self {
+    pub fn new() -> Self {
+        let (cmd_tx, cmd_rx) = mpsc::channel(16);
+
         Self {
             resolver: Arc::new(CertificateResolver::new()),
-            domain: domain.to_owned(),
             logger: get_logger("serverd/cert-provisioner"),
+            cmd_rx: Some(cmd_rx),
+            handle: CertificateProvisionerHandle { cmd_tx },
         }
     }
 
     /// TLS server configuration using this certificate provisioner.
-    pub fn server_config(&self) -> Arc<rustls::server::ServerConfig> {
+    pub fn server_config(&self, alpn_h2: bool) -> Arc<rustls::server::ServerConfig> {
         let mut cfg = rustls::server::ServerConfig::builder()
             .with_no_client_auth()
             .with_cert_resolver(self.resolver.clone());
-        cfg.alpn_protocols.push(H2_ALPN_PROTOCOL_ID.to_vec());
+        if alpn_h2 {
+            cfg.alpn_protocols.push(H2_ALPN_PROTOCOL_ID.to_vec());
+        }
         cfg.alpn_protocols.push(HTTP11_ALPN_PROTOCOL_ID.to_vec());
         cfg.alpn_protocols.push(ACME_TLS_ALPN_PROTOCOL_ID.to_vec());
         Arc::new(cfg)
     }
 
-    /// Starts the background provisioner task.
-    pub async fn provision(self) {
+    /// Certificate provisioner handle.
+    pub fn handle(&self) -> &CertificateProvisionerHandle {
+        &self.handle
+    }
+
+    /// Start the TLS provisioner.
+    pub fn start(mut self) {
+        if let Some(cmd_rx) = self.cmd_rx.take() {
+            let this = Arc::new(self);
+            tokio::spawn(this.manager(cmd_rx));
+        }
+    }
+
+    async fn manager(self: Arc<Self>, mut cmd_rx: mpsc::Receiver<Command>) {
         slog::info!(self.logger, "starting certificate provisioner task");
 
         // Initialize the ACME account.
@@ -107,19 +142,38 @@ impl CertificateProvisioner {
         let acme = acme.unwrap();
         slog::info!(self.logger, "ACME account initialized");
 
+        while let Some(cmd) = cmd_rx.recv().await {
+            match cmd {
+                Command::AddDomain(sni) => {
+                    slog::info!(self.logger, "adding new domain"; "sni" => &sni);
+                    tokio::spawn(self.clone().worker(sni.to_string(), acme.clone()));
+                }
+            }
+        }
+    }
+
+    async fn worker(self: Arc<Self>, sni: String, acme: instant_acme::Account) {
+        let sni = &sni;
+
         loop {
-            let delay = match self.provision_wait_time() {
+            let delay = match self.provision_wait_time(sni) {
                 Ok(delay) => delay,
                 Err(_) => Duration::ZERO,
             };
-            slog::info!(self.logger, "waiting before provisioning certificate"; "delay" => ?delay);
+            slog::info!(self.logger, "waiting before provisioning certificate";
+                "sni" => sni,
+                "delay" => ?delay,
+            );
             tokio::time::sleep(delay).await;
 
             let backoff = backoff::ExponentialBackoff::default();
             let _ = backoff::future::retry(backoff, async || {
-                let result = self.provision_once(&acme).await;
+                let result = self.provision_once(sni, &acme).await;
                 if let Err(ref err) = result {
-                    slog::error!(self.logger, "failed to provision certificate"; "err" => ?err);
+                    slog::error!(self.logger, "failed to provision certificate";
+                        "err" => ?err,
+                        "sni" => sni,
+                    );
                 }
 
                 result.map_err(backoff::Error::transient)
@@ -129,8 +183,8 @@ impl CertificateProvisioner {
     }
 
     /// Compute the time we need to wait before trying to provision the certificate.
-    fn provision_wait_time(&self) -> Result<Duration> {
-        let certificate = match self.resolver.get_certificate() {
+    fn provision_wait_time(&self, sni: &str) -> Result<Duration> {
+        let certificate = match self.resolver.get_certificate(sni) {
             Some(certificate) => certificate,
             None => return Ok(Duration::ZERO),
         };
@@ -149,13 +203,13 @@ impl CertificateProvisioner {
         }
     }
 
-    pub async fn provision_once(&self, acme: &instant_acme::Account) -> Result<()> {
-        slog::info!(self.logger, "provisioning new certificate");
+    pub async fn provision_once(&self, sni: &str, acme: &instant_acme::Account) -> Result<()> {
+        slog::info!(self.logger, "provisioning new certificate"; "sni" => sni);
 
         // Create a new order.
         let mut order = acme
             .new_order(&instant_acme::NewOrder::new(&[
-                instant_acme::Identifier::Dns(self.domain.clone()),
+                instant_acme::Identifier::Dns(sni.to_string()),
             ]))
             .await?;
 
@@ -172,7 +226,7 @@ impl CertificateProvisioner {
                 .ok_or_else(|| anyhow::anyhow!("no TLS-ALPN01 challenge found"))?;
 
             // Generate key.
-            let mut params = rcgen::CertificateParams::new(vec![self.domain.clone()])?;
+            let mut params = rcgen::CertificateParams::new(vec![sni.to_string()])?;
             params.custom_extensions = vec![rcgen::CustomExtension::new_acme_identifier(
                 challenge.key_authorization().digest().as_ref(),
             )];
@@ -189,7 +243,8 @@ impl CertificateProvisioner {
                 .load_private_key(key_pair)
                 .context("failed to load challenge private key")?;
             let certified_key = CertifiedKey::new(vec![cert.der().clone()], key_pair);
-            self.resolver.set_challenge(Some(Arc::new(certified_key)));
+            self.resolver
+                .set_challenge(sni, Some(Arc::new(certified_key)));
             challenge.set_ready().await?;
 
             // Currently we only support a single identifier (domain).
@@ -232,7 +287,8 @@ impl CertificateProvisioner {
             rustls::crypto::CryptoProvider::get_default()
                 .ok_or(anyhow!("missing crypto provider"))?,
         )?;
-        self.resolver.set_certificate(Some(Arc::new(certified_key)));
+        self.resolver
+            .set_certificate(sni, Some(Arc::new(certified_key)));
 
         slog::info!(self.logger, "certificate provisioned");
 
@@ -246,8 +302,8 @@ struct CertificateResolver {
 
 #[derive(Debug, Default)]
 struct CertificateResolverState {
-    challenge: Option<Arc<CertifiedKey>>,
-    certificate: Option<Arc<CertifiedKey>>,
+    challenges: HashMap<String, Arc<CertifiedKey>>,
+    certificates: HashMap<String, Arc<CertifiedKey>>,
 }
 
 impl CertificateResolver {
@@ -257,16 +313,39 @@ impl CertificateResolver {
         }
     }
 
-    fn set_challenge(&self, challenge: Option<Arc<CertifiedKey>>) {
-        self.state.lock().unwrap().challenge = challenge;
+    fn set_challenge(&self, sni: &str, challenge: Option<Arc<CertifiedKey>>) {
+        let mut state = self.state.lock().unwrap();
+
+        match challenge {
+            Some(challenge) => {
+                state.challenges.insert(sni.to_string(), challenge);
+            }
+            None => {
+                state.challenges.remove(sni);
+            }
+        }
     }
 
-    fn get_certificate(&self) -> Option<Arc<CertifiedKey>> {
-        self.state.lock().unwrap().certificate.clone()
+    fn get_challenge(&self, sni: &str) -> Option<Arc<CertifiedKey>> {
+        self.state.lock().unwrap().challenges.get(sni).cloned()
     }
 
-    fn set_certificate(&self, certificate: Option<Arc<CertifiedKey>>) {
-        self.state.lock().unwrap().certificate = certificate;
+    fn get_certificate(&self, sni: &str) -> Option<Arc<CertifiedKey>> {
+        self.state.lock().unwrap().certificates.get(sni).cloned()
+    }
+
+    fn set_certificate(&self, sni: &str, certificate: Option<Arc<CertifiedKey>>) {
+        let mut state = self.state.lock().unwrap();
+
+        match certificate {
+            Some(certificate) => {
+                state.challenges.remove(sni);
+                state.certificates.insert(sni.to_string(), certificate);
+            }
+            None => {
+                state.certificates.remove(sni);
+            }
+        }
     }
 }
 
@@ -281,7 +360,7 @@ const H2_ALPN_PROTOCOL_ID: &[u8] = b"h2";
 /// HTTP/1.1 ALPN protocol identifier.
 const HTTP11_ALPN_PROTOCOL_ID: &[u8] = b"http/1.1";
 /// ACME-TLS ALPN protocol identifier as specified in RFC 8737.
-const ACME_TLS_ALPN_PROTOCOL_ID: &[u8] = b"acme-tls/1";
+pub(super) const ACME_TLS_ALPN_PROTOCOL_ID: &[u8] = b"acme-tls/1";
 
 /// Whether the given client hello contains exactly the ACME-TLS ALPN protocol.
 fn is_acme_tls_alpn_protocol(client_hello: &rustls::server::ClientHello<'_>) -> bool {
@@ -294,13 +373,11 @@ fn is_acme_tls_alpn_protocol(client_hello: &rustls::server::ClientHello<'_>) -> 
 
 impl rustls::server::ResolvesServerCert for CertificateResolver {
     fn resolve(&self, client_hello: rustls::server::ClientHello<'_>) -> Option<Arc<CertifiedKey>> {
+        let sni = client_hello.server_name()?;
         if is_acme_tls_alpn_protocol(&client_hello) {
-            match client_hello.server_name() {
-                Some(_) => self.state.lock().unwrap().challenge.clone(),
-                None => None,
-            }
+            self.get_challenge(sni)
         } else {
-            self.state.lock().unwrap().certificate.clone()
+            self.get_certificate(sni)
         }
     }
 }

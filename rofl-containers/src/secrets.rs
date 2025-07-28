@@ -36,6 +36,7 @@ pub async fn init<A: App>(
             .open_secret(&OpenSecretRequest {
                 name: &pub_name,
                 value: &value,
+                context: None,
             })
             .await
         {

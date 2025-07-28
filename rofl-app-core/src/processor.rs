@@ -185,10 +185,6 @@ where
     async fn cmd_initial_registration_completed(&self) -> Result<()> {
         slog::info!(self.logger, "initial registration completed");
 
-        // Start application after first registration.
-        slog::info!(self.logger, "starting application");
-        tokio::spawn(self.state.app.clone().run(self.env.clone()));
-
         // Perform post-registration initialization.
         let app = self.state.app.clone();
         let env = self.env.clone();
@@ -201,6 +197,10 @@ where
 
             app.post_registration_init(env).await;
         });
+
+        // Start application after first registration.
+        slog::info!(self.logger, "starting application");
+        tokio::spawn(self.state.app.clone().run(self.env.clone()));
 
         // Notify notifier task.
         self.tasks

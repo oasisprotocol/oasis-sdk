@@ -7,6 +7,7 @@ use cmd_lib::run_cmd;
 pub async fn init() -> Result<()> {
     // Setup networking.
     run_cmd!(
+        ip link set lo up;
         mount none -t tmpfs "/tmp";
         udhcpc -i eth0 -q -n;
     )?;
