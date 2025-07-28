@@ -51,6 +51,32 @@ pub struct RawLocalConfig {
     pub api_domain: Option<String>,
     /// Lifetime of issued JWT tokens for API access (in seconds).
     pub api_token_lifetime: Option<u64>,
+    /// Optional proxy configuration.
+    pub proxy: Option<ProxyConfig>,
+}
+
+/// Proxy configuration.
+#[derive(Clone, Debug, Default, cbor::Decode)]
+pub struct ProxyConfig {
+    /// Domain used as a base to forward to apps running in deployed machines. All subdomains
+    /// should be redirected to the same address.
+    pub domain: String,
+    /// External IP address to use for incoming Wireguard connections.
+    pub external_wireguard_address: String,
+    /// External IP address to use for incoming HTTPS proxy connections.
+    pub external_proxy_address: Option<String>,
+
+    /// Optional handshake timeout (in seconds).
+    pub timeout_handshake: Option<u64>,
+    /// Optional connect timeout (in seconds).
+    pub timeout_connect: Option<u64>,
+    /// Optional maximum connection duration (in seconds).
+    pub timeout_connection: Option<u64>,
+    /// Optional read/write timeout (in seconds).
+    pub timeout_rw: Option<u64>,
+
+    /// Optional maximum connection limit.
+    pub max_connections: Option<u64>,
 }
 
 impl RawLocalConfig {
@@ -134,6 +160,8 @@ pub struct LocalConfig {
     pub api_domain: Option<String>,
     /// Lifetime of issued JWT tokens for API access (in seconds).
     pub api_token_lifetime: u64,
+    /// Optional proxy configuration.
+    pub proxy: Option<ProxyConfig>,
 }
 
 impl LocalConfig {
@@ -196,6 +224,7 @@ impl LocalConfig {
                 .api_token_lifetime
                 .unwrap_or(6 * 3600) // Default to 6 hours.
                 .clamp(60, 7 * 24 * 3600),
+            proxy: cfg.proxy,
         })
     }
 

@@ -27,7 +27,8 @@ use oasis_runtime_sdk_rofl_market::{
     types::{Deployment, Instance, InstanceId, InstanceStatus},
 };
 use rand::Rng;
-use rofl_app_core::prelude::*;
+use rofl_app_core::{prelude::*, secrets};
+use rofl_proxy::{LABEL_PROXY, PROXY_LABEL_ENCRYPTION_CONTEXT};
 use sha2::{Digest, Sha512_256};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -39,6 +40,7 @@ use super::{
     client::{MarketClient, MarketQueryClient},
     config::{LocalConfig, Resources},
     manifest::{self, Manifest},
+    proxy::Proxy,
     qcow2, types, SchedulerApp,
 };
 
@@ -154,6 +156,7 @@ pub struct Manager {
     env: Environment<SchedulerApp>,
     client: Arc<MarketClient>,
     cfg: Arc<LocalConfig>,
+    proxy: Option<Arc<Proxy>>,
 
     instances: RwLock<BTreeMap<InstanceId, InstanceState>>,
 
@@ -162,9 +165,14 @@ pub struct Manager {
 
 impl Manager {
     /// Create a new manager instance.
-    pub fn new(env: Environment<SchedulerApp>, cfg: Arc<LocalConfig>) -> Arc<Self> {
+    pub fn new(
+        env: Environment<SchedulerApp>,
+        cfg: Arc<LocalConfig>,
+        proxy: Option<Arc<Proxy>>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             client: Arc::new(MarketClient::new(env.clone(), cfg.provider_address)),
+            proxy,
             env,
             cfg,
             instances: RwLock::new(BTreeMap::new()),
@@ -646,8 +654,12 @@ impl Manager {
             .pending_start
             .iter()
             .map(|(instance, deployment, wipe_storage)| {
-                self.clone()
-                    .start_instance(instance.clone(), deployment.clone(), *wipe_storage)
+                self.clone().start_instance(
+                    local_state.client.clone(),
+                    instance.clone(),
+                    deployment.clone(),
+                    *wipe_storage,
+                )
             })
             .collect();
 
@@ -845,6 +857,7 @@ impl Manager {
     /// Start the given instance with the provided deployment.
     async fn start_instance(
         self: Arc<Self>,
+        client: Arc<MarketQueryClient>,
         instance: Instance,
         deployment: Deployment,
         wipe_storage: bool,
@@ -861,7 +874,10 @@ impl Manager {
 
         self.set_last_instance_deployment(instance.id, &deployment);
 
-        match self.pull_and_deploy_instance(&instance, &deployment).await {
+        match self
+            .pull_and_deploy_instance(client, &instance, &deployment)
+            .await
+        {
             Ok(_) => {
                 self.allow_instance_start(instance.id);
                 Ok(())
@@ -936,13 +952,14 @@ impl Manager {
     /// Pull the given deployment and deploy it into the given instance.
     async fn pull_and_deploy_instance(
         self: &Arc<Self>,
+        client: Arc<MarketQueryClient>,
         instance: &Instance,
         deployment: &Deployment,
     ) -> Result<()> {
         let deployment_info = self
             .pull_and_validate_deployment(instance, deployment)
             .await?;
-        self.deploy_instance(instance, deployment, deployment_info)
+        self.deploy_instance(client, instance, deployment, deployment_info)
             .await
     }
 
@@ -950,6 +967,7 @@ impl Manager {
     /// been pulled and is available on the host under the given temporary name.
     async fn deploy_instance(
         &self,
+        client: Arc<MarketQueryClient>,
         instance: &Instance,
         deployment: &Deployment,
         deployment_info: DeploymentInfo,
@@ -1006,6 +1024,44 @@ impl Manager {
         };
         let provider_label = BASE64_STANDARD.encode(cbor::to_vec(provider_label));
         labels.insert(LABEL_PROVIDER.to_string(), provider_label);
+
+        // Setup proxy for the instance when enabled.
+        if let Some(proxy) = self.proxy.as_ref() {
+            match proxy.provision_instance(instance.id).await {
+                Ok(proxy_label) => {
+                    // Encrypt proxy label to app's SEK.
+                    match client.app(deployment.app_id).await {
+                        Ok(app) => {
+                            let proxy_label = cbor::to_vec(proxy_label);
+                            let proxy_label = secrets::SecretEnvelope::seal_opts(
+                                &app.sek,
+                                vec![],
+                                proxy_label,
+                                secrets::SealOptions {
+                                    context: PROXY_LABEL_ENCRYPTION_CONTEXT,
+                                    ..Default::default()
+                                },
+                            );
+                            let proxy_label = BASE64_STANDARD.encode(proxy_label);
+                            labels.insert(LABEL_PROXY.to_string(), proxy_label);
+                        }
+                        Err(err) => {
+                            slog::error!(self.logger, "failed to retrieve app SEK";
+                                "err" => ?err,
+                                "id" => ?instance.id,
+                                "app" => ?deployment.app_id,
+                            );
+                        }
+                    }
+                }
+                Err(err) => {
+                    slog::error!(self.logger, "failed to provision proxy for instance";
+                        "err" => ?err,
+                        "id" => ?instance.id,
+                    );
+                }
+            }
+        }
 
         let _ = self
             .env
@@ -1407,6 +1463,13 @@ impl Manager {
         instance_id: InstanceId,
         wipe_storage: bool,
     ) -> Result<()> {
+        // Deprovision instance in the proxy.
+        if let Some(proxy) = self.proxy.as_ref() {
+            if let Err(err) = proxy.deprovision_instance(instance_id).await {
+                slog::error!(self.logger, "failed to deprovision instance in proxy"; "err" => ?err);
+            }
+        }
+
         // Wipe storage if needed.
         if wipe_storage {
             self.wipe_instance_storage(instance_id)

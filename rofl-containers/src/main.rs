@@ -4,11 +4,7 @@
 //! It expects `ROFL_APP_ID` and `ROFL_CONSENSUS_TRUST_ROOT` to be passed via environment variables.
 //! Usually these would be set in the kernel command-line so that they are part of the runtime
 //! measurements.
-//!
-//! It currently just starts a REST API server (rofl-appd) that exposes information about the
-//! application together with a simple KMS interface. In the future it will also manage secrets and
-//! expose other interfaces.
-use std::env;
+use std::{collections::BTreeMap, env};
 
 use base64::prelude::*;
 use oasis_runtime_sdk::{
@@ -19,12 +15,15 @@ use rofl_app_core::prelude::*;
 use rofl_appd::services;
 
 mod containers;
+mod proxy;
 mod reaper;
 mod secrets;
 mod storage;
 
 /// UNIX socket address where the REST API server will listen on.
 const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
+/// Name of the environment variable for disabling the proxy.
+const PROXY_DISABLED_ENV_NAME: &str = "ROFL_PROXY_DISABLED";
 
 struct ContainersApp;
 
@@ -52,6 +51,17 @@ impl App for ContainersApp {
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
     }
 
+    async fn get_metadata(
+        self: Arc<Self>,
+        _env: Environment<Self>,
+    ) -> Result<BTreeMap<String, String>> {
+        let mut meta = BTreeMap::new();
+        if let Some(identity) = rofl_proxy::http::tls::Identity::global() {
+            meta.extend(identity.metadata().into_iter());
+        }
+        Ok(meta)
+    }
+
     async fn post_registration_init(self: Arc<Self>, env: Environment<Self>) {
         // Temporarily disable the default process reaper as it interferes with scripts.
         let _guard = reaper::disable_default_reaper();
@@ -68,6 +78,12 @@ impl App for ContainersApp {
         slog::info!(logger, "initializing stage 2 storage");
         if let Err(err) = storage::init(kms.clone()).await {
             slog::error!(logger, "failed to initialize stage 2 storage"; "err" => ?err);
+            process::abort();
+        }
+
+        // Initialize TLS identity after we have persistent storage so we can load from cache.
+        if let Err(err) = rofl_proxy::http::tls::Identity::init() {
+            slog::error!(logger, "failed to initialize TLS identity"; "err" => ?err);
             process::abort();
         }
 
@@ -91,6 +107,17 @@ impl App for ContainersApp {
         if let Err(err) = containers::init().await {
             slog::error!(logger, "failed to initialize container environment"; "err" => ?err);
             process::abort();
+        }
+
+        // Initialize the proxy when enabled and available.
+        match env::var(PROXY_DISABLED_ENV_NAME) {
+            Ok(value) if ["1", "yes"].contains(&value.as_str()) => {
+                slog::info!(logger, "proxy is disabled");
+            }
+            _ => {
+                slog::info!(logger, "starting proxy");
+                proxy::start(env.clone(), kms.clone()).await;
+            }
         }
 
         // Initialize secrets.

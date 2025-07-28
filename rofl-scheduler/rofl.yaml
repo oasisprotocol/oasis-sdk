@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.3.0
+version: 0.4.0
 repository: https://github.com/oasisprotocol/oasis-sdk
 description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 tee: tdx
@@ -12,9 +12,9 @@ resources:
     size: 64
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
-  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
-  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage1.bin#23877530413a661e9187aad2eccfc9660fc4f1a864a1fbad2f6c7d43512071ca
-  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.5.0/stage2-basic.tar.bz2#72c84d2566959799fdd98fae08c143a8572a5a09ee426be376f9a8bbd1675f2b
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.1/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.1/stage1.bin#118be803795bb40c991bc4d74577c17c04fbdb985106f5a91e23f84e8c2f36b3
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.1/stage2-basic.tar.bz2#9a2b4d71e9779801bde73c16b3be789bc50672019a87e8c90fe3c94e034907c1
 deployments:
   mainnet:
     app_id: rofl1qr95suussttd2g9ehu3zcpgx8ewtwgayyuzsl0x2
@@ -31,32 +31,16 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: uprcd2wbFvXZ7US3vminHlONmOsbaU20Ll/XFn22U4kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.0
-        - id: d8+W9SL9GLSjlox5EahAzQdb/ruz4Qb2al4l9+gsDfUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.0
-        - id: aiLfTIGfj4Qb2utbgmxfWownULME4wRXz3lbvL7vWnYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.1
-        - id: 33R8MVGCGJg3CAYKDR87Zv2kvj65lbpcAHmZLKRA5FYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.1
-        - id: Sa0PyyZJsj4UpjE6IJOyqsi92iNMrwULpRbF2tq8YmQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.2
-        - id: zt08xPOoXhy1SWHNcBNalVDjf6EHAUu9x6Tvq7aOBrwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.2
-        - id: p+wMY5zEuP5geFAkuoxI7NFiszMMTJHgdGxizuCZdwkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.3
-        - id: WbUlJcnxwoy4NGyKgKIRlYF4OL7zHuvQVQ0yhbOvYcYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.3
-        - id: dko0Rai0TKLxC6Oqqzij43WcXfbFmI0nWAm+nRZwzbMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.4
-        - id: FTu9d6JtwzLUwkyW5YwOxmxCmzz3uvn6/jI7iFan0d8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.4
         - id: fxPwJH4cORkye0xbxxosfnr+WGonbHW7NzNhV5n5MwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.5
         - id: v356Ki5kxEwBc7pbwmrRdIGf+g40h6PvYFs2Xa+6MgoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.5
         - id: 4SSJB1hpKRpTkYl244GSqXh2EegoQfRdXFyInsZtXUcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.3.0
         - id: gt3ATFEOud1vByy7uhB6MoBuEkPHqhmekm49lYAb2I0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.3.0
+        - id: 6WS0pl5unAEW4bZkUNHqgxSlKqxzmlsJqOtigCnHK+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: MTvk+/bi32kT3SVy6Q/uVMs8c2WhkP9IRRf+Nm9wC1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -76,32 +60,16 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: 5pgjooS9Su7Ic+qAFhlBLXgVDrwmKUErrSKEOfIXWHYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.0
-        - id: JronXGA4H36ZRJsNQn0qRpWlinNIb7wvk/MhZqKF1S4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.0
-        - id: oo8dzG9hhkjKpY5G2/KozFXtpWncDNTMAYCSAMvWNFMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.1
-        - id: erQlwbWIEIx3WdLCqb7C/wWsDjDQgTW5VssQb9APrKMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.1
-        - id: Iq6cDWfVpHrAfgbFvaEqhnZ7YCDHfoXEWlU5n2xFnJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.2
-        - id: e9QSiflGUzqJei84tKL8N81HOMKkOXLfU6X/M/p00N0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.2
-        - id: ekUMroUmZHUOJ44N/zeMVtCyovQbbZDpy9WhinopAFMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.3
-        - id: I9VKcl+3s10LUOmruH1khxhghakr7GGiCfnD8f9Z8ikAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.3
-        - id: QepFhelHpSsrxvfqVNwIfDIYnVHS9JwvSFY34D9W5SgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.4
-        - id: FLB2DbPWOH5FAhW7swxjdA0czQiGBnVSEK9GRj6pAxQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.2.4
         - id: PrrMd3pK+l/zL64LiRpZzyshlRIHajHSpWcHcriEllcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.5
         - id: SB3/sv5IGderOxKZT3dLdFehD6EIKiL7pe/IxmMzw50AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.2.5
         - id: yjwpJ22sHTIJWQgmdKUpJGp/bkwQts76SC2nVwKt5xEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.3.0
         - id: IVXe0YbOdkNd+tBEBs5qu78lDxiVWPHsE8MdypaOta0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.3.0
+        - id: xF6FtolPmZuLZ5yd96qN41Kqr+ZR6NRGmXiu/Eg60y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: 0aspYhMnD23lBnKE2SpbOZtGzEQglb1YrPhGIZdLducAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node

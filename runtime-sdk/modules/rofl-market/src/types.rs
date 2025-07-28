@@ -21,6 +21,12 @@ macro_rules! impl_identifier {
             }
         }
 
+        impl From<$name> for $ityp {
+            fn from(value: $name) -> Self {
+                Self::from_be_bytes(value.0)
+            }
+        }
+
         impl $name {
             /// Interpret the identifier as an integer and increment it by one. Returns the previous
             /// value of the identifier.

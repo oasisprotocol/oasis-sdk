@@ -131,6 +131,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69f7f8c3906b62b754cd5326047894316021dcfe5a194c8ea52bdd94934a3457"
 
 [[package]]
+name = "arraydeque"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7d902e3d592a523def97af8f317b08ce16b7ab854c1985a0c671e6f15cebc236"
+
+[[package]]
 name = "arrayref"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -532,7 +538,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "shlex",
  "syn 2.0.104",
  "which",
@@ -555,10 +561,30 @@ dependencies = [
  "proc-macro2",
  "quote",
  "regex",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "shlex",
  "syn 2.0.104",
  "which",
+]
+
+[[package]]
+name = "bindgen"
+version = "0.72.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f72209734318d0b619a5e0f5129918b848c416e122a3c4ce054e03cb87b726f"
+dependencies = [
+ "bitflags 2.9.1",
+ "cexpr",
+ "clang-sys",
+ "itertools 0.12.1",
+ "log",
+ "prettyplease",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash 2.1.1",
+ "shlex",
+ "syn 2.0.104",
 ]
 
 [[package]]
@@ -1259,6 +1285,27 @@ name = "data-encoding"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2a2330da5de22e8a3cb63252ce2abb30116bf5265e89c0e01bc17015ce30a476"
+
+[[package]]
+name = "defguard_wireguard_rs"
+version = "0.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e2d2f56ffaf56903a51b128c6f6730b8b344fab0d0be0f5db0b65dcccbb7334"
+dependencies = [
+ "base64 0.22.1",
+ "libc",
+ "log",
+ "netlink-packet-core",
+ "netlink-packet-generic",
+ "netlink-packet-route",
+ "netlink-packet-utils",
+ "netlink-packet-wireguard",
+ "netlink-sys",
+ "nix 0.30.1",
+ "serde",
+ "thiserror 2.0.12",
+ "x25519-dalek",
+]
 
 [[package]]
 name = "deoxysii"
@@ -2208,6 +2255,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashlink"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7382cf6263419f2d8df38c55d7da83da5c18aef87fc7a7fc1fb1e344edfe14c1"
+dependencies = [
+ "hashbrown 0.15.4",
+]
+
+[[package]]
 name = "headers"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2756,6 +2812,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
+name = "ipnetwork"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf370abdafd54d13e54a620e8c3e1145f28e46cc9d704bc6d94414559df41763"
+
+[[package]]
 name = "iri-string"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3224,10 +3286,98 @@ dependencies = [
 ]
 
 [[package]]
+name = "netlink-packet-core"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72724faf704479d67b388da142b186f916188505e7e0b26719019c525882eda4"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "netlink-packet-utils",
+]
+
+[[package]]
+name = "netlink-packet-generic"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cd7eb8ad331c84c6b8cb7f685b448133e5ad82e1ffd5acafac374af4a5a308b"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "netlink-packet-core",
+ "netlink-packet-utils",
+]
+
+[[package]]
+name = "netlink-packet-route"
+version = "0.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc0e7987b28514adf555dc1f9a5c30dfc3e50750bbaffb1aec41ca7b23dcd8e4"
+dependencies = [
+ "anyhow",
+ "bitflags 2.9.1",
+ "byteorder",
+ "libc",
+ "log",
+ "netlink-packet-core",
+ "netlink-packet-utils",
+]
+
+[[package]]
+name = "netlink-packet-utils"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ede8a08c71ad5a95cdd0e4e52facd37190977039a4704eb82a283f713747d34"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "paste",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "netlink-packet-wireguard"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60b25b050ff1f6a1e23c6777b72db22790fe5b6b5ccfd3858672587a79876c8f"
+dependencies = [
+ "anyhow",
+ "byteorder",
+ "libc",
+ "log",
+ "netlink-packet-generic",
+ "netlink-packet-utils",
+]
+
+[[package]]
+name = "netlink-sys"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16c903aa70590cb93691bf97a767c8d1d6122d2cc9070433deb3bbf36ce8bd23"
+dependencies = [
+ "bytes",
+ "libc",
+ "log",
+]
+
+[[package]]
 name = "nix"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.9.1",
+ "cfg-if 1.0.1",
+ "cfg_aliases",
+ "libc",
+ "memoffset",
+]
+
+[[package]]
+name = "nix"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6"
 dependencies = [
  "bitflags 2.9.1",
  "cfg-if 1.0.1",
@@ -3536,7 +3686,7 @@ dependencies = [
  "log",
  "lru",
  "mbedtls 0.12.5",
- "nix",
+ "nix 0.29.0",
  "num-bigint 0.4.6",
  "num-derive",
  "num-traits",
@@ -4294,6 +4444,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ptrie"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4debfffbf1669869b4bea1bab297f8e9ec11900a9ff2dcf659c2a1c4918c811a"
+
+[[package]]
 name = "quote"
 version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4722,17 +4878,19 @@ dependencies = [
  "async-trait",
  "backoff",
  "base64 0.22.1",
+ "hex",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-rofl-market",
  "rand 0.8.5",
+ "rofl-proxy",
  "slog",
  "tokio",
 ]
 
 [[package]]
 name = "rofl-appd"
-version = "0.2.1"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "oasis-cbor",
@@ -4760,11 +4918,39 @@ dependencies = [
  "cmd_lib",
  "hex",
  "libc",
- "nix",
+ "nix 0.29.0",
+ "oasis-cbor",
  "oasis-runtime-sdk",
  "rofl-app-core",
  "rofl-appd",
+ "rofl-proxy",
+ "rustables",
  "tokio",
+ "yaml-rust2",
+]
+
+[[package]]
+name = "rofl-proxy"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "backoff",
+ "base64 0.22.1",
+ "byteorder",
+ "defguard_wireguard_rs",
+ "honggfuzz",
+ "instant-acme",
+ "oasis-cbor",
+ "oasis-runtime-sdk",
+ "ptrie",
+ "rcgen",
+ "rustls",
+ "slog",
+ "tokio",
+ "tokio-io-timeout",
+ "tokio-rustls",
+ "x509-parser 0.17.0",
+ "zeroize",
 ]
 
 [[package]]
@@ -4786,7 +4972,7 @@ dependencies = [
  "hex",
  "instant-acme",
  "jsonwebtoken",
- "nix",
+ "nix 0.29.0",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-rofl-market",
@@ -4794,6 +4980,7 @@ dependencies = [
  "rand 0.8.5",
  "rcgen",
  "rofl-app-core",
+ "rofl-proxy",
  "rustc-hex",
  "rustls",
  "serde",
@@ -4853,6 +5040,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustables"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19ff8788a90655f715f8236507161558a966c28a2845dc54d0f9985f9bbf389b"
+dependencies = [
+ "bindgen 0.72.0",
+ "bitflags 2.9.1",
+ "ipnetwork",
+ "libc",
+ "log",
+ "nix 0.30.1",
+ "regex",
+ "rustables-macros",
+ "thiserror 2.0.12",
+]
+
+[[package]]
+name = "rustables-macros"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "698b79177cbf57522a1dcc118ac31393dc2a7ccc9bdb3625a6601ff5c27a3085"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "proc-macro2-diagnostics",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "rustc-demangle"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4863,6 +5080,12 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustc-hash"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357703d41365b4b27c590e3ed91eabb1b663f07c4c084095e60cbed4362dff0d"
 
 [[package]]
 name = "rustc-hex"
@@ -6234,6 +6457,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-io-timeout"
+version = "1.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0bd86198d9ee903fedd2f9a2e72014287c0d9167e4ae43b5853007205dda1b76"
+dependencies = [
+ "pin-project-lite",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-macros"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6659,7 +6892,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e8b4d00e672f147fc86a09738fadb1445bd1c0a40542378dfb82909deeee688"
 dependencies = [
  "libc",
- "nix",
+ "nix 0.29.0",
 ]
 
 [[package]]
@@ -7423,6 +7656,17 @@ dependencies = [
  "rusticata-macros",
  "thiserror 2.0.12",
  "time",
+]
+
+[[package]]
+name = "yaml-rust2"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ce2a4ff45552406d02501cea6c18d8a7e50228e7736a872951fe2fe75c91be7"
+dependencies = [
+ "arraydeque",
+ "encoding_rs",
+ "hashlink",
 ]
 
 [[package]]
