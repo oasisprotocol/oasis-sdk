@@ -135,7 +135,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
                 let temp_name = format_ident!("{}_uint", arg_name);
                 arg_decls.push(quote! {
                     let #temp_name = decoded_args.#field_index.clone();
-                    if #temp_name.BITS > (u128::BITS as usize) {
+                    if *#temp_name.high() != 0 {
                         return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                             exit_status: ::evm::ExitError::Other("integer overflow".into()),
                         }));
