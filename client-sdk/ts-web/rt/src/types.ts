@@ -801,6 +801,82 @@ export interface ContractsContractEvent {
     data?: Uint8Array;
 }
 
+export interface ConsensusDelegate {
+    to: Uint8Array;
+    amount: BaseUnits;
+}
+
+export interface ConsensusUndelegate {
+    from: Uint8Array;
+    shares: Uint8Array;
+}
+
+export interface ConsensusDelegationQuery {
+    from: Uint8Array;
+    to: Uint8Array;
+}
+
+export interface ConsensusDelegationsQuery {
+    from: Uint8Array;
+}
+
+export interface ConsensusUndelegationsQuery {
+    to: Uint8Array;
+}
+
+export interface DelegationInfo {
+    shares: Uint8Array;
+}
+
+export interface ExtendedDelegationInfo {
+    to: Uint8Array;
+    shares: Uint8Array;
+}
+
+export interface CompleteDelegationInfo {
+    from: Uint8Array;
+    to: Uint8Array;
+    shares: Uint8Array;
+}
+
+export interface UndelegationInfo {
+    from: Uint8Array;
+    epoch: oasis.types.longnum;
+    shares: Uint8Array;
+}
+
+export interface CompleteUndelegationInfo {
+    from: Uint8Array;
+    to: Uint8Array;
+    epoch: oasis.types.longnum;
+    shares: Uint8Array;
+}
+
+export interface ConsensusAccountsDelegateEvent {
+    from: Uint8Array;
+    nonce: oasis.types.longnum;
+    to: Uint8Array;
+    amount: BaseUnits;
+    error?: ConsensusAccountsConsensusError;
+    shares?: Uint8Array;
+}
+
+export interface ConsensusAccountsUndelegateStartEvent {
+    from: Uint8Array;
+    nonce: oasis.types.longnum;
+    to: Uint8Array;
+    shares: Uint8Array;
+    debond_end_time: oasis.types.longnum;
+    error?: ConsensusAccountsConsensusError;
+}
+
+export interface ConsensusAccountsUndelegateDoneEvent {
+    from: Uint8Array;
+    to: Uint8Array;
+    shares: Uint8Array;
+    amount: BaseUnits;
+    epoch?: oasis.types.longnum;
+}
 // Types for roflmarket module
 
 export enum RoflmarketTeeType {
