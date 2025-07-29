@@ -173,7 +173,7 @@ export const playground = (async function () {
                 },
             }),
             oasisRT.core.moduleEventHandler({
-                [oasisRT.core.EVENT_GAS_USED]: (e, gasUsedEvent) => {
+                [oasisRT.core.EVENT_GAS_USED_CODE]: (e, gasUsedEvent) => {
                     console.log('observed gas used event', gasUsedEvent);
                 },
             }),
