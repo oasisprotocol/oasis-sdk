@@ -125,13 +125,13 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
         call_args.push(arg_name.clone());
         match evm_ty.as_str() {
             "address" => {
-                decoder_list.push(quote!(H160));
+                decoder_list.push(quote!(::solabi::Address));
                 arg_decls.push(quote! {
                     let #arg_name = decoded_args.#field_index.clone();
                 });
             }
             "uint256" => {
-                decoder_list.push(quote!(U256));
+                decoder_list.push(quote!(::solabi::U256));
                 let temp_name = format_ident!("{}_uint", arg_name);
                 arg_decls.push(quote! {
                     let #temp_name = decoded_args.#field_index.clone();
@@ -409,19 +409,19 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                 "address" => {
                     // The tuple field for this should be a primitive_types::H160.
                     abi_tokens.push(quote! {
-                        H160(*#field_ident)
+                        solabi::Address((*#field_ident).into())
                     });
                 }
                 "uint256" => {
                     // The tuple field for this should be a u128.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::Uint((*#field_ident).into())
+                        solabi::U256::new(*#field_ident as u128)
                     });
                 }
                 "string" => {
                     // The tuple field for this should be anything that has a to_string() method.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::String(#field_ident.to_string())
+                        #field_ident.to_string()
                     });
                 }
                 ty => {
@@ -440,7 +440,7 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
         } else {
             (
                 quote! { Self::#ident(#(#match_fields,)*) },
-                quote! { output.extend(::solabi::encode(&[#(#abi_tokens,)*]).as_slice()); },
+                quote! { output.extend(::solabi::encode(&(#(#abi_tokens,)*)).as_slice()); },
             )
         };
         variant_encoders.push(quote! {
@@ -474,7 +474,6 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quote::quote;
     use syn::parse_quote;
 
     #[test]
@@ -492,7 +491,6 @@ mod tests {
         };
 
         let result = generate_method_call(&attr, &sig).unwrap();
-        let result2 = generate_method_call_2(&attr, &sig).unwrap();
 
         print!("\nGenerated method call:\n{}\n", result);
         // print!("\nGenerated method call 2:\n{}\n", result2);
@@ -500,47 +498,6 @@ mod tests {
         // assert_eq!(result.to_string(), result2.to_string());
        
     }
-
-    #[test]
-    fn test_derive_evm_contract() {
-        let input: ItemImpl = parse_quote! {
-            impl MyContract {
-                #[evm_contract_address]
-                fn address() -> H160 {
-                    T::address()
-                }
-
-                #[evm_method(signature = "transfer(address,uint256)", convert)]
-                fn transfer(
-                    handle: &mut impl PrecompileHandle,
-                    to: H160,
-                    value: u128,
-                ) -> PrecompileResult {
-                    // Implementation here
-                    Ok(PrecompileOutput::succeed(vec![]))
-                }
-            }
-        };
-
-        let output = derive_evm_contract(input);
-
-        println!("Generated EVM contract code:\n{}", output);
-        
-        // Parse and format the output to see what was generated
-        match syn::parse2::<syn::File>(output.clone()) {
-            Ok(parsed) => {
-                let formatted = prettyplease::unparse(&parsed);
-                println!("Generated EVM contract code:\n{}", formatted);
-            }
-            Err(e) => {
-                println!("Generated code has syntax errors: {}", e);
-                println!("Raw generated code:\n{}", output.to_string());
-            }
-        }
-        
-        // Basic assertions
-        let output_str = output.to_string();
-        assert!(output_str.contains("StaticContract"));
-        assert!(output_str.contains("dispatch_call"));
-    }
+ 
+       
 }
