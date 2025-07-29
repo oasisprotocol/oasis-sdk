@@ -127,7 +127,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
             "address" => {
                 decoder_list.push(quote!(::solabi::Address));
                 arg_decls.push(quote! {
-                    let #arg_name = decoded_args.#field_index.clone();
+                    let #arg_name = ::primitive_types::H160(decoded_args.#field_index.0);
                 });
             }
             "uint256" => {
@@ -135,7 +135,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
                 let temp_name = format_ident!("{}_uint", arg_name);
                 arg_decls.push(quote! {
                     let #temp_name = decoded_args.#field_index.clone();
-                    if #temp_name.bits() > (u128::BITS as usize) {
+                    if #temp_name.BITS > (u128::BITS as usize) {
                         return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                             exit_status: ::evm::ExitError::Other("integer overflow".into()),
                         }));
@@ -153,8 +153,17 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
         }
     }
     let method_name = sig.name.clone();
+    let decode_type = if decoder_list.is_empty() {
+        quote!(())
+    } else if decoder_list.len() == 1 {
+        let single_type = &decoder_list[0];
+        quote!((#single_type,))
+    } else {
+        quote!((#(#decoder_list,)*))
+    };
+    
     Some(quote! { {
-        let decoded_args = match ::solabi::decode(&handle.input()[#SELECTOR_LENGTH..]) {
+        let decoded_args: #decode_type = match ::solabi::decode(&handle.input()[#SELECTOR_LENGTH..]) {
             Err(e) => return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                 exit_status: ::evm::ExitError::Other("invalid argument".into()),
             })),
