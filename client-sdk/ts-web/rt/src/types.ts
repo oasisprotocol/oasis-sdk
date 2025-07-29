@@ -1,6 +1,29 @@
 import * as oasis from '@oasisprotocol/client';
 
 /**
+ * Parameters for the core module.
+ */
+export interface CoreParameters {
+    gas_costs: {
+        tx_byte: oasis.types.longnum;
+        storage_byte: oasis.types.longnum;
+        auth_signature: oasis.types.longnum;
+        auth_multisig_signer: oasis.types.longnum;
+        callformat_x25519_deoxysii: oasis.types.longnum;
+    };
+    max_tx_size: number;
+    max_batch_gas: oasis.types.longnum;
+    min_gas_price: oasis.types.NotModeled;
+    max_tx_signers: number;
+    max_multisig_signers: number;
+    dynamic_min_gas_price: {
+        enabled: boolean;
+        min_price_max_change_denominator: number;
+        target_block_gas_usage_percentage: number;
+    };
+}
+
+/**
  * Arguments for the EstimateGas query.
  */
 export interface CoreEstimateGasQuery {
@@ -359,6 +382,26 @@ export interface ConsensusWithdraw {
  */
 export interface ConsensusBalanceQuery {
     address: Uint8Array;
+}
+
+/**
+ * Parameters for the consensus_accounts module.
+ */
+export interface ConsensusAccountsParameters {
+    gas_costs: {
+        delegation: oasis.types.longnum;
+        tx_deposit: oasis.types.longnum;
+        tx_delegate: oasis.types.longnum;
+        tx_withdraw: oasis.types.longnum;
+        take_receipt: oasis.types.longnum;
+        store_receipt: oasis.types.longnum;
+        tx_undelegate: oasis.types.longnum;
+        shares_to_tokens: oasis.types.longnum;
+    };
+    disable_deposit: boolean;
+    disable_delegate: boolean;
+    disable_withdraw: boolean;
+    disable_undelegate: boolean;
 }
 
 /**
@@ -877,6 +920,18 @@ export interface ConsensusAccountsUndelegateDoneEvent {
     amount: BaseUnits;
     epoch?: oasis.types.longnum;
 }
+
+export interface AccountsGasCosts {
+    tx_transfer: oasis.types.longnum;
+}
+
+export interface AccountsParameters {
+    transfers_disabled: boolean;
+    gas_costs: AccountsGasCosts;
+    debug_disable_nonce_check?: boolean;
+    denomination_infos?: Map<Uint8Array, AccountsDenominationInfo>;
+}
+
 // Types for roflmarket module
 
 export enum RoflmarketTeeType {

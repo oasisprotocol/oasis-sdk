@@ -19,6 +19,7 @@ export const METHOD_WITHDRAW = 'consensus.Withdraw';
 export const METHOD_DELEGATE = 'consensus.Delegate';
 export const METHOD_UNDELEGATE = 'consensus.Undelegate';
 // Queries.
+export const METHOD_PARAMETERS = 'consensus_accounts.Parameters';
 export const METHOD_BALANCE = 'consensus.Balance';
 export const METHOD_ACCOUNT = 'consensus.Account';
 export const METHOD_DELEGATION = 'consensus.Delegation';
@@ -54,6 +55,10 @@ export class Wrapper extends wrapper.Base {
 
     callUndelegate() {
         return this.call<types.ConsensusUndelegate, void>(METHOD_UNDELEGATE);
+    }
+
+    queryParameters() {
+        return this.query<void, types.ConsensusAccountsParameters>(METHOD_PARAMETERS);
     }
 
     queryBalance() {

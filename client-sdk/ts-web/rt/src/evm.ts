@@ -25,6 +25,7 @@ export const EVENT_LOG_CODE = 1;
 export const METHOD_CREATE = 'evm.Create';
 export const METHOD_CALL = 'evm.Call';
 // Queries.
+export const METHOD_PARAMETERS = 'evm.Parameters';
 export const METHOD_STORAGE = 'evm.Storage';
 export const METHOD_CODE = 'evm.Code';
 export const METHOD_BALANCE = 'evm.Balance';
@@ -41,6 +42,10 @@ export class Wrapper extends wrapper.Base {
 
     callCall() {
         return this.call<types.EVMCall, Uint8Array>(METHOD_CALL);
+    }
+
+    queryParameters() {
+        return this.query<void, void>(METHOD_PARAMETERS);
     }
 
     queryStorage() {
