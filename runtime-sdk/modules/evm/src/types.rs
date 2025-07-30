@@ -223,5 +223,43 @@ mod eth {
     }
 
     impl_upstream_conversions!(H160, H256, U256);
+
+    // Add solabi::Decode implementation for H160
+    impl solabi::decode::Decode for H160 {
+        fn is_dynamic() -> bool {
+            false // Addresses are fixed-size
+        }
+
+        fn decode(decoder: &mut solabi::decode::Decoder) -> Result<Self, solabi::decode::DecodeError> {
+            // Decode as solabi::Address, then convert to H160
+            let solabi_addr = solabi::Address::decode(decoder)?;
+            Ok(H160::from(solabi_addr))
+        }
+    }
+
+    // Add solabi::Encode implementation for H160
+    impl solabi::encode::Encode for H160 {
+        fn size(&self) -> solabi::encode::Size {
+            // Delegate to solabi::Address's size implementation
+            solabi::Address::from(*self).size()
+        }
+
+        fn encode(&self, encoder: &mut solabi::encode::Encoder) {
+            // Convert to solabi::Address and encode
+            solabi::Address::from(*self).encode(encoder);
+        }
+    }
+
+    impl From<solabi::Address> for H160 {
+    fn from(addr: solabi::Address) -> Self {
+        H160(addr.0)
+        }
+    }
+
+    impl From<H160> for solabi::Address {
+        fn from(addr: H160) -> Self {
+            solabi::Address(addr.0)
+        }
+    }
 }
 pub use eth::{H160, H256, U256};
