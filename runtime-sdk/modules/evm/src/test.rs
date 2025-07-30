@@ -2,7 +2,7 @@
 use std::{collections::BTreeMap, str::FromStr as _};
 
 use base64::prelude::*;
-use ethabi::{ParamType, Token};
+use solabi;
 use sha3::Digest as _;
 use uint::hex::FromHex;
 
@@ -331,7 +331,7 @@ fn test_c10l_evm_balance_transfer() {
         parameters: Default::default(),
     });
 
-    let recipient = ethabi::Address::repeat_byte(42);
+    let recipient = solabi::Address::from_slice(&[42; 20]);
     let transfer_tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -861,10 +861,7 @@ fn test_c10l_queries() {
         .query_evm_call(&ctx, contract_address, solabi::selector!("test()"), &())
         .expect("query should succeed");
 
-    let mut result =
-        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
-
-    let test = result.pop().unwrap().into_address().unwrap();
+    let test: H160 = solabi::decode(&result).expect("output should be correct");
     assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 
     // Test call with confidential envelope.
@@ -881,10 +878,7 @@ fn test_c10l_queries() {
         )
         .expect("query should succeed");
 
-    let mut result =
-        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
-
-    let test = result.pop().unwrap().into_address().unwrap();
+    let test: H160 = solabi::decode(&result).expect("output should be correct");
     assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 }
 
@@ -1369,13 +1363,6 @@ impl AccountToken for TestErcToken {
     }
 }
 
-fn downcast_uint(uint: &ethabi::Uint) -> u128 {
-    if uint.bits() > 128 {
-        panic!("ethabi::uint too large");
-    }
-    uint.as_u128()
-}
-
 #[test]
 fn test_erc20_dispatch() {
     let mut mock = mock::Mock::default();
@@ -1397,24 +1384,21 @@ fn test_erc20_dispatch() {
     let result = signer
         .query_evm_call(&ctx, contract_address, solabi::selector!("name()"), &())
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_string().unwrap();
-    assert_eq!(test, "Test Token", "token name should be correct");
+    let result = solabi::decode::<String>(&result).expect("output should be correct");
+    assert_eq!(result, "Test Token", "token name should be correct");
 
     let result = signer
         .query_evm_call(&ctx, contract_address, solabi::selector!("symbol()"), &())
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_string().unwrap();
-    assert_eq!(test, "TTOK", "token symbol should be correct");
+    let result = solabi::decode::<String>(&result).expect("output should be correct");
+    assert_eq!(result, "TTOK", "token symbol should be correct");
 
     let result = signer
         .query_evm_call(&ctx, contract_address, solabi::selector!("decimals()"), &())
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 18, "decimals should be correct");
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 18, "decimals should be correct");
 
     let result = signer
         .query_evm_call(
@@ -1425,9 +1409,8 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "total supply should be correct");
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "total supply should be correct");
 
     let result = signer
         .query_evm_call(
@@ -1438,9 +1421,8 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "dave's balance should be correct");
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "dave's balance should be correct");
 
     let result = signer
         .query_evm_call(
@@ -1450,9 +1432,8 @@ fn test_erc20_dispatch() {
             &(solabi::Address(erin.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
-    assert_eq!(test, true, "transfer from dave to erin should happen");
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
+    assert_eq!(result, true, "transfer from dave to erin should happen");
 
     let result = signer
         .query_evm_call(
@@ -1466,10 +1447,9 @@ fn test_erc20_dispatch() {
             ),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
     assert_eq!(
-        test, true,
+        result, true,
         "transfer from erin to dave by dave should happen"
     );
 
@@ -1481,9 +1461,8 @@ fn test_erc20_dispatch() {
             &(solabi::Address(erin.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
-    assert_eq!(test, true, "dave's approval for erin should succeed");
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
+    assert_eq!(result, true, "dave's approval for erin should succeed");
 
     let result = signer
         .query_evm_call(
@@ -1494,9 +1473,8 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "allowance should be correct");
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "allowance should be correct");
 
     signer
         .query_evm_call(
@@ -1548,9 +1526,8 @@ fn get_balance<C: Context>(ctx: &C, signer: &EvmSigner, address: &primitive_type
         )
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    downcast_uint(&test)
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    result.as_u128()
 }
 
 fn get_allowance<C: Context>(
@@ -1572,9 +1549,8 @@ fn get_allowance<C: Context>(
         )
         .expect("query should succeed");
     let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    downcast_uint(&test)
+        solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    result.as_u128()
 }
 
 #[test]
@@ -1629,7 +1605,7 @@ fn test_erc20_minting_burning() {
             // Minting is a transfer from address 0.
             H256::zero(),
             // The recipient was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
         ],
         "transfer event topics should be correct"
     );
@@ -1660,7 +1636,7 @@ fn test_erc20_minting_burning() {
                     .unwrap()
             ),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // Burning is a transfer to address 0.
             H256::zero(),
         ],
@@ -1770,9 +1746,9 @@ fn test_erc20_allowances() {
                     .unwrap()
             ),
             // Owner is dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // Happy spender is erin.
-            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(erin.into())])),
         ],
         "approval event topics should be correct"
     );
@@ -1840,9 +1816,9 @@ fn test_erc20_allowances() {
                     .unwrap()
             ),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(erin.into())])),
         ],
         "transfer event topics should be correct"
     );
