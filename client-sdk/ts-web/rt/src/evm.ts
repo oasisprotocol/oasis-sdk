@@ -14,9 +14,10 @@ export const ERR_INVALID_SIGNER_TYPE_CODE = 3;
 export const ERR_FEE_OVERFLOW_CODE = 4;
 export const ERR_GAS_LIMIT_TOO_LOW_CODE = 5;
 export const ERR_INSUFFICIENT_BALANCE_CODE = 6;
-export const ERROR_FORBIDDEN_CODE = 7;
-export const ERROR_REVERTED_CODE = 8;
-export const ERROR_SIMULATION_TOO_EXPENSIVE = 8;
+export const ERR_FORBIDDEN_CODE = 7;
+export const ERR_REVERTED_CODE = 8;
+export const ERR_SIMULATION_TOO_EXPENSIVE_CODE = 9;
+export const ERR_INVALID_SIGNED_SIMULATE_CALL_CODE = 10;
 
 export const EVENT_LOG_CODE = 1;
 

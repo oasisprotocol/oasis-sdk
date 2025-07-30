@@ -15,6 +15,7 @@
     "scripts": {
         "prepare": "tsc",
         "check-playground": "cd playground && tsc -p jsconfig.json",
+        "check-missing-methods": "node ./check-missing-methods.mjs",
         "fmt": "prettier --write playground/src src test",
         "lint": "prettier --check playground/src src test",
         "playground": "cd playground && webpack s -c webpack.config.js",

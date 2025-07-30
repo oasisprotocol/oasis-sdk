@@ -11,6 +11,7 @@ export const ERR_INVALID_DENOMINATION_CODE = 2;
 export const ERR_INTERNAL_STATE_ERROR_CODE = 3;
 export const ERR_CONSENSUS_INCOMPATIBLE_SIGNER_CODE = 4;
 export const ERR_AMOUNT_NOT_REPRESENTABLE_CODE = 5;
+export const ERR_UNDER_MIN_DELEGATION_AMOUNT_CODE = 6;
 
 // Queries.
 export const METHOD_PARAMETERS = 'consensus.Parameters';

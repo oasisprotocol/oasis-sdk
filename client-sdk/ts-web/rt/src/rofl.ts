@@ -12,6 +12,23 @@ import * as deoxysii from '@oasisprotocol/deoxysii';
  */
 export const MODULE_NAME = 'rofl';
 
+export const ERR_INVALID_ARGUMENT_CODE = 1;
+export const ERR_UNKNOWN_APP_CODE = 2;
+export const ERR_NOT_SIGNED_BY_RAK_CODE = 3;
+export const ERR_NOT_SIGNED_BY_EXTRA_KEY_CODE = 4;
+export const ERR_UNKNOWN_ENCLAVE_CODE = 5;
+export const ERR_UNKNOWN_NODE_CODE = 6;
+export const ERR_NODE_NOT_ALLOWED_CODE = 7;
+export const ERR_REGISTRATION_EXPIRED_CODE = 8;
+export const ERR_EXTRA_KEY_UPDATE_NOT_ALLOWED_CODE = 9;
+export const ERR_APP_ALREADY_EXISTS_CODE = 10;
+export const ERR_FORBIDDEN_CODE = 11;
+export const ERR_UNKNOWN_INSTANCE_CODE = 12;
+export const ERR_PLAIN_CALL_FORMAT_NOT_ALLOWED_CODE = 13;
+export const ERR_ENDORSEMENT_POLICY_TOO_DEEP_CODE = 14;
+export const ERR_ENDORSEMENT_POLICY_TOO_MANY_ATOMS_CODE = 15;
+export const ERR_POLICY_MAX_EXPIRATION_TOO_HIGH_CODE = 16;
+
 // Callable methods.
 export const METHOD_CREATE = 'rofl.Create';
 export const METHOD_UPDATE = 'rofl.Update';

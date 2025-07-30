@@ -15,21 +15,26 @@ export const ERR_INVALID_METHOD_CODE = 3;
 export const ERR_INVALID_NONCE_CODE = 4;
 export const ERR_INSUFFICIENT_FEE_BALANCE_CODE = 5;
 export const ERR_OUT_OF_MESSAGE_SLOTS_CODE = 6;
-export const ERR_MESSAGE_NOT_HANDLED_CODE = 8;
+export const ERR_MESSAGE_HANDLER_NOT_INVOKED_CODE = 8;
 export const ERR_MESSAGE_HANDLER_MISSING_CODE = 9;
 export const ERR_INVALID_ARGUMENT_CODE = 10;
 export const ERR_GAS_OVERFLOW_CODE = 11;
 export const ERR_OUT_OF_GAS_CODE = 12;
-export const ERR_BATCH_GAS_OVERFLOW_CODE = 13;
-export const ERR_BATCH_OUT_OF_GAS_CODE = 14;
+export const ERR_BATCH_GAS_OVERFLOW_CODE = 13; // No longer emitted
+export const ERR_BATCH_OUT_OF_GAS_CODE = 14; // No longer emitted
 export const ERR_TOO_MANY_AUTH_CODE = 15;
 export const ERR_MULTISIG_TOO_MANY_SIGNERS_CODE = 16;
 export const ERR_INVARIANT_VIOLATION_CODE = 17;
 export const ERR_INVALID_CALL_FORMAT_CODE = 18;
 export const ERR_NOT_AUTHENTICATED_CODE = 19;
 export const ERR_GAS_PRICE_TOO_LOW_CODE = 20;
-export const ERR_FORBIDDEN_IN_SECURE_BUILD = 21;
-export const ERR_FORBIDDEN_BY_NODE_POLICY = 22;
+export const ERR_FORBIDDEN_IN_SECURE_BUILD_CODE = 21;
+export const ERR_FORBIDDEN_BY_NODE_POLICY_CODE = 22;
+export const ERR_OVERSIZED_TRANSACTION_CODE = 23;
+export const ERR_EXPIRED_TRANSACTION_CODE = 24;
+export const ERR_READ_ONLY_TRANSACTION_CODE = 25;
+export const ERR_FUTURE_NONCE_CODE = 26;
+export const ERR_CALL_DEPTH_EXCEEDED_CODE = 27;
 
 // Queries.
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';
@@ -39,7 +44,7 @@ export const METHOD_MIN_GAS_PRICE = 'core.MinGasPrice';
 export const METHOD_RUNTIME_INFO = 'core.RuntimeInfo';
 
 // Events.
-export const EVENT_GAS_USED = 1;
+export const EVENT_GAS_USED_CODE = 1;
 
 // Introspection.
 // Keep these in sync with `CoreMethodHandlerInfo.kind`
@@ -76,7 +81,7 @@ export class Wrapper extends wrapper.Base {
 }
 
 export function moduleEventHandler(codes: {
-    [EVENT_GAS_USED]?: event.Handler<types.CoreGasUsedEvent>;
+    [EVENT_GAS_USED_CODE]?: event.Handler<types.CoreGasUsedEvent>;
 }) {
     return [MODULE_NAME, codes] as event.ModuleHandler;
 }

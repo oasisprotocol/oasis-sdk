@@ -8,6 +8,19 @@ import * as wrapper from './wrapper';
  */
 export const MODULE_NAME = 'roflmarket';
 
+export const ERR_INVALID_ARGUMENT_CODE = 1;
+export const ERR_PROVIDER_ALREADY_EXISTS_CODE = 2;
+export const ERR_PROVIDER_NOT_FOUND_CODE = 3;
+export const ERR_FORBIDDEN_CODE = 4;
+export const ERR_PROVIDER_HAS_INSTANCES_CODE = 5;
+export const ERR_OUT_OF_CAPACITY_CODE = 6;
+export const ERR_OFFER_NOT_FOUND_CODE = 7;
+export const ERR_INSTANCE_NOT_FOUND_CODE = 8;
+export const ERR_TOO_MANY_QUEUED_COMMANDS_CODE = 9;
+export const ERR_PAYMENT_FAILED_CODE = 10;
+export const ERR_BAD_RESOURCE_DESCRIPTOR_CODE = 11;
+export const ERR_INVALID_INSTANCE_STATE_CODE = 12;
+
 // Callable methods.
 export const METHOD_PROVIDER_CREATE = 'roflmarket.ProviderCreate';
 export const METHOD_PROVIDER_UPDATE = 'roflmarket.ProviderUpdate';

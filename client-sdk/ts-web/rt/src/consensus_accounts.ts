@@ -10,7 +10,8 @@ export const MODULE_NAME = 'consensus_accounts';
 
 export const ERR_INVALID_ARGUMENT_CODE = 1;
 export const ERR_INVALID_DENOMINATION_CODE = 2;
-export const ERR_INSUFFICIENT_WITHDRAW_BALANCE_CODE = 3;
+export const ERR_INSUFFICIENT_BALANCE_CODE = 3;
+export const ERR_FORBIDDEN_CODE = 4;
 
 // Callable methods.
 export const METHOD_DEPOSIT = 'consensus.Deposit';
@@ -20,8 +21,12 @@ export const METHOD_BALANCE = 'consensus.Balance';
 export const METHOD_ACCOUNT = 'consensus.Account';
 
 // Events.
+// https://github.com/oasisprotocol/oasis-sdk/blob/114ff20/runtime-sdk/src/modules/consensus_accounts/mod.rs#L118
 export const EVENT_DEPOSIT_CODE = 1;
 export const EVENT_WITHDRAW_CODE = 2;
+export const EVENT_DELEGATE_CODE = 3;
+export const EVENT_UNDELEGATE_START_CODE = 4;
+export const EVENT_UNDELEGATE_DONE_CODE = 5;
 
 export class Wrapper extends wrapper.Base {
     constructor(runtimeID: Uint8Array) {
