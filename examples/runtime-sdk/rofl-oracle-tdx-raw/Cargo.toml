@@ -1,11 +1,12 @@
 [package]
-name = "rofl-oracle-tdx"
+name = "rofl-oracle-tdx-raw"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 # Oasis SDK.
 oasis-runtime-sdk = { path = "../../../runtime-sdk", features = ["tdx"] }
+rofl-app-core = { path = "../../../rofl-app-core", features = ["tdx"] }
 module-evm = { path = "../../../runtime-sdk/modules/evm", package = "oasis-runtime-sdk-evm" }
 
 # Third-party dependencies.

@@ -39,8 +39,8 @@ exclude = [
     "examples/contract-sdk/hello-world",
     "examples/contract-sdk/c10l-hello-world",
     "examples/runtime-sdk/minimal-runtime",
-    "examples/runtime-sdk/rofl-oracle",
-    "examples/runtime-sdk/rofl-oracle-tdx",
+    "examples/runtime-sdk/rofl-oracle-sgx",
+    "examples/runtime-sdk/rofl-oracle-tdx-raw",
 ]
 resolver = "2"
 
