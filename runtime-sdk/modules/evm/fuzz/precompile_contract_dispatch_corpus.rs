@@ -4,7 +4,6 @@ use std::{fs, path};
 #[cfg(fuzzing)]
 use honggfuzz::fuzz;
 
-use ethabi::Token;
 use primitive_types::H160;
 
 fn gen_calldata() -> Box<dyn Iterator<Item = Vec<u8>>> {
@@ -13,10 +12,10 @@ fn gen_calldata() -> Box<dyn Iterator<Item = Vec<u8>>> {
     let arg = &[0xd5, 0x2b, 0xce, 0x59];
 
     let mut arg_input = arg.to_vec();
-    arg_input.append(&mut ethabi::encode(&[
-        Token::Address(H160::zero()),
-        Token::Uint(42.into()),
-    ]));
+    arg_input.append(&mut solabi::encode(&(
+        solabi::Address(H160::zero().into()),
+        solabi::U256::from(42),
+    )));
 
     Box::new(vec![direct.to_vec(), arg_input].into_iter())
 }
