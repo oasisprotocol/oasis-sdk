@@ -37,6 +37,7 @@ export const ERR_FUTURE_NONCE_CODE = 26;
 export const ERR_CALL_DEPTH_EXCEEDED_CODE = 27;
 
 // Queries.
+export const METHOD_PARAMETERS = 'core.Parameters';
 export const METHOD_ESTIMATE_GAS = 'core.EstimateGas';
 export const METHOD_CHECK_INVARIANTS = 'core.CheckInvariants';
 export const METHOD_CALL_DATA_PUBLIC_KEY = 'core.CallDataPublicKey';
@@ -55,6 +56,10 @@ export const METHODHANDLERKIND_MESSAGE_RESULT = 'message_result';
 export class Wrapper extends wrapper.Base {
     constructor(runtimeID: Uint8Array) {
         super(runtimeID);
+    }
+
+    queryParameters() {
+        return this.query<void, types.CoreParameters>(METHOD_PARAMETERS);
     }
 
     queryEstimateGas() {

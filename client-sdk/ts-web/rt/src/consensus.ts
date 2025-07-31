@@ -21,7 +21,7 @@ export class Wrapper extends wrapper.Base {
         super(runtimeID);
     }
 
-    queryAccount() {
+    queryParameters() {
         return this.query<void, types.ConsensusParameters>(METHOD_PARAMETERS);
     }
 }

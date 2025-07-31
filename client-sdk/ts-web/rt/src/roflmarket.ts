@@ -27,9 +27,14 @@ export const METHOD_PROVIDER_UPDATE = 'roflmarket.ProviderUpdate';
 export const METHOD_PROVIDER_UPDATE_OFFERS = 'roflmarket.ProviderUpdateOffers';
 export const METHOD_PROVIDER_REMOVE = 'roflmarket.ProviderRemove';
 export const METHOD_INSTANCE_CREATE = 'roflmarket.InstanceCreate';
+export const METHOD_INSTANCE_CHANGE_ADMIN = 'roflmarket.InstanceChangeAdmin';
 export const METHOD_INSTANCE_TOP_UP = 'roflmarket.InstanceTopUp';
+export const METHOD_INSTANCE_ACCEPT = 'roflmarket.InstanceAccept';
+export const METHOD_INSTANCE_UPDATE = 'roflmarket.InstanceUpdate';
 export const METHOD_INSTANCE_CANCEL = 'roflmarket.InstanceCancel';
+export const METHOD_INSTANCE_REMOVE = 'roflmarket.InstanceRemove';
 export const METHOD_INSTANCE_EXECUTE_CMDS = 'roflmarket.InstanceExecuteCmds';
+export const METHOD_INSTANCE_CLAIM_PAYMENT = 'roflmarket.InstanceClaimPayment';
 
 // Queries.
 export const METHOD_PROVIDER = 'roflmarket.Provider';
@@ -83,14 +88,34 @@ export class Wrapper extends wrapper.Base {
         return this.call<types.RoflmarketInstanceCreate, void>(METHOD_INSTANCE_CREATE);
     }
 
+    /** Changes the admin of a machine instance. */
+    callInstanceChangeAdmin() {
+        return this.call<types.RoflmarketInstanceChangeAdmin, void>(METHOD_INSTANCE_CHANGE_ADMIN);
+    }
+
     /** Tops up a machine instance. */
     callInstanceTopUp() {
         return this.call<types.RoflmarketInstanceTopUp, void>(METHOD_INSTANCE_TOP_UP);
     }
 
+    /** Accepts machine instances. Intended for scheduler use only. */
+    private callInstanceAccept() {
+        return this.call<types.RoflmarketInstanceAccept, void>(METHOD_INSTANCE_ACCEPT);
+    }
+
+    /** Updates machine instances. Intended for scheduler use only. */
+    private callInstanceUpdate() {
+        return this.call<types.RoflmarketInstanceUpdate, void>(METHOD_INSTANCE_UPDATE);
+    }
+
     /** Cancels a machine instance. */
     callInstanceCancel() {
         return this.call<types.RoflmarketInstanceCancel, void>(METHOD_INSTANCE_CANCEL);
+    }
+
+    /** Removes a machine instance. Intended for scheduler use only. */
+    private callInstanceRemove() {
+        return this.call<types.RoflmarketInstanceRemove, void>(METHOD_INSTANCE_REMOVE);
     }
 
     /**
@@ -101,6 +126,11 @@ export class Wrapper extends wrapper.Base {
      */
     callInstanceExecuteCmds() {
         return this.call<types.RoflmarketInstanceExecuteCmds, void>(METHOD_INSTANCE_EXECUTE_CMDS);
+    }
+
+    /** Claims payment for machine instances. Intended for scheduler use only. */
+    private callInstanceClaimPayment() {
+        return this.call<types.RoflmarketInstanceClaimPayment, void>(METHOD_INSTANCE_CLAIM_PAYMENT);
     }
 
     /** Returns the provider descriptor. */
@@ -173,7 +203,12 @@ export type TransactionCallHandlers = {
     [METHOD_PROVIDER_UPDATE_OFFERS]?: transaction.CallHandler<types.RoflmarketProviderUpdateOffers>;
     [METHOD_PROVIDER_REMOVE]?: transaction.CallHandler<types.RoflmarketProviderRemove>;
     [METHOD_INSTANCE_CREATE]?: transaction.CallHandler<types.RoflmarketInstanceCreate>;
+    [METHOD_INSTANCE_CHANGE_ADMIN]?: transaction.CallHandler<types.RoflmarketInstanceChangeAdmin>;
     [METHOD_INSTANCE_TOP_UP]?: transaction.CallHandler<types.RoflmarketInstanceTopUp>;
+    [METHOD_INSTANCE_ACCEPT]?: transaction.CallHandler<types.RoflmarketInstanceAccept>;
+    [METHOD_INSTANCE_UPDATE]?: transaction.CallHandler<types.RoflmarketInstanceUpdate>;
     [METHOD_INSTANCE_CANCEL]?: transaction.CallHandler<types.RoflmarketInstanceCancel>;
+    [METHOD_INSTANCE_REMOVE]?: transaction.CallHandler<types.RoflmarketInstanceRemove>;
     [METHOD_INSTANCE_EXECUTE_CMDS]?: transaction.CallHandler<types.RoflmarketInstanceExecuteCmds>;
+    [METHOD_INSTANCE_CLAIM_PAYMENT]?: transaction.CallHandler<types.RoflmarketInstanceClaimPayment>;
 };

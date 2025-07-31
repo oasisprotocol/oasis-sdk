@@ -18,6 +18,7 @@ export const ERR_NOT_FOUND_CODE = 4;
 // Callable methods.
 export const METHOD_TRANSFER = 'accounts.Transfer';
 // Queries.
+export const METHOD_PARAMETERS = 'accounts.Parameters';
 export const METHOD_NONCE = 'accounts.Nonce';
 export const METHOD_BALANCES = 'accounts.Balances';
 export const METHOD_ADDRESSES = 'accounts.Addresses';
@@ -54,6 +55,10 @@ export class Wrapper extends wrapper.Base {
         return this.query<types.AccountsDenominationInfoQuery, types.AccountsDenominationInfo>(
             METHOD_DENOMINATION_INFO,
         );
+    }
+
+    queryParameters() {
+        return this.query<void, types.AccountsParameters>(METHOD_PARAMETERS);
     }
 }
 
