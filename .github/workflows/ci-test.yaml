@@ -506,6 +506,20 @@ jobs:
           cat src/types.ts src/client.ts >/tmp/current.ts
           diff -u --color=always /tmp/current.ts /tmp/reflect-out.ts || true
 
+  ts-web-rt-reflect:
+    # NOTE: This name appears in GitHub's Checks API.
+    name: ts-web-rt-reflect
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Diff
+        working-directory: client-sdk/ts-web/rt
+        # This is only advisory. Don't fail if there are differences.
+        run: |
+          npm run-script check-missing-methods
+
   benchmark-rt:
     # NOTE: This name appears in GitHub's Checks API.
     name: benchmark-rt
