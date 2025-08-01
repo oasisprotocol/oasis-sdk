@@ -8,7 +8,7 @@
 //! It currently just starts a REST API server (rofl-appd) that exposes information about the
 //! application together with a simple KMS interface. In the future it will also manage secrets and
 //! expose other interfaces.
-use std::env;
+use std::{collections::BTreeMap, env};
 
 use base64::prelude::*;
 use oasis_runtime_sdk::{
@@ -19,6 +19,7 @@ use rofl_app_core::prelude::*;
 use rofl_appd::services;
 
 mod containers;
+mod proxy;
 mod reaper;
 mod secrets;
 mod storage;
@@ -50,6 +51,14 @@ impl App for ContainersApp {
                 .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR)."),
         )
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
+    }
+
+    async fn get_metadata(
+        self: Arc<Self>,
+        _env: Environment<Self>,
+    ) -> Result<BTreeMap<String, String>> {
+        let meta = rofl_proxy::http::tls::Identity::global()?.metadata();
+        Ok(meta)
     }
 
     async fn post_registration_init(self: Arc<Self>, env: Environment<Self>) {
@@ -85,6 +94,10 @@ impl App for ContainersApp {
                 process::abort();
             }
         });
+
+        // Initialize the proxy when available.
+        slog::info!(logger, "initializing proxy");
+        proxy::init(env.clone(), kms.clone()).await;
 
         // Initialize containers.
         slog::info!(logger, "initializing container environment");

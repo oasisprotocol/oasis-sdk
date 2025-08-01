@@ -14,6 +14,7 @@ mod client;
 mod config;
 mod manager;
 mod manifest;
+mod proxy;
 mod qcow2;
 mod serverd;
 mod types;
@@ -30,6 +31,11 @@ impl SchedulerApp {
 
 /// Name of the metadata key used to store the endpoint URL.
 const METADATA_KEY_ENDPOINT_URL: &str = "net.oasis.scheduler.api";
+/// Metadata key used to store the used proxy domain.
+const METADATA_KEY_PROXY_DOMAIN: &str = "net.oasis.proxy.domain";
+
+/// TCP port that the HTTPS server should listen on.
+const HTTPS_SERVER_PORT: u16 = 443;
 
 #[async_trait]
 impl App for SchedulerApp {
@@ -61,21 +67,54 @@ impl App for SchedulerApp {
                 format!("https://{}", api_domain),
             );
         }
+        if let Some(proxy) = &cfg.proxy {
+            meta.insert(METADATA_KEY_PROXY_DOMAIN.to_string(), proxy.domain.clone());
+        }
 
         Ok(meta)
     }
 
     async fn run(self: Arc<Self>, env: Environment<Self>) {
         let logger = get_logger("scheduler");
+        let cfg = self.cfg.as_ref().unwrap();
+
+        // Create and start the proxy when configured.
+        let proxy = cfg.proxy.as_ref().map(|cfg| {
+            let mut proxy = proxy::Proxy::new(cfg, HTTPS_SERVER_PORT).unwrap();
+            proxy.start();
+
+            Arc::new(proxy)
+        });
 
         // Create the manager.
-        let cfg = self.cfg.as_ref().unwrap();
-        let manager = manager::Manager::new(env.clone(), cfg.clone());
+        let manager = manager::Manager::new(env.clone(), cfg.clone(), proxy.clone());
 
         // Start API server when enabled.
         if let Some(domain) = &cfg.api_domain {
+            let address = match proxy.as_ref() {
+                Some(proxy) => {
+                    // When proxy is configured change the listen address and add mapping.
+                    let api_server_address = "127.0.0.1";
+                    let api_server_port = 444;
+
+                    proxy
+                        .add_static_mapping(rofl_proxy::http::Mapping {
+                            name: domain.clone(),
+                            dst_address: api_server_address.to_string(),
+                            dst_port: api_server_port,
+                        })
+                        .await;
+
+                    &format!("0.0.0.0:{api_server_port}")
+                }
+                None => {
+                    // When no proxy is configured, directly listen on the HTTPS port.
+                    &format!("0.0.0.0:{HTTPS_SERVER_PORT}")
+                }
+            };
+
             if let Err(err) = serverd::serve(serverd::Config {
-                address: "0.0.0.0:443",
+                address,
                 domain,
                 env,
                 manager: manager.clone(),
@@ -88,6 +127,7 @@ impl App for SchedulerApp {
         }
 
         // Start the manager.
+        slog::info!(logger, "starting manager");
         manager.run().await
     }
 }

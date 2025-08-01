@@ -22,6 +22,7 @@ members = [
     "rofl-appd",
     "rofl-containers",
     "rofl-scheduler",
+    "rofl-proxy",
 
     # Test runtimes.
     "tests/runtimes/benchmarking",
