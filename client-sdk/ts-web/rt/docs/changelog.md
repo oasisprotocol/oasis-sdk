@@ -1,5 +1,23 @@
 # Changelog
 
+## v1.3.0
+
+Spotlight change:
+
+- We've added ROFL and ROFL Marketplace modules.
+
+New features:
+
+- We've added delegation methods for the consensus accounts module.
+- All methods now have `toSubcall()` to encode as eth_sendTransaction params.
+  This makes an EVM-compatible transaction through a precompile and allows e.g.
+  delegating, or making ROFL apps using wallets like MetaMask.
+
+Little things:
+
+- Added `queryParameters()` to most modules.
+- Added missing events types and error codes constants.
+
 ## v1.2.0
 
 Breaking changes:
