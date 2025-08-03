@@ -14,8 +14,8 @@ use crate::{
         TransactionHandler,
     },
     modules::{
-        core,
-        core::{Error as CoreError, Module as Core, API as _},
+        accounts::MAX_CHECK_NONCE_FUTURE_DELTA,
+        core::{self, Error as CoreError, Module as Core, API as _},
     },
     sdk_derive,
     state::{self, CurrentState, Options},
@@ -545,9 +545,36 @@ fn test_authenticate_tx() {
     let priority = core::Module::<mock::Config>::take_priority();
     assert_eq!(priority, 1, "priority should be equal to gas price");
 
-    // Should fail with an invalid nonce.
+    // Should fail with a future nonce.
+    tx.auth_info.signer_info[0].nonce = nonce + 1;
     let result = Accounts::authenticate_tx(&ctx, &tx);
     assert!(matches!(result, Err(core::Error::InvalidNonce)));
+
+    // Should fail with a past nonce.
+    tx.auth_info.signer_info[0].nonce = nonce - 1;
+    let result = Accounts::authenticate_tx(&ctx, &tx);
+    assert!(matches!(result, Err(core::Error::InvalidNonce)));
+
+    // Check mode.
+    CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
+        // Should succeed with current nonce.
+        tx.auth_info.signer_info[0].nonce = nonce;
+        Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
+
+        // Should succeed with future nonce.
+        tx.auth_info.signer_info[0].nonce = nonce + MAX_CHECK_NONCE_FUTURE_DELTA;
+        Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
+
+        // Should fail with a nonce too much in the future.
+        tx.auth_info.signer_info[0].nonce = nonce + MAX_CHECK_NONCE_FUTURE_DELTA + 1;
+        let result = Accounts::authenticate_tx(&ctx, &tx);
+        assert!(matches!(result, Err(core::Error::InvalidNonce)));
+
+        // Should fail with a past nonce.
+        tx.auth_info.signer_info[0].nonce = nonce - 1;
+        let result = Accounts::authenticate_tx(&ctx, &tx);
+        assert!(matches!(result, Err(core::Error::InvalidNonce)));
+    });
 
     // Should fail when there's not enough balance to pay fees.
     tx.auth_info.signer_info[0].nonce = nonce;
