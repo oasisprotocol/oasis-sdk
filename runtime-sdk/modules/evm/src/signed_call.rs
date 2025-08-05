@@ -1,6 +1,5 @@
 use std::convert::TryFrom as _;
 
-use ethabi::Token;
 use once_cell::sync::OnceCell;
 use sha3::{Digest as _, Keccak256};
 
@@ -113,23 +112,23 @@ fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
     );
     hash_encoded(&[
         encode_bytes(CALL_TYPE_STR),
-        Token::Address(query.caller.0.into()),
-        Token::Address(query.address.unwrap_or_default().0.into()),
-        Token::Uint(query.gas_limit.into()),
-        Token::Uint(primitive_types::U256(query.gas_price.0)),
-        Token::Uint(primitive_types::U256(query.value.0)),
+        solabi::Value::Address(query.caller.into()),
+        solabi::Value::Address(query.address.unwrap_or_default().into()),
+        solabi::Value::Uint(solabi::value::Uint::new(64, query.gas_limit.into()).unwrap()),
+        solabi::Value::Uint(solabi::value::Uint::new(256, query.gas_price.into()).unwrap()),
+        solabi::Value::Uint(solabi::value::Uint::new(256, query.value.into()).unwrap()),
         encode_bytes(&query.data),
-        Token::Uint(hash_leash(leash).into()),
+        encode_bytes(hash_leash(leash)),
     ])
 }
 
 fn hash_leash(leash: &Leash) -> [u8; 32] {
     hash_encoded(&[
         encode_bytes(leash_type_str!()),
-        Token::Uint(leash.nonce.into()),
-        Token::Uint(leash.block_number.into()),
-        Token::Uint(leash.block_hash.0.into()),
-        Token::Uint(leash.block_range.into()),
+        solabi::Value::Uint(solabi::value::Uint::new(64, leash.nonce.into()).unwrap()),
+        solabi::Value::Uint(solabi::value::Uint::new(64, leash.block_number.into()).unwrap()),
+        encode_bytes(leash.block_hash.0),
+        solabi::Value::Uint(solabi::value::Uint::new(64, leash.block_range.into()).unwrap()),
     ])
 }
 
@@ -141,17 +140,24 @@ fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
             encode_bytes(DOMAIN_TYPE_STR),
             encode_bytes("oasis-runtime-sdk/evm: signed query"),
             encode_bytes("1.0.0"),
-            Token::Uint(Cfg::CHAIN_ID.into()),
+            solabi::Value::Uint(solabi::value::Uint::new(256, Cfg::CHAIN_ID.into()).unwrap()),
         ])
     })
 }
 
-fn encode_bytes(s: impl AsRef<[u8]>) -> Token {
-    Token::FixedBytes(Keccak256::digest(s.as_ref()).to_vec())
+fn encode_bytes(s: impl AsRef<[u8]>) -> solabi::Value {
+    let hash = Keccak256::digest(s.as_ref());
+    solabi::Value::FixedBytes(
+        solabi::value::FixedBytes::new(hash.as_slice())
+            .expect("Keccak256 hash should always be valid FixedBytes"),
+    )
 }
 
-fn hash_encoded(tokens: &[Token]) -> [u8; 32] {
-    Keccak256::digest(ethabi::encode(tokens)).into()
+fn hash_encoded(tokens: &[solabi::Value]) -> [u8; 32] {
+    let tokens_array = solabi::Value::Array(
+        tokens.iter().cloned().collect(),
+    );
+    Keccak256::digest(solabi::encode(&tokens_array)).into()
 }
 
 #[cfg(test)]

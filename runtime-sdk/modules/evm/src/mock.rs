@@ -237,31 +237,11 @@ pub fn load_contract_bytecode(raw: &str) -> Vec<u8> {
 
 /// Decode a basic revert reason.
 pub fn decode_reverted(msg: &str) -> Option<String> {
-    decode_reverted_abi(
-        msg,
-        ethabi::AbiError {
-            name: "Error".to_string(),
-            inputs: vec![ethabi::Param {
-                name: "message".to_string(),
-                kind: ethabi::ParamType::String,
-                internal_type: None,
-            }],
-        },
-    )?
-    .pop()
-    .unwrap()
-    .into_string()
-}
 
-/// Decode a revert reason accoording to the given API.
-pub fn decode_reverted_abi(msg: &str, abi: ethabi::AbiError) -> Option<Vec<ethabi::Token>> {
+    let error_encoder = solabi::ErrorEncoder::<(String,)>::new(solabi::selector!("Error(string)"));
     let raw = decode_reverted_raw(msg)?;
-
-    // Strip (and validate) error signature.
-    let signature = abi.signature();
-    let raw = raw.strip_prefix(&signature.as_bytes()[..4])?;
-
-    Some(abi.decode(raw).unwrap())
+    let (message,) = error_encoder.decode(&raw).ok()?;
+    Some(message)
 }
 
 /// Decode a base64-encoded revert reason.
