@@ -4,8 +4,6 @@ use std::{fs, path};
 #[cfg(fuzzing)]
 use honggfuzz::fuzz;
 
-use ethabi::Token;
-
 use oasis_runtime_sdk_evm::precompile::testing::read_test_cases;
 
 fn gen_test_vectors(fixture: &str) -> Box<dyn Iterator<Item = Vec<u8>>> {
@@ -16,9 +14,6 @@ fn gen_test_vectors(fixture: &str) -> Box<dyn Iterator<Item = Vec<u8>>> {
     )
 }
 
-fn gen_ethabi(tokens: &[Token]) -> Box<dyn Iterator<Item = Vec<u8>>> {
-    Box::new(vec![ethabi::encode(tokens)].into_iter())
-}
 
 fn gen_x25519() -> Box<dyn Iterator<Item = Vec<u8>>> {
     let key = b"this must be the excelentest key";
@@ -26,51 +21,56 @@ fn gen_x25519() -> Box<dyn Iterator<Item = Vec<u8>>> {
     let plaintext = b"0123456789";
     let ad = b"additional data";
 
-    gen_ethabi(&[
-        Token::FixedBytes(key.to_vec()),
-        Token::FixedBytes(nonce.to_vec()),
-        Token::Bytes(plaintext.to_vec()),
-        Token::Bytes(ad.to_vec()),
-    ])
+    Box::new(vec![solabi::encode(&(
+        key.to_vec(),
+        nonce.to_vec(),
+        plaintext.to_vec(),
+        ad.to_vec(),
+    ))].into_iter())
+
+  
 }
 
 fn gen_random_bytes() -> Box<dyn Iterator<Item = Vec<u8>>> {
     Box::new(
         (0..32).map(|bytes| {
-            ethabi::encode(&[Token::Uint(bytes.into()), Token::Bytes(vec![0xbe, 0xef])])
+            solabi::encode(&(
+                bytes,
+                vec![0xbe, 0xef],
+            ))
         }),
     )
 }
 
 fn gen_keygen() -> Box<dyn Iterator<Item = Vec<u8>>> {
     Box::new((0..10).map(|signature_type| {
-        ethabi::encode(&[
-            Token::Uint(signature_type.into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ])
+        solabi::encode(&(
+            signature_type.into(),
+            b"01234567890123456789012345678901".to_vec(),
+        ))
     }))
 }
 
 fn gen_sign() -> Box<dyn Iterator<Item = Vec<u8>>> {
     Box::new((0..10).map(|signature_type| {
-        ethabi::encode(&[
-            Token::Uint(signature_type.into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-            Token::Bytes(b"test context".to_vec()),
-            Token::Bytes(b"test message".to_vec()),
-        ])
+        solabi::encode(&(
+            signature_type,
+            b"01234567890123456789012345678901",
+            b"test context",
+            b"test message",
+        ))
     }))
 }
 
 fn gen_verify() -> Box<dyn Iterator<Item = Vec<u8>>> {
     Box::new((0..10).map(|signature_type| {
-        ethabi::encode(&[
-            Token::Uint(signature_type.into()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-            Token::Bytes(b"test context".to_vec()),
-            Token::Bytes(b"test message".to_vec()),
-            Token::Bytes(b"01234567890123456789012345678901".to_vec()),
-        ])
+        solabi::encode(&(
+            signature_type,
+            b"01234567890123456789012345678901",
+            b"test context",
+            b"test message",
+            b"01234567890123456789012345678901",
+        ))
     }))
 }
 
