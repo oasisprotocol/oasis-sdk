@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.3.0
+
+Little things:
+
+- Added more validation to inputs in utility functions
+
+  - fromBigInt throw on negative number
+  - fromHex throw on non-hex chars
+  - fromHex allow 0x prefix
+  - addressToBech32 throw on incorrect length
+
 ## v1.2.0
 
 Breaking changes:
