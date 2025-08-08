@@ -35,6 +35,8 @@ pub struct EmptyRuntime;
 impl Runtime for EmptyRuntime {
     const VERSION: Version = Version::new(0, 0, 0);
 
+    const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 5;
+
     type Core = modules::core::Module<Config>;
 
     type Accounts = modules::accounts::Module;

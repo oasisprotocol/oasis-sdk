@@ -13,10 +13,7 @@ use crate::{
         self, BlockHandler, FeeProxyHandler, InvariantHandler, MethodHandler, Module,
         TransactionHandler,
     },
-    modules::{
-        accounts::MAX_CHECK_NONCE_FUTURE_DELTA,
-        core::{self, Error as CoreError, Module as Core, API as _},
-    },
+    modules::core::{self, Error as CoreError, Module as Core, API as _},
     sdk_derive,
     state::{self, CurrentState, Options},
     subcall,
@@ -557,16 +554,20 @@ fn test_authenticate_tx() {
 
     // Check mode.
     CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
+        // Runtime should allow nonces in the future.
+        let max_delta = mock::EmptyRuntime::MAX_CHECK_NONCE_FUTURE_DELTA;
+        assert!(max_delta > 0);
+
         // Should succeed with current nonce.
         tx.auth_info.signer_info[0].nonce = nonce;
         Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
 
         // Should succeed with future nonce.
-        tx.auth_info.signer_info[0].nonce = nonce + MAX_CHECK_NONCE_FUTURE_DELTA;
+        tx.auth_info.signer_info[0].nonce = nonce + max_delta;
         Accounts::authenticate_tx(&ctx, &tx).expect("transaction authentication should succeed");
 
         // Should fail with a nonce too much in the future.
-        tx.auth_info.signer_info[0].nonce = nonce + MAX_CHECK_NONCE_FUTURE_DELTA + 1;
+        tx.auth_info.signer_info[0].nonce = nonce + max_delta + 1;
         let result = Accounts::authenticate_tx(&ctx, &tx);
         assert!(matches!(result, Err(core::Error::InvalidNonce)));
 

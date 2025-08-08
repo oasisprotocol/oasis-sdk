@@ -38,6 +38,10 @@ pub trait Runtime {
     /// Runtime schedule control configuration.
     const SCHEDULE_CONTROL: config::ScheduleControl = config::ScheduleControl::default();
 
+    /// Maximum delta that the transaction nonce can be in the future from the current nonce
+    /// to still be accepted during transaction checks.
+    const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 0;
+
     /// Module that provides the core API.
     type Core: modules::core::API;
     /// Module that provides the accounts API.
