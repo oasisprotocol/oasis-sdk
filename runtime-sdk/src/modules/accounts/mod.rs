@@ -38,10 +38,6 @@ pub mod types;
 /// Unique module name.
 const MODULE_NAME: &str = "accounts";
 
-/// Maximum delta that the transaction nonce can be in the future from the current nonce to still
-/// be accepted during transaction checks.
-const MAX_CHECK_NONCE_FUTURE_DELTA: u64 = 5;
-
 /// Errors emitted by the accounts module.
 #[derive(Error, Debug, oasis_runtime_sdk_macros::Error)]
 pub enum Error {
@@ -742,7 +738,7 @@ impl API for Module {
                         }
 
                         // If too much in the future, reject.
-                        if si.nonce - account.nonce > MAX_CHECK_NONCE_FUTURE_DELTA {
+                        if si.nonce - account.nonce > C::Runtime::MAX_CHECK_NONCE_FUTURE_DELTA {
                             return Err(modules::core::Error::InvalidNonce);
                         }
                     }
