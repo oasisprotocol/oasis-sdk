@@ -112,29 +112,51 @@ impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
         }
         Some(match (address[0], address[18], address[19]) {
             // Ethereum-compatible.
+            // 0x0000000000000000000000000000000000000001
             (0, 0, 1) => standard::call_ecrecover(handle),
+            // 0x0000000000000000000000000000000000000002
             (0, 0, 2) => standard::call_sha256(handle),
+            // 0x0000000000000000000000000000000000000003
             (0, 0, 3) => standard::call_ripemd160(handle),
+            // 0x0000000000000000000000000000000000000004
             (0, 0, 4) => standard::call_datacopy(handle),
+            // 0x0000000000000000000000000000000000000005
             (0, 0, 5) => standard::call_bigmodexp(handle),
+            // 0x0000000000000000000000000000000000000006
             (0, 0, 6) => standard::call_bn128_add(handle),
+            // 0x0000000000000000000000000000000000000007
             (0, 0, 7) => standard::call_bn128_mul(handle),
+            // 0x0000000000000000000000000000000000000008
             (0, 0, 8) => standard::call_bn128_pairing(handle),
             // Oasis-specific, confidential.
+            // 0x0100000000000000000000000000000000000001
             (1, 0, 1) => confidential::call_random_bytes(handle, self.backend),
+            // 0x0100000000000000000000000000000000000002
             (1, 0, 2) => confidential::call_x25519_derive(handle),
+            // 0x0100000000000000000000000000000000000003
             (1, 0, 3) => confidential::call_deoxysii_seal(handle),
+            // 0x0100000000000000000000000000000000000004
             (1, 0, 4) => confidential::call_deoxysii_open(handle),
+            // 0x0100000000000000000000000000000000000005
             (1, 0, 5) => confidential::call_keypair_generate(handle),
+            // 0x0100000000000000000000000000000000000006
             (1, 0, 6) => confidential::call_sign(handle),
+            // 0x0100000000000000000000000000000000000007
             (1, 0, 7) => confidential::call_verify(handle),
+            // 0x0100000000000000000000000000000000000008
             (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
+            // 0x0100000000000000000000000000000000000009
             (1, 0, 9) => gas::call_gas_used(handle),
+            // 0x010000000000000000000000000000000000000a
             (1, 0, 10) => gas::call_pad_gas(handle),
             // Oasis-specific, general.
+            // 0x0100000000000000000000000000000000000101
             (1, 1, 1) => sha2::call_sha512_256(handle),
+            // 0x0100000000000000000000000000000000000102
             (1, 1, 2) => sha2::call_sha512(handle),
+            // 0x0100000000000000000000000000000000000103
             (1, 1, 3) => subcall::call_subcall(handle, self.backend),
+            // 0x0100000000000000000000000000000000000104
             (1, 1, 4) => sha2::call_sha384(handle),
             _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
         })
