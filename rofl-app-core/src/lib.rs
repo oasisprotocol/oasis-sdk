@@ -26,6 +26,7 @@ mod notifier;
 pub mod prelude;
 mod processor;
 mod registration;
+pub mod secrets;
 mod watchdog;
 
 pub use client::Client;
