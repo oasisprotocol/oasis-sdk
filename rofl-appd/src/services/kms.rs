@@ -8,16 +8,15 @@ use sp800_185::KMac;
 use tokio::sync::Notify;
 
 use oasis_runtime_sdk::{
-    core::common::{
-        crypto::{mrae::deoxysii, x25519},
-        logger::get_logger,
-    },
+    core::common::{crypto::x25519, logger::get_logger},
     crypto::signature::{ed25519, secp256k1, Signer},
     modules,
 };
-use rofl_app_core::{client::DeriveKeyRequest, prelude::*};
-
-use crate::types::SecretEnvelope;
+use rofl_app_core::{
+    client::DeriveKeyRequest,
+    prelude::*,
+    secrets::{OpenOptions, SecretEnvelope},
+};
 
 /// A key management service.
 #[async_trait]
@@ -115,6 +114,9 @@ pub struct OpenSecretRequest<'r> {
     ///
     /// It is expected that the value contains a CBOR-encoded `SecretEnvelope`.
     pub value: &'r [u8],
+    /// Domain separation context.
+    #[serde(default)]
+    pub context: Option<&'r str>,
 }
 
 /// Secret decryption and authentication response.
@@ -262,27 +264,14 @@ impl<A: App> KmsService for OasisKmsService<A> {
 
         let keys_guard = self.keys.lock().unwrap();
         let sek = &keys_guard.as_ref().ok_or(Error::NotInitialized)?.sek;
-        let sek = sek.clone().into(); // Fine as the clone will be zeroized on drop.
-
-        // Name.
-        let name = deoxysii::box_open(
-            &envelope.nonce,
-            envelope.name.clone(),
-            b"name".into(), // Prevent mixing name and value.
-            &envelope.pk.0,
-            &sek,
-        )
-        .map_err(|_| Error::CorruptedSecret)?;
-
-        // Value.
-        let value = deoxysii::box_open(
-            &envelope.nonce,
-            envelope.value.clone(),
-            b"value".into(), // Prevent mixing name and value.
-            &envelope.pk.0,
-            &sek,
-        )
-        .map_err(|_| Error::CorruptedSecret)?;
+        let (name, value) = envelope
+            .open_opts(
+                sek,
+                OpenOptions {
+                    context: request.context.unwrap_or_default(),
+                },
+            )
+            .map_err(|_| Error::CorruptedSecret)?;
 
         Ok(OpenSecretResponse { name, value })
     }

@@ -2,7 +2,6 @@
 mod auth;
 mod error;
 mod routes;
-pub mod tls;
 
 use std::sync::Arc;
 
@@ -13,6 +12,7 @@ use tower_http::cors;
 
 use oasis_runtime_sdk::types::address::Address;
 use rofl_app_core::prelude::*;
+pub use rofl_proxy::http::tls;
 
 use crate::{config::LocalConfig, manager::Manager, SchedulerApp};
 
@@ -41,7 +41,9 @@ pub struct State {
 
 /// Start the server endpoint in a background task.
 pub async fn serve(cfg: Config<'_>) -> Result<()> {
-    let tls_provisioner = tls::CertificateProvisioner::new(cfg.domain);
+    let tls_provisioner = tls::CertificateProvisioner::new();
+    tls_provisioner.handle().add_domain(cfg.domain).await;
+
     let state = Arc::new(State {
         env: cfg.env,
         manager: cfg.manager,
@@ -63,9 +65,9 @@ pub async fn serve(cfg: Config<'_>) -> Result<()> {
 
     let addr = cfg.address.parse().context("bad address")?;
     let tls_cfg =
-        axum_server::tls_rustls::RustlsConfig::from_config(tls_provisioner.server_config());
+        axum_server::tls_rustls::RustlsConfig::from_config(tls_provisioner.server_config(true));
 
-    tokio::spawn(tls_provisioner.provision());
+    tls_provisioner.start();
     tokio::spawn(axum_server::bind_rustls(addr, tls_cfg).serve(app.into_make_service()));
 
     Ok(())

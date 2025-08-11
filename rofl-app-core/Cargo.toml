@@ -7,13 +7,14 @@ edition = "2021"
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk" }
 oasis-runtime-sdk-rofl-market = { path = "../runtime-sdk/modules/rofl-market" }
+rofl-proxy = { path = "../rofl-proxy", optional = true }
 
 # Third party.
 anyhow = "1.0.86"
 async-trait = "0.1.77"
 base64 = "0.22.1"
-rand = "0.8.5"
 backoff = { version = "0.4", features = ["tokio"] }
+rand = "0.8.5"
 slog = "2.7.0"
 tokio = { version = "1.38", features = [
     "rt",
@@ -23,8 +24,11 @@ tokio = { version = "1.38", features = [
     "macros",
 ] }
 
+[dev-dependencies]
+hex = "0.4.3"
+
 [features]
 # TDX build.
-tdx = ["oasis-runtime-sdk/tdx"]
+tdx = ["oasis-runtime-sdk/tdx", "dep:rofl-proxy"]
 # Enables mock SGX in non-SGX builds.
 debug-mock-sgx = ["oasis-runtime-sdk/debug-mock-sgx"]

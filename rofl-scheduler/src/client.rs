@@ -2,7 +2,10 @@
 use std::collections::BTreeMap;
 
 use anyhow::Result;
-use oasis_runtime_sdk::types::address::Address;
+use oasis_runtime_sdk::{
+    modules::rofl::types::{AppConfig, AppQuery},
+    types::address::Address,
+};
 use oasis_runtime_sdk_rofl_market::{
     self as market,
     types::{
@@ -198,6 +201,15 @@ impl MarketQueryClient {
                     provider: self.parent.provider,
                 },
             )
+            .await
+    }
+
+    /// Query given app.
+    pub async fn app(&self, id: AppId) -> Result<AppConfig> {
+        self.parent
+            .env
+            .client()
+            .query(self.round, "rofl.App", AppQuery { id })
             .await
     }
 }

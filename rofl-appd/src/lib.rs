@@ -3,7 +3,6 @@
 mod routes;
 pub mod services;
 pub(crate) mod state;
-pub mod types;
 
 use std::sync::Arc;
 
