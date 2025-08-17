@@ -1,3 +1,5 @@
+mod luks2;
+
 use std::{
     cmp::Ordering,
     fs,
@@ -7,7 +9,7 @@ use std::{
 
 use anyhow::{anyhow, Context, Result};
 use byteorder::{ByteOrder, LittleEndian};
-use cmd_lib::run_cmd;
+use cmd_lib::{run_cmd, run_fun};
 use libc::{c_int, size_t};
 use nix::{ioctl_read, ioctl_read_bad, ioctl_write_ptr, request_code_none};
 
@@ -18,12 +20,17 @@ use rofl_appd::services::{
     kms::{GenerateRequest, KeyKind},
 };
 
+use crate::utils::RemoveFileOnDrop;
+
 /// Storage encryption key identifier.
 const STORAGE_ENCRYPTION_KEY_ID: &str =
     "oasis-runtime-sdk/rofl-containers: storage encryption key v1";
 
 /// Initialize stage 2 storage based on configuration.
 pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
+    // Always initialize tmpfs.
+    run_cmd!(mount none -t tmpfs "/tmp")?;
+
     // Parse kernel command line to determine relevant features.
     let cmdline = fs::read_to_string("/proc/cmdline")?;
     let storage_mode = cmdline
@@ -76,9 +83,17 @@ pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
 
 /// Attempt to open the storage partition block device using the given storage key.
 fn open_storage(storage_key: &str) -> Result<()> {
+    // Make a copy of the LUKS2 header so we operate on an in-memory copy.
+    run_cmd!(cryptsetup luksHeaderBackup --header-backup-file "/tmp/storage-luks2-header" --disable-locks "/dev/mapper/part-storage")?;
+    let _guard = RemoveFileOnDrop::new("/tmp/storage-luks2-header");
+    // Dump and validate header.
+    let header_json = run_fun!(cryptsetup luksDump --type luks2 --dump-json-metadata "/tmp/storage-luks2-header")?;
+    luks2::validate_header(&header_json).context("failed to validate LUKS2 header")?;
+
+    // Attempt to open the storage device using a validated header.
     run_cmd!(
         echo -n ${storage_key} |
-            cryptsetup open --type luks2 --disable-locks "/dev/mapper/part-storage" storage
+            cryptsetup open --type luks2 --disable-locks --header "/tmp/storage-luks2-header" "/dev/mapper/part-storage" storage
     )
     .map_err(|_| anyhow!("failed to open storage device"))?;
 
@@ -87,10 +102,10 @@ fn open_storage(storage_key: &str) -> Result<()> {
 
 /// Format the storage partition block device using the given storage key.
 fn format_storage(storage_key: &str) -> Result<()> {
-    // Format block device.
+    // Format block device. See the `luks2` module for valid configurations.
     run_cmd!(
         echo -n ${storage_key} |
-            cryptsetup luksFormat --type luks2 --integrity hmac-sha256 --disable-locks "/dev/mapper/part-storage"
+            cryptsetup luksFormat --type luks2 --cipher aes-xts-plain64 --integrity hmac-sha256 --disable-locks --progress-json "/dev/mapper/part-storage"
     ).map_err(|_| anyhow!("failed to format storage device"))?;
 
     open_storage(storage_key)?;

@@ -4925,6 +4925,8 @@ dependencies = [
  "rofl-appd",
  "rofl-proxy",
  "rustables",
+ "serde",
+ "serde_json",
  "tokio",
  "yaml-rust2",
 ]
