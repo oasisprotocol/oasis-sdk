@@ -10,12 +10,13 @@ use std::{
 use anyhow::Result;
 use cmd_lib::run_cmd;
 
+use crate::utils::RemoveFileOnDrop;
+
 /// Initialize container environment.
 pub async fn init() -> Result<()> {
     // Setup networking.
     run_cmd!(
         ip link set lo up;
-        mount none -t tmpfs "/tmp";
         udhcpc -i eth0 -q -n;
     )?;
 
@@ -61,6 +62,7 @@ pub async fn start() -> Result<()> {
         writeln!(&mut env_file, "{key}={value}")?;
     }
     drop(env_file); // Close the file.
+    let _guard = RemoveFileOnDrop::new("/run/podman/env");
 
     // Run the podman API service.
     Command::new("podman")
@@ -81,9 +83,6 @@ pub async fn start() -> Result<()> {
         .args(["logs", "--follow", "--since", &format!("{}", now)])
         .current_dir("/etc/oasis/containers")
         .spawn()?;
-
-    // Purge environment file as it is not needed anymore.
-    fs::remove_file("/run/podman/env")?;
 
     Ok(())
 }

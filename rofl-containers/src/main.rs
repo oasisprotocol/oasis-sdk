@@ -19,6 +19,7 @@ mod proxy;
 mod reaper;
 mod secrets;
 mod storage;
+mod utils;
 
 /// UNIX socket address where the REST API server will listen on.
 const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
@@ -57,7 +58,7 @@ impl App for ContainersApp {
     ) -> Result<BTreeMap<String, String>> {
         let mut meta = BTreeMap::new();
         if let Some(identity) = rofl_proxy::http::tls::Identity::global() {
-            meta.extend(identity.metadata().into_iter());
+            meta.extend(identity.metadata());
         }
         Ok(meta)
     }

@@ -67,7 +67,7 @@ impl App for SchedulerApp {
         let cfg = self.cfg.as_ref().unwrap();
         let mut meta = BTreeMap::new();
         if let Some(identity) = serverd::tls::Identity::global() {
-            meta.extend(identity.metadata().into_iter());
+            meta.extend(identity.metadata());
         }
         if let Some(api_domain) = &cfg.api_domain {
             meta.insert(
