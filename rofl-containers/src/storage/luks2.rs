@@ -98,9 +98,13 @@ pub fn validate_header(data: &str) -> Result<()> {
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct LuksMeta {
+    #[serde(with = "serde_with::rust::maps_duplicate_key_is_error")]
     keyslots: HashMap<u8, LuksKeyslot>,
+    #[serde(with = "serde_with::rust::maps_duplicate_key_is_error")]
     tokens: HashMap<u8, LuksToken>,
+    #[serde(with = "serde_with::rust::maps_duplicate_key_is_error")]
     segments: HashMap<u8, LuksSegment>,
+    #[serde(with = "serde_with::rust::maps_duplicate_key_is_error")]
     digests: HashMap<u8, LuksDigest>,
     config: LuksConfig,
 }
@@ -486,6 +490,92 @@ mod test {
       }
     }"#;
 
+    const LUKS2_HEADER_INVALID_CIPHER3: &str = r#"{
+      "keyslots":{
+        "0":{
+          "type":"luks2",
+          "key_size":96,
+          "af":{
+            "type":"luks1",
+            "stripes":4000,
+            "hash":"sha256"
+          },
+          "area":{
+            "type":"raw",
+            "offset":"32768",
+            "size":"385024",
+            "encryption":"null",
+            "key_size":64
+          },
+          "kdf":{
+            "type":"argon2i",
+            "time":7,
+            "memory":191952,
+            "cpus":1,
+            "salt":"VaeYp2RiRvTZLqKxggLfN2owbhkNSB9H6yGDhI9d6ko="
+          }
+        },
+        "0":{
+          "type":"luks2",
+          "key_size":96,
+          "af":{
+            "type":"luks1",
+            "stripes":4000,
+            "hash":"sha256"
+          },
+          "area":{
+            "type":"raw",
+            "offset":"32768",
+            "size":"385024",
+            "encryption":"aes-xts-plain64",
+            "key_size":64
+          },
+          "kdf":{
+            "type":"argon2i",
+            "time":7,
+            "memory":191952,
+            "cpus":1,
+            "salt":"VaeYp2RiRvTZLqKxggLfN2owbhkNSB9H6yGDhI9d6ko="
+          }
+        }
+      },
+      "tokens":{},
+      "segments":{
+        "0":{
+          "type":"crypt",
+          "offset":"16777216",
+          "size":"dynamic",
+          "iv_tweak":"0",
+          "encryption":"aes-xts-plain64",
+          "sector_size":512,
+          "integrity":{
+            "type":"hmac(sha256)",
+            "journal_encryption":"none",
+            "journal_integrity":"none"
+          }
+        }
+      },
+      "digests":{
+        "0":{
+          "type":"pbkdf2",
+          "keyslots":[
+            "0"
+          ],
+          "segments":[
+            "0"
+          ],
+          "hash":"sha256",
+          "iterations":84344,
+          "salt":"CakmJdYBkOgwCHVkoMjUGEQTnNZjym0pa1hl8nWPauM=",
+          "digest":"0psj0pfQ4uHA/i/sF2/HUxZnhdO8f1c3GDRuikoZx+Q="
+        }
+      },
+      "config":{
+        "json_size":"12288",
+        "keyslots_size":"16744448"
+      }
+    }"#;
+
     const LUKS2_HEADER_INVALID_INTEGRITY1: &str = r#"{
       "keyslots":{
         "0":{
@@ -678,6 +768,9 @@ mod test {
             .expect_err("invalid cipher validation should fail");
 
         validate_header(LUKS2_HEADER_INVALID_CIPHER2)
+            .expect_err("invalid cipher validation should fail");
+
+        validate_header(LUKS2_HEADER_INVALID_CIPHER3)
             .expect_err("invalid cipher validation should fail");
 
         validate_header(LUKS2_HEADER_INVALID_INTEGRITY1)
