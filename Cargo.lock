@@ -4936,6 +4936,7 @@ dependencies = [
  "rustables",
  "serde",
  "serde_json",
+ "serde_with",
  "tokio",
  "yaml-rust2",
 ]
