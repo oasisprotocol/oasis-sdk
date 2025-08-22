@@ -100,8 +100,14 @@ Commands:
   <no queued commands>
 ```
 
-This shows you, if any of the ROFL nodes registered to execute your ROFL app,
-the details of the machine, the expiration date, the provider and other details.
+This shows you the details of the machine, including:
+
+- Machine status and expiration date
+- Provider information
+- **Proxy URLs** for any published ports
+  (if using CLI v0.15.0+ with updated artifacts)
+- Resource allocation (TEE type, memory, CPUs, storage)
+- Deployment details
 
 You can also fetch the logs of your app by invoking the following command and
 signing the request with app's admin account:

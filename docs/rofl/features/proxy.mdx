@@ -1,9 +1,8 @@
 # ROFL Proxy
 
-ROFL apps can expose TCP services to the public internet through the built-in
-ROFL proxy. The proxy automatically provisions a unique domain for your
-ROFL machine and generates HTTPS URLs for each published TCP port from
-your `compose.yaml` file.
+The ROFL proxy automatically generates public HTTPS URLs for services in your
+ROFL app. Simply publish a port in your `compose.yaml` and the proxy handles
+TLS certificates and routing.
 
 ## Enabling the Proxy
 
@@ -35,11 +34,27 @@ Proxy:
 ```
 
 :::info Prerequisites
-To use the ROFL proxy, ensure you are using:
+To use the ROFL proxy:
 
-1. Oasis CLI v0.15.0 or newer.
-2. The latest ROFL artifacts. Run `oasis rofl upgrade` to
-update them in your `rofl.yaml`.
+1. **Update Oasis CLI to v0.15.0 or newer**
+   - macOS: `brew install oasis`
+   - Other platforms: Download from
+   [GitHub releases](https://github.com/oasisprotocol/cli/releases)
+
+2. **Upgrade ROFL artifacts** (they should be v0.6.2 or newer in rofl.yaml)
+
+   ```shell
+   oasis rofl upgrade
+   ```
+
+3. **Rebuild and redeploy your app**
+
+   ```shell
+   oasis rofl build
+   oasis rofl update
+   oasis rofl deploy
+   ```
+
 :::
 
 ## Configuration
