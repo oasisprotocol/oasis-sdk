@@ -226,7 +226,8 @@ next step.
 
 What the core of the ROFL app does is defined with services running in Podman
 containers defined in [the compose file]. Anything that can run as a bunch of
-containers can also be run as a ROFL app.
+containers can also be run as a ROFL app. This includes exposing web services
+to the internet using the [ROFL Proxy].
 
 For an easier start, we will use the `docker.io/oasisprotocol/demo-rofl` image
 defined in [the `demo-rofl` repository] and which implements [a trivial oracle]
@@ -260,6 +261,7 @@ name e.g. `docker.io/ollama/ollama` and not just `ollama/ollama`.
 [the compose file]: https://docs.docker.com/reference/compose-file/
 [the `demo-rofl` repository]: https://github.com/oasisprotocol/demo-rofl/tree/main/docker
 [a trivial oracle]: https://github.com/oasisprotocol/demo-rofl/blob/main/docker/app.sh
+[ROFL Proxy]: features/proxy.mdx
 
 ## Build
 
