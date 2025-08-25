@@ -181,7 +181,11 @@ impl ParsedPort {
             .as_str()
             .unwrap_or("127.0.0.1")
             .to_string();
-        let host_port = mapping["published"].as_str()?.parse().ok()?;
+        let host_port = match mapping["published"] {
+            Yaml::String(ref str) => str.parse().ok()?,
+            Yaml::Integer(int) => int.try_into().ok()?,
+            _ => return None,
+        };
         let container_port = mapping["target"].as_i64()?.try_into().ok()?;
 
         // Ensure ports are valid.
@@ -284,9 +288,11 @@ services:
             - target: 1234
               published: "8888"
               host_ip: "127.0.0.2"
+            - target: 6666
+              published: 6666
 "#;
         let parsed = ParsedCompose::parse(data).unwrap();
-        assert_eq!(parsed.port_mappings.len(), 2);
+        assert_eq!(parsed.port_mappings.len(), 3);
 
         let mapping = &parsed.port_mappings[0];
         assert_eq!(&mapping.service, "frontend");
@@ -302,6 +308,14 @@ services:
         assert_eq!(&mapping.port.host_address, "127.0.0.2");
         assert_eq!(mapping.port.host_port, 8888);
         assert_eq!(mapping.port.container_port, 1234);
+        assert_eq!(mapping.mode, PortMappingMode::TerminateTls);
+
+        let mapping = &parsed.port_mappings[2];
+        assert_eq!(&mapping.service, "frontend");
+        assert_eq!(&mapping.port.protocol, "tcp");
+        assert_eq!(&mapping.port.host_address, "127.0.0.1");
+        assert_eq!(mapping.port.host_port, 6666);
+        assert_eq!(mapping.port.container_port, 6666);
         assert_eq!(mapping.mode, PortMappingMode::TerminateTls);
     }
 
