@@ -2,7 +2,7 @@ use rofl_app_core::prelude::*;
 
 /// Address where the oracle contract is deployed.
 // #region oracle-contract-address
-const ORACLE_CONTRACT_ADDRESS: &str = "0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20"; // TODO: Replace with your contract address.
+const ORACLE_CONTRACT_ADDRESS: &str = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // TODO: Replace with your contract address.
 // #endregion oracle-contract-address
 
 /// Type of the submitObservation function inside the contract.
