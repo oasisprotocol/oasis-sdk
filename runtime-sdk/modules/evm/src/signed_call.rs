@@ -111,48 +111,73 @@ fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
         ")",
         leash_type_str!()
     );
-    hash_encoded(&[
-        encode_bytes(CALL_TYPE_STR),
-        Token::Address(query.caller.0.into()),
-        Token::Address(query.address.unwrap_or_default().0.into()),
-        Token::Uint(query.gas_limit.into()),
-        Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
-        Token::Uint(ethabi::ethereum_types::U256(query.value.0)),
-        encode_bytes(&query.data),
-        Token::Uint(hash_leash(leash).into()),
-    ])
+
+    let encoded = solabi::encode(&(
+        solabi::Bytes::borrowed(&encode_bytes(&CALL_TYPE_STR.as_bytes())),
+        query.caller,
+        query.address.unwrap(),
+        query.gas_limit,
+        solabi::U256::from(query.value),
+        solabi::Bytes::borrowed(&encode_bytes(&query.data)),
+        solabi::Bytes::borrowed(&hash_leash(leash)),
+    ));
+
+    Keccak256::digest(encoded).into()
 }
 
 fn hash_leash(leash: &Leash) -> [u8; 32] {
-    hash_encoded(&[
-        encode_bytes(leash_type_str!()),
-        Token::Uint(leash.nonce.into()),
-        Token::Uint(leash.block_number.into()),
-        Token::Uint(leash.block_hash.0.into()),
-        Token::Uint(leash.block_range.into()),
-    ])
+    let encoded = solabi::encode(&(
+        solabi::Bytes::borrowed(leash_type_str!().as_bytes()),
+        leash.nonce,
+        leash.block_number,
+        solabi::Bytes::borrowed(leash.block_hash.0.as_ref()),
+        leash.block_range,
+    ));
+    Keccak256::digest(encoded).into()
 }
 
 fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
     static DOMAIN_SEPARATOR: OnceCell<[u8; 32]> = OnceCell::new(); // Not `Lazy` because of generic.
     DOMAIN_SEPARATOR.get_or_init(|| {
         const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
-        hash_encoded(&[
-            encode_bytes(DOMAIN_TYPE_STR),
-            encode_bytes("oasis-runtime-sdk/evm: signed query"),
-            encode_bytes("1.0.0"),
+        let encoded = solabi::encode(&(
+            solabi::Bytes::borrowed(&encode_bytes(&DOMAIN_TYPE_STR.as_bytes())),
+            solabi::Bytes::borrowed(&encode_bytes(b"oasis-runtime-sdk/evm: signed query")),
+            solabi::Bytes::borrowed(&encode_bytes(b"1.0.0")),
+            Cfg::CHAIN_ID,
+        ));
+        Keccak256::digest(encoded).into()
+    })
+}
+
+
+
+fn encode_bytes(s: impl AsRef<[u8]>) -> [u8; 32] {
+    Keccak256::digest(s.as_ref()).into()
+}
+
+fn hash_domain2<Cfg: Config>() -> &'static [u8; 32] {
+    static DOMAIN_SEPARATOR: OnceCell<[u8; 32]> = OnceCell::new(); // Not `Lazy` because of generic.
+    DOMAIN_SEPARATOR.get_or_init(|| {
+        const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
+        hash_encoded2(&[
+            encode_bytes2(DOMAIN_TYPE_STR),
+            encode_bytes2("oasis-runtime-sdk/evm: signed query"),
+            encode_bytes2("1.0.0"),
             Token::Uint(Cfg::CHAIN_ID.into()),
         ])
     })
 }
 
-fn encode_bytes(s: impl AsRef<[u8]>) -> Token {
+fn encode_bytes2(s: impl AsRef<[u8]>) -> Token {
     Token::FixedBytes(Keccak256::digest(s.as_ref()).to_vec())
 }
 
-fn hash_encoded(tokens: &[Token]) -> [u8; 32] {
+fn hash_encoded2(tokens: &[Token]) -> [u8; 32] {
     Keccak256::digest(ethabi::encode(tokens)).into()
 }
+
+
 
 #[cfg(test)]
 mod test {
@@ -167,6 +192,36 @@ mod test {
     };
 
     type Accounts = accounts::Module;
+
+        #[test]
+    fn test_hash_domain_refactor() {
+        const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
+ 
+
+
+        let domain_encode = solabi::encode(&(
+            solabi::Bytes::borrowed(&encode_bytes(&DOMAIN_TYPE_STR.as_bytes())),
+            // solabi::Bytes::borrowed(&encode_bytes(b"oasis-runtime-sdk/evm: signed query")),
+            // solabi::Bytes::borrowed(&encode_bytes(b"1.0.0")),
+            // Cfg::CHAIN_ID,
+        ));
+
+        let domain_encode2 = ethabi::encode(&[
+            encode_bytes2(DOMAIN_TYPE_STR),
+            // encode_bytes2("oasis-runtime-sdk/evm: signed query"),
+            // encode_bytes2("1.0.0"),
+            // Token::Uint(Cfg::CHAIN_ID.into()),
+        ]);
+
+
+        let binding = encode_bytes(&DOMAIN_TYPE_STR.as_bytes());
+        let first_el = solabi::Bytes::borrowed(&binding);
+        let first_el_2 = encode_bytes2(DOMAIN_TYPE_STR);
+
+
+        print!("Encode: {:?}\n{:?}\n\n\n", domain_encode, domain_encode2);
+        print!("Base data: {:?}\n{:?}", first_el, first_el_2);
+    }
 
     /// This was generated using the `@oasislabs/sapphire-paratime` JS lib.
     const SIGNED_CALL_DATA_PACK: &str =
@@ -333,4 +388,6 @@ mod test {
         assert_eq!(c10l_decode(&signed_body).unwrap().0, unsigned_body);
         assert_eq!(non_c10l_decode(&unsigned_body).unwrap().0, unsigned_body);
     }
+
+
 }

@@ -3,6 +3,10 @@ use rofl_app_core::prelude::*;
 /// Address where the oracle contract is deployed.
 const ORACLE_CONTRACT_ADDRESS: &str = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // TODO: Replace with your contract address.
 
+/// Type of the submitObservation function inside the contract.
+const SUBMIT_OBSERVATION: solabi::FunctionEncoder<(u128,), (bool,)> =
+    solabi::FunctionEncoder::new(solabi::selector!("submitObservation(uint128)"));
+
 struct OracleApp;
 
 #[async_trait]
@@ -54,12 +58,7 @@ impl OracleApp {
             module_evm::types::Call {
                 address: ORACLE_CONTRACT_ADDRESS.parse().unwrap(),
                 value: 0.into(),
-                data: [
-                    ethabi::short_signature("submitObservation", &[ethabi::ParamType::Uint(128)])
-                        .to_vec(),
-                    ethabi::encode(&[ethabi::Token::Uint(observation.into())]),
-                ]
-                .concat(),
+                data: SUBMIT_OBSERVATION.encode_params(&(observation,)),
             },
         );
         tx.set_fee_gas(200_000);
