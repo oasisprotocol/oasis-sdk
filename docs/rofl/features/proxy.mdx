@@ -1,0 +1,67 @@
+# ROFL Proxy
+
+The ROFL proxy automatically generates public HTTPS URLs for services in your
+ROFL app. Simply publish a port in your `compose.yaml` and the proxy handles
+TLS certificates and routing.
+
+TLS is terminated inside the ROFL app, providing end-to-end encryption so that
+even the provider cannot see the traffic.
+
+## Enabling the Proxy
+
+To expose a port from your container, publish it in
+your `compose.yaml` file:
+
+```yaml title="compose.yaml"
+services:
+  frontend:
+    image: docker.io/hashicorp/http-echo:latest
+    ports:
+      - "5678:5678" # Expose container port 5678 on host port 5678
+```
+
+After deploying your ROFL app, you can find the generated URL by
+running `oasis rofl machine show`:
+
+```shell
+oasis rofl machine show
+```
+
+The output will contain a `Proxy` section with the URL for each published port:
+
+```
+Proxy:
+  Domain: m602.test-proxy-b.rofl.app
+  Ports from compose file:
+    5678 (frontend): https://p5678.m602.test-proxy-b.rofl.app
+```
+
+## Configuration
+
+The proxy behavior can be configured using annotations in
+your `compose.yaml` file.
+
+The annotation key is `net.oasis.proxy.ports.<published_port>.mode`.
+
+Supported modes are:
+
+- `terminate-tls` (default): The proxy terminates the TLS connection and
+  forwards the unencrypted traffic to your container.
+  This is suitable for HTTPS services.
+- `passthrough`: The proxy forwards the raw TCP connection to your container.
+  This is suitable for services that handle their own TLS or
+  use other TCP-based protocols.
+- `ignore`: The proxy will ignore this port, and it will
+  not be exposed publicly.
+
+Example of configuring a port for TCP passthrough:
+
+```yaml title="compose.yaml"
+services:
+  myservice:
+    image: docker.io/my/service:latest
+    ports:
+      - "8080:8080"
+    annotations:
+      net.oasis.proxy.ports.8080.mode: passthrough
+```

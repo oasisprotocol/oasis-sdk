@@ -83,6 +83,10 @@ Node ID:    bOlqho9R3JHP64kJk+SfMxZt5fNkYWf6gdhErWlY60E=
 Created at: 2025-05-22 15:01:47 +0000 UTC
 Updated at: 2025-05-22 15:01:59 +0000 UTC
 Paid until: 2025-05-22 16:01:47 +0000 UTC
+Proxy:
+  Domain: m162.test-proxy-a.rofl.app
+  Ports from compose file:
+    5678 (frontend): https://p5678.m162.test-proxy-a.rofl.app
 Resources:
   TEE:     Intel TDX
   Memory:  4096 MiB
@@ -96,8 +100,13 @@ Commands:
   <no queued commands>
 ```
 
-This shows you, if any of the ROFL nodes registered to execute your ROFL app,
-the details of the machine, the expiration date, the provider and other details.
+This shows you the details of the machine, including:
+
+- Machine status and expiration date
+- Provider information
+- Proxy URLs for any published ports
+- Resource allocation (TEE type, memory, CPUs, storage)
+- Deployment details
 
 You can also fetch the logs of your app by invoking the following command and
 signing the request with app's admin account:
