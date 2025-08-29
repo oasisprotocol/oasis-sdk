@@ -123,6 +123,7 @@ struct State {
 pub struct Proxy {
     rt: tokio::runtime::Runtime,
     state: Arc<State>,
+    handle: ProxyHandle,
     provisioner: Option<CertificateProvisioner>,
 }
 
@@ -141,35 +142,34 @@ impl Proxy {
             provisioner: provisioner.handle().clone(),
             acceptor: TlsAcceptor::from(provisioner.server_config(false)),
         };
+        let state = Arc::new(state);
 
         Ok(Self {
             rt,
-            state: Arc::new(state),
+            state: state.clone(),
+            handle: ProxyHandle { state },
             provisioner: Some(provisioner),
         })
     }
 
+    /// Proxy handle that can be used to update proxy mappings.
+    pub fn handle(&self) -> &ProxyHandle {
+        &self.handle
+    }
+
     /// Add a new proxy mapping.
     pub async fn add_mapping(&self, mapping: Mapping) {
-        if matches!(mapping.mode, Mode::TerminateTls) {
-            self.state.provisioner.add_domain(&mapping.name).await;
-        }
-        self.state.mappings.add(mapping);
+        self.handle.add_mapping(mapping).await
     }
 
     /// Remove an existing proxy mapping.
     pub async fn remove_mapping(&self, name: &str) {
-        let mapping = self.state.mappings.remove(name);
-        if let Some(mapping) = mapping {
-            if matches!(mapping.mode, Mode::TerminateTls) {
-                self.state.provisioner.remove_domain(name).await;
-            }
-        }
+        self.handle.remove_mapping(name).await
     }
 
     /// Lookup an existing proxy mapping.
     pub fn get_mapping(&self, name: &str) -> Option<Arc<Mapping>> {
-        self.state.mappings.get(name)
+        self.handle.get_mapping(name)
     }
 
     /// Start the proxy.
@@ -343,6 +343,36 @@ impl Proxy {
         }
 
         Err(anyhow!("missing SNI extension"))
+    }
+}
+
+#[derive(Clone)]
+pub struct ProxyHandle {
+    state: Arc<State>,
+}
+
+impl ProxyHandle {
+    /// Add a new proxy mapping.
+    pub async fn add_mapping(&self, mapping: Mapping) {
+        if matches!(mapping.mode, Mode::TerminateTls) {
+            self.state.provisioner.add_domain(&mapping.name).await;
+        }
+        self.state.mappings.add(mapping);
+    }
+
+    /// Remove an existing proxy mapping.
+    pub async fn remove_mapping(&self, name: &str) {
+        let mapping = self.state.mappings.remove(name);
+        if let Some(mapping) = mapping {
+            if matches!(mapping.mode, Mode::TerminateTls) {
+                self.state.provisioner.remove_domain(name).await;
+            }
+        }
+    }
+
+    /// Lookup an existing proxy mapping.
+    pub fn get_mapping(&self, name: &str) -> Option<Arc<Mapping>> {
+        self.state.mappings.get(name)
     }
 }
 

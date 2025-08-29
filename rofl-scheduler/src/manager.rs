@@ -1012,7 +1012,7 @@ impl Manager {
 
         // Setup proxy for the instance when enabled.
         if let Some(proxy) = self.proxy.as_ref() {
-            match proxy.provision_instance(instance.id).await {
+            match proxy.provision_instance(instance, deployment).await {
                 Ok(proxy_label) => {
                     // Encrypt proxy label to app's SEK.
                     match client.app(deployment.app_id).await {
@@ -1048,7 +1048,7 @@ impl Manager {
             }
         }
 
-        let _ = self
+        let result = self
             .env
             .host()
             .bundle_manager()
@@ -1058,7 +1058,12 @@ impl Manager {
                 labels,
                 volumes,
             })
-            .await?;
+            .await;
+        // Ensure that the proxy is deprovisioned if the bundle deployment fails.
+        if let (Err(_), Some(proxy)) = (&result, self.proxy.as_ref()) {
+            let _ = proxy.deprovision_instance(instance.id).await;
+        }
+        result?;
 
         slog::info!(self.logger, "bundle deployed";
             "id" => ?instance.id,

@@ -1,7 +1,7 @@
 mod compose;
 mod firewall;
 
-use std::{fs, future, sync::Arc};
+use std::{collections::HashSet, fs, future, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
@@ -156,8 +156,24 @@ async fn run(proxy_label: ProxyLabel, compose: ParsedCompose) -> Result<()> {
     .context("failed to create https proxy")?;
     http.start();
 
+    let mut names = HashSet::new();
     for mapping in compose.port_mappings {
-        let name = format!("p{}.{}", mapping.port.host_port, proxy_label.http.host);
+        let name = match mapping.custom_domain {
+            Some(domain) => domain,
+            None => format!("p{}.{}", mapping.port.host_port, proxy_label.http.host),
+        };
+
+        if names.contains(&name) {
+            slog::warn!(logger, "ignoring duplicate mapping";
+                "service" => &mapping.service,
+                "name" => &name,
+                "host_address" => &mapping.port.host_address,
+                "host_port" => mapping.port.host_port,
+                "container_port" => mapping.port.container_port,
+            );
+            continue;
+        }
+        names.insert(name.clone());
 
         slog::info!(logger, "adding mapping for port";
             "service" => &mapping.service,
