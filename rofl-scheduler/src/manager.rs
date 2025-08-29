@@ -1012,7 +1012,7 @@ impl Manager {
 
         // Setup proxy for the instance when enabled.
         if let Some(proxy) = self.proxy.as_ref() {
-            match proxy.provision_instance(instance.id).await {
+            match proxy.provision_instance(instance, deployment).await {
                 Ok(proxy_label) => {
                     // Encrypt proxy label to app's SEK.
                     match client.app(deployment.app_id).await {
