@@ -2,30 +2,51 @@
 description: Build your own ROFL app
 ---
 
+import DocCard from '@theme/DocCard';
 import DocCardList from '@theme/DocCardList';
-import {findSidebarItem} from '@site/src/sidebarUtils';
+import { findSidebarItem } from '@site/src/sidebarUtils';
 
-# Build ROFL App
+# ROFL App
+
+*Runtime OFf-chain Logic (ROFL)* apps are applications running on Oasis nodes
+inside a *Trusted Execution Environment (TEE)* that are managed through the
+Oasis Sapphire blockchain.
+
+ROFL introduces the following features:
+
+- support for Docker-like containers or single-executable apps depending on your
+  TCB demand and threat model
+- integrity and auditability of your app including full history of updates
+- uncensorable registration, management and deployment of your app on a
+  permissionless pool of ROFL nodes including billing
+- built-in Key Management Service (KMS) for storing your app secrets and
+  secure derivation of keys within TEE
+- integration with Oasis Sapphire that enables EVM-compatible smart contracts
+  verification of the ROFL transaction origin
 
 ![ROFL diagram](images/rofl.svg)
 
-*Runtime OFf-chain Logic (ROFL)* apps are a mechanism to augment the deterministic
-on-chain backend with verifiable off-chain applications. These applications are
-stateless (with support for encrypted persistent local volumes), have access to
-the network and can perform expensive and/or non-deterministic computation.
+These features allow you to implement and deploy provably secure decentralized
+oracles, bridges, AI agents, game servers and more!
 
-ROFL apps run in *Trusted Execution Environments (TEEs)*, similar to the
-on-chain confidential runtimes. This enables them to securely authenticate to
-the on-chain backend which is handled transparently by the framework. Together
-they allow one to implement secure decentralized oracles, bridges, AI agents and
-more.
+## Build Your ROFL App
 
-The following chapters will teach you how to build your own ROFL app with the
-help of the [Oasis Runtime SDK].
+Set up your environment as described in the [Prerequisites] chapter. Then, the
+best way to start learning ROFL is by following tutorials that suit your needs
+the most:
+
+<DocCardList items={[
+  findSidebarItem('/build/rofl/tutorials/tgbot'),
+  findSidebarItem('/build/rofl/tutorials/price-oracle'),
+]} />
+
+[Prerequisites]: ./prerequisites.mdx
 
 ## See also
 
 <DocCardList items={[
+    findSidebarItem('/build/rofl/features/'),
+    findSidebarItem('/build/rofl/workflow/'),
     findSidebarItem('/build/sapphire/'),
     findSidebarItem('/node/run-your-node/rofl-node'),
 ]} />
