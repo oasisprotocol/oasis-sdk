@@ -1,0 +1,50 @@
+import Tabs from "@theme/Tabs";
+import TabItem from "@theme/TabItem";
+
+# Build
+
+Whenever you make changes to your ROFL app and want to deploy it, you first need
+to build it. The build process takes the compose file together with other ROFL
+app artifacts and deterministically generates a bundle that can later be
+deployed.
+
+The build process also computes the _enclave identity_ of the bundle which is
+used during the process of remote attestation to authenticate the app instances
+before granting them access to the key management system and [other features].
+
+To build a ROFL app and update the enclave identity in the app manifest, simply
+run:
+
+<Tabs>
+    <TabItem value="Native Linux">
+        ```shell
+        oasis rofl build
+        ```
+    </TabItem>
+    <TabItem value="Docker (Windows, Mac, Linux)">
+        ```shell
+        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+        ```
+    </TabItem>
+</Tabs>
+
+This will generate the resulting ROFL app bundle which can be used for later
+deployment and output something like:
+
+```
+ROFL app built and bundle written to 'myapp.default.orc'.
+```
+
+[other features]: features/
+
+## Update On-chain App Config
+
+After any changes to the ROFL app policy defined in the manifest, the on-chain
+app config needs to be updated in order for the changes to take effect.
+
+The designated admin account is able to update this policy by issuing an update
+transaction which can be done via the CLI by running:
+
+```shell
+oasis rofl update
+```
