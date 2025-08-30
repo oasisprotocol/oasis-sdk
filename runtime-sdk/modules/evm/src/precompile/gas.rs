@@ -1,4 +1,3 @@
-use ethabi::{ParamType, Token};
 use evm::{
     executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
     ExitError, ExitSucceed,
@@ -12,11 +11,11 @@ const PAD_GAS_COST: u64 = 10;
 pub(super) fn call_gas_used(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     handle.record_cost(GAS_USED_COST)?;
 
-    let used_gas = handle.used_gas();
+    let used_gas: u64 = handle.used_gas();
 
     Ok(PrecompileOutput {
         exit_status: ExitSucceed::Returned,
-        output: ethabi::encode(&[Token::Uint(used_gas.into())]),
+        output: solabi::encode(&(used_gas,)),
     })
 }
 
@@ -24,12 +23,10 @@ pub(super) fn call_pad_gas(handle: &mut impl PrecompileHandle) -> PrecompileResu
     handle.record_cost(PAD_GAS_COST)?;
 
     // Decode args.
-    let mut call_args = ethabi::decode(&[ParamType::Uint(128)], handle.input()).map_err(|e| {
-        PrecompileFailure::Error {
+    let gas_amount_big: u128 =
+        solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
             exit_status: ExitError::Other(e.to_string().into()),
-        }
-    })?;
-    let gas_amount_big = call_args.pop().unwrap().into_uint().unwrap();
+        })?;
     let gas_amount = gas_amount_big.try_into().unwrap_or(u64::MAX);
 
     // Obtain total used gas so far.
@@ -62,7 +59,6 @@ mod test {
         mock::EvmSigner,
         precompile::testing::{init_and_deploy_contract, TestRuntime},
     };
-    use ethabi::{ParamType, Token};
     use oasis_runtime_sdk::{
         modules::core::Event,
         testing::{keys, mock::Mock},
@@ -79,19 +75,14 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x09,
             ]),
-            &ethabi::encode(&[Token::Bytes(Vec::new())]),
+            &solabi::encode(&(solabi::Bytes(Vec::new()),)),
             10_560,
         )
         .unwrap();
 
-        let gas_usage = ethabi::decode(&[ParamType::Uint(128)], &ret.unwrap().output)
-            .expect("call should return gas usage")
-            .pop()
-            .unwrap()
-            .into_uint()
-            .expect("call should return uint")
-            .try_into()
-            .unwrap_or(u64::max_value());
+        let gas_usage_big: u128 =
+            solabi::decode(&ret.unwrap().output).expect("call should return gas usage");
+        let gas_usage: u64 = gas_usage_big.try_into().unwrap_or(u64::max_value());
         assert_eq!(gas_usage, 10, "call should return gas usage");
 
         // Test use gas in contract.
@@ -105,8 +96,12 @@ mod test {
         let expected_gas_used = 22_659;
 
         // Call into the test contract.
-        let dispatch_result =
-            signer.call_evm(&ctx, contract_address.into(), "test_gas_used", &[], &[]);
+        let dispatch_result = signer.call_evm(
+            &ctx,
+            contract_address.into(),
+            solabi::selector!("test_gas_used()"),
+            &(),
+        );
         assert!(
             dispatch_result.result.is_success(),
             "test gas used should succeed"
@@ -130,7 +125,7 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
-            &ethabi::encode(&[Token::Uint(1.into())]),
+            &solabi::encode(&(1_u64,)),
             10_560,
         )
         .expect("call should return something")
@@ -140,7 +135,7 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
-            &ethabi::encode(&[Token::Uint(20.into())]),
+            &solabi::encode(&(20_u64,)),
             10_560,
         )
         .unwrap();
@@ -151,7 +146,7 @@ mod test {
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
-            &ethabi::encode(&[Token::Uint(20_000.into())]),
+            &solabi::encode(&(20_000_u64,)),
             10_560,
         )
         .expect("call should return something")
@@ -171,9 +166,8 @@ mod test {
         let dispatch_result = signer.call_evm(
             &ctx,
             contract_address.into(),
-            "test_pad_gas",
-            &[ParamType::Uint(128)],
-            &[Token::Uint(100.into())],
+            solabi::selector!("test_pad_gas(uint128)"),
+            &(100_u128,),
         );
         assert!(
             dispatch_result.result.is_success(),
@@ -193,9 +187,8 @@ mod test {
         let dispatch_result = signer.call_evm(
             &ctx,
             contract_address.into(),
-            "test_pad_gas",
-            &[ParamType::Uint(128)],
-            &[Token::Uint(1.into())],
+            solabi::selector!("test_pad_gas(uint128)"),
+            &(1_u128,),
         );
         assert!(
             dispatch_result.result.is_success(),
