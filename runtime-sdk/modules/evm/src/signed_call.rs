@@ -1,7 +1,5 @@
 use std::convert::TryFrom as _;
 
-use blake3::hash;
-use ethabi::Token;
 use once_cell::sync::OnceCell;
 use sha3::{Digest as _, Keccak256};
 
@@ -141,32 +139,6 @@ fn hash_call(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
     Keccak256::digest(encoded).into()
 }
 
-fn hash_call_old(query: &SimulateCallQuery, leash: &Leash) -> [u8; 32] {
-    const CALL_TYPE_STR: &str = concat!(
-        "Call",
-        "(",
-        "address from",
-        ",address to",
-        ",uint64 gasLimit",
-        ",uint256 gasPrice",
-        ",uint256 value",
-        ",bytes data",
-        ",Leash leash",
-        ")",
-        leash_type_str!()
-    );
-    hash_encoded(&[
-        encode_bytes(CALL_TYPE_STR),
-        Token::Address(query.caller.0.into()),
-        Token::Address(query.address.unwrap_or_default().0.into()),
-        Token::Uint(query.gas_limit.into()),
-        Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
-        Token::Uint(ethabi::ethereum_types::U256(query.value.0)),
-        encode_bytes(&query.data),
-        Token::Uint(hash_leash(leash).into()),
-    ])
-}
-
 fn hash_leash(leash: &Leash) -> [u8; 32] {
     let encoded = solabi::encode_packed(&(
         hash_bytes(leash_type_str!()),
@@ -176,16 +148,6 @@ fn hash_leash(leash: &Leash) -> [u8; 32] {
         solabi::U256::new(leash.block_range.into()),
     ));
     Keccak256::digest(encoded).into()
-}
-
-fn hash_leash_old(leash: &Leash) -> [u8; 32] {
-    hash_encoded(&[
-        encode_bytes(leash_type_str!()),
-        Token::Uint(leash.nonce.into()),
-        Token::Uint(leash.block_number.into()),
-        Token::Uint(leash.block_hash.0.into()),
-        Token::Uint(leash.block_range.into()),
-    ])
 }
 
 fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
@@ -202,16 +164,8 @@ fn hash_domain<Cfg: Config>() -> &'static [u8; 32] {
     })
 }
 
-fn encode_bytes(s: impl AsRef<[u8]>) -> Token {
-    Token::FixedBytes(Keccak256::digest(s.as_ref()).to_vec())
-}
-
 fn hash_bytes(s: impl AsRef<[u8]>) -> Vec<u8> {
     Keccak256::digest(s.as_ref()).to_vec()
-}
-
-fn hash_encoded(tokens: &[Token]) -> [u8; 32] {
-    Keccak256::digest(ethabi::encode(tokens)).into()
 }
 
 #[cfg(test)]
@@ -222,7 +176,7 @@ mod test {
 
     use crate::{
         test::{ConfidentialEVMConfig as C10lCfg, EVMConfig as Cfg},
-        types::{SignedCallDataPack, SimulateCallQuery, H160, H256},
+        types::{SignedCallDataPack, SimulateCallQuery, H160},
         Module as EVMModule,
     };
 
@@ -236,102 +190,6 @@ mod test {
         ];
         assert_eq!(u64x4_to_u8x32(input), expected);
     }
-
-    #[test]
-    fn test_hash_domain_refactor() {
-        const DOMAIN_TYPE_STR: &str = "EIP712Domain(string name,string version,uint256 chainId)";
- 
-        let old_domain_encode = ethabi::encode(&[
-            encode_bytes(DOMAIN_TYPE_STR),
-            encode_bytes("oasis-runtime-sdk/evm: signed query"),
-            encode_bytes("1.0.0"),
-            Token::Uint(Cfg::CHAIN_ID.into()),
-        ]);
-
-        let new_domain_encode = solabi::encode_packed(&(
-            hash_bytes(DOMAIN_TYPE_STR),
-            hash_bytes("oasis-runtime-sdk/evm: signed query"),
-            hash_bytes("1.0.0"),
-            solabi::U256::new(Cfg::CHAIN_ID.into()),
-        ));
-
-        assert_eq!(old_domain_encode, new_domain_encode)        
-    }
-
-    #[test]
-    fn test_hash_leash_refactor() {
-        let leash: Leash = Leash {
-            nonce: 1,
-            block_number: 2,
-            block_hash: H256::zero(),
-            block_range: 3,
-        };
-
-        let old_leash_hash = hash_leash_old(&leash);
-        let new_leash_hash = hash_leash(&leash);
-        assert_eq!(old_leash_hash, new_leash_hash);
-    }
-
-    #[test]
-    fn test_hash_call_refactor() {
-        // Prepare a sample query and leash
-        let leash = Leash {
-            nonce: 1,
-            block_number: 2,
-            block_hash: H256::zero(),
-            block_range: 3,
-        };
-        let query = SimulateCallQuery {
-            gas_price: 123u64.into(),
-            gas_limit: 10,
-            caller: "0x11e244400Cf165ade687077984F09c3A037b868F".parse().unwrap(),
-            address: Some("0xb5ed90452AAC09f294a0BE877CBf2Dc4D55e096f".parse().unwrap()),
-            value: 42u64.into(),
-            data: vec![1, 2, 3, 4],
-        };
-           const CALL_TYPE_STR: &str = concat!(
-            "Call",
-            "(",
-            "address from",
-            ",address to",
-            ",uint64 gasLimit",
-            ",uint256 gasPrice",
-            ",uint256 value",
-            ",bytes data",
-            ",Leash leash",
-            ")",
-            leash_type_str!()
-        );
-
-        print!("Query gas price {:?}", query.gas_price.0);
-
-        // New
-        let encoded_new = solabi::encode_packed(&(
-            hash_bytes(CALL_TYPE_STR),
-            solabi::U256::from_be_bytes(pad_address_to_u8x32(&query.caller.0)),
-            solabi::U256::from_be_bytes(pad_address_to_u8x32(&query.address.unwrap_or_default().0)),
-            solabi::U256::new(query.gas_limit.into()),
-            solabi::U256::from_be_bytes(u64x4_to_u8x32(query.gas_price.0)),
-            solabi::U256::from_be_bytes(u64x4_to_u8x32(query.value.0)),
-            hash_bytes(&query.data),
-            solabi::U256::from_be_bytes(hash_leash(&leash)),
-        ));
-
-        // Old
-        let encoded_old = ethabi::encode(&[
-            encode_bytes(CALL_TYPE_STR),
-            Token::Address(query.caller.0.into()),
-            Token::Address(query.address.unwrap_or_default().0.into()),
-            Token::Uint(query.gas_limit.into()),
-            Token::Uint(ethabi::ethereum_types::U256(query.gas_price.0)),
-            Token::Uint(ethabi::ethereum_types::U256(query.value.0)),
-            encode_bytes(&query.data),
-            Token::Uint(hash_leash(&leash).into()),
-        ]);
-
-        assert_eq!(encoded_new, encoded_old);
-    }
-
 
     /// This was generated using the `@oasislabs/sapphire-paratime` JS lib.
     const SIGNED_CALL_DATA_PACK: &str =
