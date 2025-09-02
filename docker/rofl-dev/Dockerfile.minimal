@@ -1,0 +1,12 @@
+FROM debian:bookworm-slim
+
+ARG OASIS_CLI_VERSION=0.14.0
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -qq && apt-get install -qq --no-install-recommends curl ca-certificates squashfs-tools cryptsetup-bin qemu-utils && apt-get clean && \
+    curl -L -o /tmp/cli.tar.gz "https://github.com/oasisprotocol/cli/releases/download/v${OASIS_CLI_VERSION}/oasis_cli_${OASIS_CLI_VERSION}_linux_amd64.tar.gz" && \
+    tar -C /usr/bin -xf /tmp/cli.tar.gz --strip-components 1 "oasis_cli_${OASIS_CLI_VERSION}_linux_amd64/oasis" && \
+    rm /tmp/cli.tar.gz
+
+VOLUME /src
+WORKDIR /src
