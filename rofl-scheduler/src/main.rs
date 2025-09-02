@@ -17,6 +17,7 @@ mod manifest;
 mod proxy;
 mod qcow2;
 mod serverd;
+mod state;
 mod types;
 
 struct SchedulerApp {

@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{btree_map::Entry, BTreeMap, BTreeSet},
     io::Write,
     sync::{Arc, RwLock},
     time::{Instant, SystemTime},
@@ -10,16 +10,13 @@ use backoff::backoff::Backoff;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::BufMut;
 use futures_util::StreamExt;
-use oasis_runtime_sdk::{
-    core::{
-        common::{
-            crypto::{hash::Hash, signature::PublicKey},
-            logger::get_logger,
-            process,
-        },
-        host::{bundle_manager, volume_manager},
+use oasis_runtime_sdk::core::{
+    common::{
+        crypto::{hash::Hash, signature::PublicKey},
+        logger::get_logger,
+        process,
     },
-    types::address::Address,
+    host::{bundle_manager, volume_manager},
 };
 use oasis_runtime_sdk_rofl_market::{
     self as market,
@@ -36,12 +33,14 @@ use tokio::{
 };
 use tokio_util::compat::FuturesAsyncWriteCompatExt;
 
-use super::{
+use crate::{
     client::{MarketClient, MarketQueryClient},
     config::{LocalConfig, Resources},
     manifest::{self, Manifest},
     proxy::Proxy,
-    qcow2, types, SchedulerApp,
+    qcow2,
+    state::InstanceState,
+    types, SchedulerApp,
 };
 
 /// Metadata key used to configure the offer identifier.
@@ -121,28 +120,6 @@ struct LocalState {
     claim_payment: Vec<InstanceId>,
     /// Amounts of resources used.
     resources_used: Resources,
-}
-
-/// Instance state.
-#[derive(Default, Debug, Clone)]
-pub struct InstanceState {
-    /// Address of the instance administrator.
-    admin: Address,
-    /// Last deployment.
-    last_deployment: Option<Deployment>,
-    /// Last error message corresponding to deploying `last_deployment`.
-    last_error: Option<String>,
-    // Whether to ignore instance start until the given time elapses.
-    ignore_start_until: Option<Instant>,
-    /// Backoff associated with ignoring instance start.
-    ignore_start_backoff: Option<backoff::ExponentialBackoff>,
-}
-
-impl InstanceState {
-    /// Address of the instance administrator.
-    pub fn admin(&self) -> &Address {
-        &self.admin
-    }
 }
 
 struct DeploymentInfo {
@@ -357,12 +334,6 @@ impl Manager {
 
             local_state.accepted.insert(instance.id, instance.clone());
 
-            // Update administrator address.
-            {
-                let mut instances = self.instances.write().unwrap();
-                instances.entry(instance.id).or_default().admin = instance.admin;
-            }
-
             // Compute total provisioned resources.
             local_state.resources_used = local_state.resources_used.add(&instance.resources);
 
@@ -446,6 +417,21 @@ impl Manager {
                         METADATA_KEY_SCHEDULER_RAK.to_string(),
                         scheduler_rak.clone(),
                     );
+            }
+
+            // Update instance state from latest instance.
+            {
+                let mut instances = self.instances.write().unwrap();
+                match instances.entry(instance.id) {
+                    Entry::Vacant(entry) => {
+                        entry.insert(InstanceState::from_instance(&instance, desired.as_ref()));
+                    }
+                    Entry::Occupied(mut entry) => {
+                        let state = entry.get_mut();
+                        state.update_admin(&instance);
+                        state.update_permissions(desired.as_ref());
+                    }
+                }
             }
 
             // If the instance has been running for a while, make sure to claim payment. Use a fuzzy
@@ -895,14 +881,21 @@ impl Manager {
 
     fn set_last_instance_deployment(&self, instance_id: InstanceId, deployment: &Deployment) {
         let mut instances = self.instances.write().unwrap();
-        let state = instances.entry(instance_id).or_default();
+        let state = match instances.get_mut(&instance_id) {
+            Some(state) => state,
+            None => return,
+        };
         state.last_deployment = Some(deployment.clone());
         state.last_error = None;
     }
 
     fn ignore_instance_start(&self, instance_id: InstanceId, reason: String) {
         let mut instances = self.instances.write().unwrap();
-        let state = instances.entry(instance_id).or_default();
+        let state = match instances.get_mut(&instance_id) {
+            None => return,
+            Some(state) => state,
+        };
+
         if state.ignore_start_backoff.is_none() {
             state.ignore_start_backoff = Some(backoff::ExponentialBackoff {
                 max_elapsed_time: None,
@@ -922,7 +915,10 @@ impl Manager {
 
     fn should_start_instance(&self, instance_id: InstanceId, deployment: &Deployment) -> bool {
         let mut instances = self.instances.write().unwrap();
-        let state = instances.entry(instance_id).or_default();
+        let state = match instances.get_mut(&instance_id) {
+            None => return false,
+            Some(state) => state,
+        };
 
         if let Some(last_deployment) = &state.last_deployment {
             // In case the deployment has changed, allow immediate start as the new deployment could
