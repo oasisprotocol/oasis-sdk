@@ -1,3 +1,6 @@
+use std::collections::{BTreeMap, BTreeSet};
+
+use oasis_runtime_sdk::types::address::Address;
 use oasis_runtime_sdk_rofl_market::types::Deployment;
 
 /// Name of the Deploy command.
@@ -38,4 +41,36 @@ pub struct RestartRequest {
 pub struct TerminateRequest {
     /// Whether the storage should be wiped.
     pub wipe_storage: bool,
+}
+
+/// Name of the metadata key used to store the delegated permissions.
+pub const METADATA_KEY_PERMISSIONS: &str = "net.oasis.scheduler.permissions";
+
+/// Name of the action for viewing machine logs.
+pub const ACTION_LOG_VIEW: &str = "log.view";
+
+/// Instance permissions for different actions.
+pub type Permissions = BTreeMap<String, BTreeSet<Address>>;
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use oasis_runtime_sdk::testing;
+
+    #[test]
+    fn test_permissions_serialization() {
+        let mut permissions: Permissions = Default::default();
+        permissions.insert(
+            ACTION_LOG_VIEW.to_owned(),
+            BTreeSet::from([
+                testing::keys::alice::address(),
+                testing::keys::bob::address(),
+            ]),
+        );
+
+        let data = cbor::to_vec(permissions.clone());
+        let dec = cbor::from_slice(&data).unwrap();
+        assert_eq!(permissions, dec);
+    }
 }

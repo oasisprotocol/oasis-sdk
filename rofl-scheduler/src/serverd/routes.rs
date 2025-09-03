@@ -2,8 +2,13 @@ use std::sync::Arc;
 
 use axum::{extract, response};
 
-use oasis_runtime_sdk::core::host::{bundle_manager, log_manager};
+use oasis_runtime_sdk::{
+    core::host::{bundle_manager, log_manager},
+    types::address::Address,
+};
 use oasis_runtime_sdk_rofl_market::types::InstanceId;
+
+use crate::types::ACTION_LOG_VIEW;
 
 use super::{auth::Claims, error::Error, State};
 
@@ -36,7 +41,8 @@ pub async fn logs_get(
         .manager
         .get_instance(&instance_id)
         .ok_or(Error::NotFound)?;
-    if instance.admin().to_bech32() != claims.address {
+    let address = Address::from_bech32(&claims.address)?;
+    if !instance.has_permission(ACTION_LOG_VIEW, address) {
         return Err(Error::Forbidden);
     }
 

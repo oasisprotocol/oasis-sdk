@@ -233,9 +233,6 @@ mod test {
             "a462706b582077e51262274c9505a89db23b4921105d4ea1d8bd49bc99087281f3f92c812144646e616d65533fd8dabddfaf5cf0d1505f9ea0c090d241ed71656e6f6e63654f49f7baede65e2b5e930fb0d3f616fe6576616c756555bd080af9cb24129afafc5c461d231385c22ebb83b5",
         )];
 
-        let k1 = x25519::PrivateKey::generate();
-        let k2 = x25519::PrivateKey::generate();
-
         for (idx, tv) in tvs.iter().enumerate() {
             let sk1: [u8; x25519::PRIVATE_KEY_LENGTH] =
                 hex::decode(tv.0).unwrap().try_into().unwrap();

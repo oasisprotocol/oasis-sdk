@@ -421,8 +421,17 @@ impl<Cfg: Config> Module<Cfg> {
         Self::ensure_caller_is_instance_admin(&instance)?;
 
         instance.admin = body.admin;
+        // Clear deployment and any queued commands to ensure that the new admin deploys an
+        // authorized configuration.
+        instance.deployment = None;
+        instance.cmd_count = 0;
         instance.updated_at = ctx.now();
         state::set_instance(instance);
+
+        // Remove any queued instance commands (see above comment).
+        for cmd in state::get_instance_commands(body.provider, body.id, u64::MAX.into()) {
+            state::remove_instance_command(body.provider, body.id, cmd.id);
+        }
 
         CurrentState::with(|state| {
             state.emit_event(Event::InstanceUpdated {

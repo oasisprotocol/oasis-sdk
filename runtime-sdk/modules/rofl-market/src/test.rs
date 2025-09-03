@@ -953,7 +953,7 @@ fn test_instance_change_admin() {
         provider: keys::alice::address(),
         offer: 0.into(),
         admin: None, // Caller.
-        deployment: None,
+        deployment: Some(types::Deployment::default()),
         term: types::Term::Month,
         term_count: 1,
     };
@@ -962,7 +962,21 @@ fn test_instance_change_admin() {
     let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
 
-    // Ensure instance has the correct admin set.
+    // Fake provider accepting the instance.
+    let mut instance = state::get_instance(keys::alice::address(), 0.into()).unwrap();
+    instance.status = types::InstanceStatus::Accepted;
+    state::set_instance(instance);
+
+    // Queue a command.
+    let exec = types::InstanceExecuteCmds {
+        provider: keys::alice::address(),
+        id: 0.into(),
+        cmds: vec![b"do the thing. now!".to_vec()],
+    };
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceExecuteCmds", exec);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Ensure instance has been correctly configured.
     let instance: types::Instance = signer_alice
         .query(
             &ctx,
@@ -974,6 +988,8 @@ fn test_instance_change_admin() {
         )
         .unwrap();
     assert_eq!(instance.admin, keys::charlie::address());
+    assert!(instance.deployment.is_some());
+    assert_eq!(instance.cmd_count, 1);
 
     // Transfer instance to a new admin and then back again.
     let change_admin = types::InstanceChangeAdmin {
@@ -1008,7 +1024,19 @@ fn test_instance_change_admin() {
             },
         )
         .unwrap();
-    assert_eq!(instance.admin, keys::erin::address());
+    assert_eq!(
+        instance.admin,
+        keys::erin::address(),
+        "admin should be changed"
+    );
+    assert_eq!(
+        instance.deployment, None,
+        "deployment should be cleared on transfer"
+    );
+    assert_eq!(
+        instance.cmd_count, 0,
+        "queued commands should be cleared on transfer"
+    );
 
     // Change the instance back.
     let change_admin = types::InstanceChangeAdmin {
