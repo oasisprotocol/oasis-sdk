@@ -133,6 +133,10 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
   transparently for the caller using an ephemeral key and any response is first
   decrypted before being passed on.
 
+- `evm_use_oasis_tx` is a boolean flag that controls transaction encoding for
+  Ethereum-compatible calls. By default this is `false`, meaning `eth`
+  transactions are encoded as native Ethereum transactions.
+
 **Example response:**
 
 Inside `data` the JSON response contains a CBOR-serialized hex-encoded
@@ -147,7 +151,7 @@ For example:
     "data": "a1626f6b40"
   }
   ```
-  
+
   deserialized as `{"ok": ''}`.
 
 - Unsusccessful call result:
@@ -157,7 +161,7 @@ For example:
     "data": "a1646661696ca364636f646508666d6f64756c656365766d676d6573736167657272657665727465643a20614a416f4c773d3d"
   }
   ```
-  
+
   deserialized as
   `{"fail": {"code": 8, "module": "evm", "message": "reverted: aJAoLw=="}}`.
 
