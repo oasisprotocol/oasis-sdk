@@ -8,6 +8,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context as _, Result};
+use k256::{elliptic_curve::sec1::ToEncodedPoint, sha2::Digest as Sha2Digest};
 use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
 
@@ -36,7 +37,7 @@ use oasis_runtime_sdk::{
     types::{
         address::{Address, SignatureAddressSpec},
         callformat, token,
-        transaction::{self, CallerAddress},
+        transaction::{self, AuthProof, CallerAddress, UnverifiedTransaction},
     },
 };
 
@@ -58,6 +59,8 @@ pub struct SubmitTxOpts {
     pub encrypt: bool,
     /// Whether to verify the transaction result (true by default).
     pub verify: bool,
+    /// Use Oasis transaction format for EVM transactions instead of Ethereum format (false by default).
+    pub evm_use_oasis_tx: bool,
 }
 
 impl Default for SubmitTxOpts {
@@ -66,6 +69,7 @@ impl Default for SubmitTxOpts {
             timeout: Some(Duration::from_millis(60_000)), // 60 seconds.
             encrypt: true,
             verify: true,
+            evm_use_oasis_tx: false,
         }
     }
 }
@@ -640,13 +644,20 @@ where
         }
 
         // Sign the transaction.
-        let mut tx = tx.prepare_for_signing();
-        for signer in signers {
-            tx.append_sign(signer)?;
-        }
-        let tx = tx.finalize();
-        let raw_tx = cbor::to_vec(tx);
-        let tx_hash = Hash::digest_bytes(&raw_tx);
+        let (raw_tx, tx_hash) = if !opts.evm_use_oasis_tx
+            && matches!(tx.call.method.as_str(), "evm.Call" | "evm.Create")
+        {
+            sign_and_encode_as_ethereum_tx(&tx, signers)?
+        } else {
+            let mut tx = tx.prepare_for_signing();
+            for signer in signers {
+                tx.append_sign(signer)?;
+            }
+            let tx = tx.finalize();
+            let raw_tx = cbor::to_vec(tx);
+            let tx_hash = Hash::digest_bytes(&raw_tx);
+            (raw_tx, tx_hash)
+        };
 
         // Submit the transaction.
         let submit_tx_task = client.state.host.submit_tx(
@@ -721,4 +732,367 @@ where
             _ => Ok(result),
         }
     }
+}
+
+/// Sign and encode a transaction as an Ethereum RLP-encoded transaction.
+fn sign_and_encode_as_ethereum_tx(
+    tx: &transaction::Transaction,
+    signers: &[Arc<dyn Signer>],
+) -> Result<(Vec<u8>, Hash)> {
+    // Ensure a single signer.
+    if signers.len() != 1 {
+        return Err(anyhow!(
+            "ethereum transactions support only a single signer"
+        ));
+    }
+
+    // Ensure we have a secp256k1 signer for Ethereum.
+    let signer = &signers[0];
+    if signer.public_key().key_type() != "secp256k1" {
+        return Err(anyhow!("ethereum transactions require secp256k1 signer"));
+    }
+
+    // Extract transaction parameters based on method using existing EVM types.
+    let (action, value, data) = match tx.call.method.as_str() {
+        "evm.Call" => {
+            let call: oasis_runtime_sdk_evm::types::Call =
+                cbor::from_value(tx.call.body.clone())
+                    .map_err(|e| anyhow!("failed to decode evm.Call body: {}", e))?;
+            ("call", call.value, call.data)
+        }
+        "evm.Create" => {
+            let create: oasis_runtime_sdk_evm::types::Create =
+                cbor::from_value(tx.call.body.clone())
+                    .map_err(|e| anyhow!("failed to decode evm.Create body: {}", e))?;
+            ("create", create.value, create.init_code)
+        }
+        _ => {
+            return Err(anyhow!("not an EVM transaction"));
+        }
+    };
+
+    // Transaction parameters.
+    let nonce = tx
+        .auth_info
+        .signer_info
+        .first()
+        .ok_or_else(|| anyhow!("no signer info"))?
+        .nonce;
+    let gas_price = tx.auth_info.fee.gas_price();
+    let gas_limit = tx.auth_info.fee.gas;
+
+    // Create Ethereum transaction action.
+    let eth_action = match action {
+        "call" => {
+            let call: oasis_runtime_sdk_evm::types::Call = cbor::from_value(tx.call.body.clone())?;
+            let address: primitive_types::H160 = call.address.0.into();
+            ethereum::TransactionAction::Call(address)
+        }
+        "create" => ethereum::TransactionAction::Create,
+        _ => return Err(anyhow!("invalid action type")),
+    };
+
+    // Create EIP-2930 Ethereum transaction.
+    let eth_tx = ethereum::EIP2930Transaction {
+        chain_id: 123, // TODO: Get actual chain id (or create a Legacy transaction without a Chain ID).
+        nonce: primitive_types::U256::from(nonce),
+        gas_price: primitive_types::U256::from(gas_price),
+        gas_limit: primitive_types::U256::from(gas_limit),
+        action: eth_action,
+        value: primitive_types::U256(value.0),
+        input: data,
+        access_list: vec![],
+        signature: ethereum::eip2930::TransactionSignature::new(
+            false,
+            primitive_types::H256::from_low_u64_be(1),
+            primitive_types::H256::from_low_u64_be(1),
+        )
+        .unwrap(),
+    };
+
+    // Sign the transaction.
+    let signed_tx = sign_ethereum_transaction(eth_tx, signer.as_ref())?;
+    let unverified_tx = UnverifiedTransaction(
+        signed_tx,
+        vec![AuthProof::Module("evm.ethereum.v0".to_string())],
+    );
+    let raw_tx = cbor::to_vec(unverified_tx);
+    let tx_hash = Hash::digest_bytes(&raw_tx);
+
+    Ok((raw_tx, tx_hash))
+}
+
+fn sign_ethereum_transaction(
+    mut tx: ethereum::EIP2930Transaction,
+    signer: &dyn Signer,
+) -> Result<Vec<u8>> {
+    let message = tx.clone().to_message();
+    let hash: [u8; 32] = message.hash().as_bytes().try_into().unwrap();
+
+    let sig = signer
+        .sign_raw(&hash)
+        .map_err(|e| anyhow!("failed to sign Ethereum transaction: {}", e))?;
+
+    let sig = k256::ecdsa::Signature::from_der(sig.as_ref())
+        .map_err(|e| anyhow!("failed parsing ecdsa signature: {e}"))?;
+
+    // Normalize to low-S.
+    let sig = match sig.normalize_s() {
+        Some(normalized) => normalized,
+        None => sig, // Already low-S.
+    };
+
+    // Determine recovery id (0/1).
+    let pk = signer.public_key();
+    let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(pk.as_bytes())
+        .map_err(|e| anyhow!("invalid public key: {}", e))?;
+    let recid_u8 = [0u8, 1u8]
+        .iter()
+        .find_map(|&rid| {
+            let recid = k256::ecdsa::recoverable::Id::new(rid).ok()?;
+            let rsig = k256::ecdsa::recoverable::Signature::new(&sig, recid).ok()?;
+            let recovered = rsig
+                .recover_verifying_key_from_digest(k256::sha2::Sha256::new().chain_update(&hash))
+                .ok()?;
+
+            if recovered.to_encoded_point(false) == vk.to_encoded_point(false) {
+                Some(rid)
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| anyhow!("could not determine recovery id"))?;
+
+    // Fill r,s,y.
+    let mut r_be = [0u8; 32];
+    let mut s_be = [0u8; 32];
+    r_be.copy_from_slice(sig.r().to_bytes().as_slice());
+    s_be.copy_from_slice(sig.s().to_bytes().as_slice());
+    tx.signature = ethereum::eip2930::TransactionSignature::new(
+        recid_u8 == 1,
+        primitive_types::H256::from_slice(&r_be),
+        primitive_types::H256::from_slice(&s_be),
+    )
+    .unwrap();
+
+    let mut result = vec![0x01];
+    result.extend_from_slice(&rlp::encode(&tx));
+    Ok(result)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use sha3::Digest;
+
+    use oasis_runtime_sdk::{
+        crypto::signature::{ed25519, secp256k1},
+        types::{
+            token,
+            transaction::{AuthInfo, Call, CallFormat, Fee, Transaction},
+        },
+    };
+    use oasis_runtime_sdk_evm::{
+        raw_tx,
+        types::{Call as EvmCall, Create as EvmCreate, H160, U256},
+    };
+
+    use super::*;
+
+    const TEST_NONCE: u64 = 42;
+    const TEST_CHAIN_ID: u64 = 123;
+    const TEST_ADDRESS: [u8; 20] = [1u8; 20];
+    const TEST_VALUE: u64 = 1000;
+    const TEST_DATA: [u8; 3] = [0x42, 0x43, 0x44];
+    const TEST_GAS: u64 = 21000;
+
+    fn create_test_signer() -> Arc<dyn Signer> {
+        let seed = sha3::Keccak256::digest(b"test_seed");
+        Arc::new(secp256k1::MemorySigner::new_from_seed(&seed).unwrap())
+    }
+
+    fn create_test_evm_tx(is_create: bool) -> Transaction {
+        let (method, body) = if is_create {
+            let create_body = EvmCreate {
+                value: U256::from(TEST_VALUE),
+                init_code: TEST_DATA.to_vec(),
+            };
+            ("evm.Create".to_string(), cbor::to_value(create_body))
+        } else {
+            let call_body = EvmCall {
+                address: H160(TEST_ADDRESS),
+                value: U256::from(TEST_VALUE),
+                data: TEST_DATA.to_vec(),
+            };
+            ("evm.Call".to_string(), cbor::to_value(call_body))
+        };
+
+        Transaction {
+            version: 1,
+            call: Call {
+                format: CallFormat::Plain,
+                method,
+                body,
+                ..Default::default()
+            },
+            auth_info: AuthInfo {
+                fee: Fee {
+                    gas: TEST_GAS,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn test_encode_ethereum_tx_multiple_signers_fails() {
+        let signer1 = create_test_signer();
+        let signer2 = create_test_signer();
+        let tx = create_test_evm_tx(false);
+
+        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer1, signer2]);
+        assert!(result.is_err(), "Should fail with multiple signers");
+        assert!(result.unwrap_err().to_string().contains("single signer"));
+    }
+
+    #[test]
+    fn test_encode_ethereum_tx_non_secp256k1_fails() {
+        // Create an Ed25519 signer (not secp256k1).
+        let seed = sha3::Keccak256::digest(b"test_ed25519");
+        let ed25519_signer = Arc::new(ed25519::MemorySigner::new_from_seed(&seed).unwrap());
+
+        let tx = create_test_evm_tx(false);
+
+        let result = sign_and_encode_as_ethereum_tx(&tx, &[ed25519_signer]);
+        assert!(result.is_err(), "Should fail with non-secp256k1 signer");
+        assert!(result.unwrap_err().to_string().contains("secp256k1"));
+    }
+
+    #[test]
+    fn test_encode_ethereum_tx_non_evm_method_fails() {
+        let signer = create_test_signer();
+        let mut tx = create_test_evm_tx(false);
+        tx.call.method = "accounts.Transfer".to_string(); // Not an EVM method
+
+        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
+        assert!(
+            result.is_err(),
+            "Should fail with non-EVM transaction method"
+        );
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("not an EVM transaction"));
+    }
+
+    #[test]
+    fn test_encode_ethereum_call_transaction() {
+        let signer = create_test_signer();
+        let mut tx = create_test_evm_tx(false);
+
+        tx.append_auth_signature(
+            SignatureAddressSpec::try_from_pk(&signer.public_key()).unwrap(),
+            TEST_NONCE,
+        );
+
+        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
+        assert!(
+            result.is_ok(),
+            "Should successfully encode EVM call transaction: {:?}",
+            result.err()
+        );
+
+        // Verify we got non-empty encoded transaction and hash.
+        let (raw_tx, tx_hash) = result.unwrap();
+        assert!(
+            !raw_tx.is_empty(),
+            "Encoded transaction should not be empty"
+        );
+        assert_ne!(
+            tx_hash,
+            Hash::empty_hash(),
+            "Transaction hash should not be empty"
+        );
+
+        // Decode the transaction and verify it contains an UnverifiedTransaction with EVM module auth.
+        let unverified_tx: UnverifiedTransaction =
+            cbor::from_slice(&raw_tx).expect("Should be able to decode as UnverifiedTransaction");
+        // Verify it has the EVM ethereum auth proof.
+        assert_eq!(unverified_tx.1.len(), 1);
+        assert!(matches!(unverified_tx.1[0], AuthProof::Module(ref s) if s == "evm.ethereum.v0"));
+
+        // Verify the inner transaction can be decoded as an Ethereum transaction.
+        let eth_tx_bytes = &unverified_tx.0;
+        let decoded_tx = raw_tx::decode(
+            eth_tx_bytes,
+            Some(TEST_CHAIN_ID),
+            0, // Min gas price
+            &token::Denomination::NATIVE,
+        )
+        .expect("Should be able to decode inner transaction as Ethereum transaction");
+
+        // Verify transaction parameters match our input.
+        assert_eq!(decoded_tx.auth_info.signer_info[0].nonce, TEST_NONCE);
+        assert_eq!(decoded_tx.auth_info.fee.gas, TEST_GAS);
+
+        // Decode the call body to verify EVM transaction parameters.
+        let call_body: EvmCall = cbor::from_value(decoded_tx.call.body).unwrap();
+        assert_eq!(call_body.value, U256::from(TEST_VALUE));
+        assert_eq!(call_body.data, TEST_DATA.to_vec());
+        assert_eq!(call_body.address, H160(TEST_ADDRESS));
+    }
+
+    #[test]
+    fn test_encode_ethereum_create_transaction() {
+        let signer = create_test_signer();
+        let mut tx = create_test_evm_tx(true);
+
+        tx.append_auth_signature(
+            SignatureAddressSpec::try_from_pk(&signer.public_key()).unwrap(),
+            TEST_NONCE,
+        );
+
+        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
+        assert!(
+            result.is_ok(),
+            "Should successfully encode EVM create transaction"
+        );
+
+        // Verify we got non-empty encoded transaction and hash.
+        let (raw_tx, tx_hash) = result.unwrap();
+        assert!(
+            !raw_tx.is_empty(),
+            "Encoded transaction should not be empty"
+        );
+        assert_ne!(
+            tx_hash,
+            Hash::empty_hash(),
+            "Transaction hash should not be empty"
+        );
+
+        // Decode and verify the transaction structure.
+        let unverified_tx: UnverifiedTransaction =
+            cbor::from_slice(&raw_tx).expect("Should be able to decode as UnverifiedTransaction");
+
+        // Verify the inner transaction can be decoded as an Ethereum transaction.
+        let eth_tx_bytes = &unverified_tx.0;
+        let decoded_tx = raw_tx::decode(
+            eth_tx_bytes,
+            Some(TEST_CHAIN_ID),
+            0, // Min gas price
+            &token::Denomination::NATIVE,
+        )
+        .expect("Should be able to decode inner transaction as Ethereum transaction");
+        assert_eq!(decoded_tx.auth_info.signer_info[0].nonce, TEST_NONCE);
+        assert_eq!(decoded_tx.auth_info.fee.gas, TEST_GAS);
+        assert_eq!(decoded_tx.call.method, "evm.Create");
+
+        // Decode the create body to verify EVM transaction parameters.
+        let create_body: EvmCreate = cbor::from_value(decoded_tx.call.body).unwrap();
+        assert_eq!(create_body.value, U256::from(TEST_VALUE));
+        assert_eq!(create_body.init_code, TEST_DATA.to_vec());
+    }
+
 }

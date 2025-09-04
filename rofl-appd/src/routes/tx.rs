@@ -72,11 +72,21 @@ pub struct SignAndSubmitRequest {
     /// Whether the transaction calldata should be encrypted.
     #[serde(default = "default_encrypt_flag")]
     pub encrypt: bool,
+
+    /// Use Oasis transaction format for EVM transactions instead of Ethereum format.
+    /// When false (default), EVM transactions (evm.Call, evm.Create) will be encoded as Ethereum transactions.
+    #[serde(default = "default_evm_use_oasis_tx_flag")]
+    pub evm_use_oasis_tx: bool,
 }
 
 /// Default value for the `encrypt` field in `SignAndSubmitRequest`.
 fn default_encrypt_flag() -> bool {
     true
+}
+
+/// Default value for the `evm_use_oasis_tx` field in `SignAndSubmitRequest`.
+fn default_evm_use_oasis_tx_flag() -> bool {
+    false
 }
 
 /// Transaction signing and submission response.
@@ -101,6 +111,7 @@ pub async fn sign_and_submit(
 
     let opts = SubmitTxOpts {
         encrypt: body.encrypt,
+        evm_use_oasis_tx: body.evm_use_oasis_tx,
         ..Default::default()
     };
 
