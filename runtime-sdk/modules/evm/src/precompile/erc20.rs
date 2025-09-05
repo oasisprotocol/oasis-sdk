@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use ethabi::Token;
 use evm::{
     executor::stack::{PrecompileHandle, PrecompileOutput},
     ExitSucceed,
@@ -304,22 +303,22 @@ impl<T: AccountToken> Erc20Token for T {
 #[evm_event(name = "Transfer")]
 struct TransferEvent {
     #[evm_event(arg_type = "address", indexed)]
-    from: Token,
+    from: solabi::Address,
     #[evm_event(arg_type = "address", indexed)]
-    to: Token,
+    to: solabi::Address,
     #[evm_event(arg_type = "uint256")]
-    value: Token,
+    value: solabi::U256,
 }
 
 #[derive(EvmEvent)]
 #[evm_event(name = "Approval")]
 struct ApprovalEvent {
     #[evm_event(arg_type = "address", indexed)]
-    owner: Token,
+    owner: solabi::Address,
     #[evm_event(arg_type = "address", indexed)]
-    spender: Token,
+    spender: solabi::Address,
     #[evm_event(arg_type = "uint256")]
-    value: Token,
+    value: solabi::U256,
 }
 
 #[derive(Default)]
@@ -339,7 +338,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         handle.record_cost(T::GAS_COSTS.name)?;
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            output: ethabi::encode(&[Token::String(T::NAME.to_string())]),
+            output: solabi::encode(&[T::NAME.to_string()]),
         })
     }
 
@@ -348,7 +347,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         handle.record_cost(T::GAS_COSTS.symbol)?;
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            output: ethabi::encode(&[Token::String(T::SYMBOL.to_string())]),
+            output: solabi::encode(&[T::SYMBOL.to_string()]),
         })
     }
 
@@ -357,7 +356,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         handle.record_cost(T::GAS_COSTS.decimals)?;
         Ok(PrecompileOutput {
             exit_status: ExitSucceed::Returned,
-            output: ethabi::encode(&[Token::Uint(T::DECIMALS.into())]),
+            output: solabi::encode(&[T::DECIMALS as u128]),
         })
     }
 
@@ -367,7 +366,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::total_supply() {
             Ok(amount) => Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
-                output: ethabi::encode(&[Token::Uint(amount.into())]),
+                output: solabi::encode(&amount),
             }),
             Err(e) => Err(e.encode()),
         }
@@ -379,7 +378,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::balance_of(&address) {
             Ok(amount) => Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
-                output: ethabi::encode(&[Token::Uint(amount.into())]),
+                output: solabi::encode(&amount),
             }),
             Err(e) => Err(e.encode()),
         }
@@ -396,15 +395,15 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::transfer(&sender, &recipient, amount) {
             Ok(done) => {
                 TransferEvent {
-                    from: Token::Address(handle.context().caller),
-                    to: Token::Address(recipient),
-                    value: Token::Uint(amount.into()),
+                    from: solabi::Address(handle.context().caller.into()),
+                    to: solabi::Address(recipient.into()),
+                    value: solabi::U256::from(amount),
                 }
                 .emit::<Self>(handle)
                 .unwrap();
                 Ok(PrecompileOutput {
                     exit_status: ExitSucceed::Returned,
-                    output: ethabi::encode(&[Token::Bool(done)]),
+                    output: solabi::encode(&done),
                 })
             }
             Err(e) => Err(e.encode()),
@@ -423,15 +422,15 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::transfer_from(&owner, &caller, &recipient, amount) {
             Ok(done) => {
                 TransferEvent {
-                    from: Token::Address(owner),
-                    to: Token::Address(recipient),
-                    value: Token::Uint(amount.into()),
+                    from: solabi::Address(owner.into()),
+                    to: solabi::Address(recipient.into()),
+                    value: solabi::U256::from(amount),
                 }
                 .emit::<Self>(handle)
                 .unwrap();
                 Ok(PrecompileOutput {
                     exit_status: ExitSucceed::Returned,
-                    output: ethabi::encode(&[Token::Bool(done)]),
+                    output: solabi::encode(&[done]),
                 })
             }
             Err(e) => Err(e.encode()),
@@ -449,15 +448,15 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::approve(&owner, &spender, amount) {
             Ok(done) => {
                 ApprovalEvent {
-                    owner: Token::Address(owner),
-                    spender: Token::Address(spender),
-                    value: Token::Uint(amount.into()),
+                    owner: solabi::Address(owner.into()),
+                    spender: solabi::Address(spender.into()),
+                    value: solabi::U256::from(amount),
                 }
                 .emit::<Self>(handle)
                 .unwrap();
                 Ok(PrecompileOutput {
                     exit_status: ExitSucceed::Returned,
-                    output: ethabi::encode(&[Token::Bool(done)]),
+                    output: solabi::encode(&[done]),
                 })
             }
             Err(e) => Err(e.encode()),
@@ -474,7 +473,7 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::allowance(&owner, &spender) {
             Ok(amount) => Ok(PrecompileOutput {
                 exit_status: ExitSucceed::Returned,
-                output: ethabi::encode(&[Token::Uint(amount.into())]),
+                output: solabi::encode(&amount),
             }),
             Err(e) => Err(e.encode()),
         }
@@ -487,9 +486,9 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::mint(&caller, &to, amount) {
             Ok(_) => {
                 TransferEvent {
-                    from: Token::Address(H160::zero()),
-                    to: Token::Address(to),
-                    value: Token::Uint(amount.into()),
+                    from: solabi::Address(H160::zero().into()),
+                    to: solabi::Address(to.into()),
+                    value: solabi::U256::from(amount),
                 }
                 .emit::<Self>(handle)
                 .unwrap();
@@ -509,9 +508,9 @@ impl<T: Erc20Token> Erc20Contract<T> {
         match T::burn(&caller, &from, amount) {
             Ok(_) => {
                 TransferEvent {
-                    from: Token::Address(from),
-                    to: Token::Address(H160::zero()),
-                    value: Token::Uint(amount.into()),
+                    from: solabi::Address(from.into()),
+                    to: solabi::Address(H160::zero().into()),
+                    value: solabi::U256::from(amount),
                 }
                 .emit::<Self>(handle)
                 .unwrap();

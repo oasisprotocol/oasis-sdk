@@ -28,38 +28,32 @@ impl EvmSigner {
     }
 
     /// Dispatch a call to the given EVM contract method.
-    pub fn call_evm<C>(
+    pub fn call_evm<C, T: solabi::encode::Encode>(
         &mut self,
         ctx: &C,
         address: H160,
-        name: &str,
-        param_types: &[ethabi::ParamType],
-        params: &[ethabi::Token],
+        selector: solabi::Selector,
+        params: &T,
     ) -> dispatcher::DispatchResult
     where
         C: Context,
     {
-        self.call_evm_opts(ctx, address, name, param_types, params, Default::default())
+        self.call_evm_opts(ctx, address, selector, params, Default::default())
     }
 
     /// Dispatch a call to the given EVM contract method with the given options.
-    pub fn call_evm_opts<C>(
+    pub fn call_evm_opts<C, T: solabi::encode::Encode>(
         &mut self,
         ctx: &C,
         address: H160,
-        name: &str,
-        param_types: &[ethabi::ParamType],
-        params: &[ethabi::Token],
+        selector: solabi::Selector,
+        params: &T,
         opts: CallOptions,
     ) -> dispatcher::DispatchResult
     where
         C: Context,
     {
-        let data = [
-            ethabi::short_signature(name, param_types).to_vec(),
-            ethabi::encode(params),
-        ]
-        .concat();
+        let data = solabi::encode_with_selector(selector, params);
 
         self.call_opts(
             ctx,
@@ -79,38 +73,32 @@ impl EvmSigner {
     }
 
     /// Dispatch a query to the given EVM contract method.
-    pub fn query_evm_call<C>(
+    pub fn query_evm_call<C, T: solabi::encode::Encode>(
         &self,
         ctx: &C,
         address: H160,
-        name: &str,
-        param_types: &[ethabi::ParamType],
-        params: &[ethabi::Token],
+        selector: solabi::Selector,
+        params: &T,
     ) -> Result<Vec<u8>, RuntimeError>
     where
         C: Context,
     {
-        self.query_evm_call_opts(ctx, address, name, param_types, params, Default::default())
+        self.query_evm_call_opts(ctx, address, selector, params, Default::default())
     }
 
     /// Dispatch a query to the given EVM contract method.
-    pub fn query_evm_call_opts<C>(
+    pub fn query_evm_call_opts<C, T: solabi::encode::Encode>(
         &self,
         ctx: &C,
         address: H160,
-        name: &str,
-        param_types: &[ethabi::ParamType],
-        params: &[ethabi::Token],
+        selector: solabi::Selector,
+        params: &T,
         opts: QueryOptions,
     ) -> Result<Vec<u8>, RuntimeError>
     where
         C: Context,
     {
-        let data = [
-            ethabi::short_signature(name, param_types).to_vec(),
-            ethabi::encode(params),
-        ]
-        .concat();
+        let data = solabi::encode_with_selector(selector, params);
 
         self.query_evm_opts(ctx, Some(address), data, opts)
     }
@@ -249,31 +237,10 @@ pub fn load_contract_bytecode(raw: &str) -> Vec<u8> {
 
 /// Decode a basic revert reason.
 pub fn decode_reverted(msg: &str) -> Option<String> {
-    decode_reverted_abi(
-        msg,
-        ethabi::AbiError {
-            name: "Error".to_string(),
-            inputs: vec![ethabi::Param {
-                name: "message".to_string(),
-                kind: ethabi::ParamType::String,
-                internal_type: None,
-            }],
-        },
-    )?
-    .pop()
-    .unwrap()
-    .into_string()
-}
-
-/// Decode a revert reason accoording to the given API.
-pub fn decode_reverted_abi(msg: &str, abi: ethabi::AbiError) -> Option<Vec<ethabi::Token>> {
+    let error_encoder = solabi::ErrorEncoder::<(String,)>::new(solabi::selector!("Error(string)"));
     let raw = decode_reverted_raw(msg)?;
-
-    // Strip (and validate) error signature.
-    let signature = abi.signature();
-    let raw = raw.strip_prefix(&signature.as_bytes()[..4])?;
-
-    Some(abi.decode(raw).unwrap())
+    let (message,) = error_encoder.decode(&raw).ok()?;
+    Some(message)
 }
 
 /// Decode a base64-encoded revert reason.
