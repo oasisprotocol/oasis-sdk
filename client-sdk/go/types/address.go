@@ -47,6 +47,13 @@ const ContextKeyAccountNames = contextKey("runtime/account-names")
 // AccountNames maps public key or address to user-defined account name for pretty printing.
 type AccountNames map[string]string
 
+// AccountEthAddresses maps a native Oasis bech32 address string -> Ethereum hex address (0x...)
+// for accounts where an Ethereum form is known (e.g., secp256k1 accounts imported from Ethereum tooling).
+const ContextKeyAccountEthAddresses = contextKey("runtime/account-eth-addresses")
+
+// AccountEthAddresses is a map keyed by native bech32 address string to its Ethereum hex address.
+type AccountEthAddresses map[string]string
+
 // SignatureAddressSpec is information for signature-based authentication and public key-based
 // address derivation.
 type SignatureAddressSpec struct {
