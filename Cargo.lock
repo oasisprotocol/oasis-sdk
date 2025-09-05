@@ -3865,7 +3865,7 @@ dependencies = [
  "serde_json",
  "sha2 0.10.9",
  "sha3",
- "solabi",
+ "solabi 0.2.0 (git+https://github.com/njelich/solabi-rs.git?branch=main)",
  "substrate-bn",
  "thiserror 1.0.69",
  "uint",
@@ -3896,7 +3896,7 @@ dependencies = [
  "oasis-runtime-sdk-evm",
  "once_cell",
  "rustc-hex",
- "solabi",
+ "solabi 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.69",
  "zeroize",
 ]
@@ -5957,6 +5957,15 @@ name = "solabi"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a05e216e6d7e93fcd8bda50df6c57960998b22bd926638fd9aa14b786bc53bf2"
+dependencies = [
+ "ethprim",
+ "serde",
+]
+
+[[package]]
+name = "solabi"
+version = "0.2.0"
+source = "git+https://github.com/njelich/solabi-rs.git?branch=main#a9f25d493ceed74df02df882f1d89056427676c6"
 dependencies = [
  "ethprim",
  "serde",
