@@ -91,12 +91,23 @@ func NewBaseUnits(amount quantity.Quantity, denomination Denomination) BaseUnits
 func PrettyPrintToAmount(ctx context.Context, prefix string, w io.Writer, to *Address, amount BaseUnits) {
 	toStr := "Self"
 	if to != nil {
-		toStr = to.String()
-		an, ok := ctx.Value(ContextKeyAccountNames).(AccountNames)
-		if ok {
-			if name, ok := an[to.String()]; ok {
-				toStr = fmt.Sprintf("%s (%s)", name, to)
+		native := to.String()
+		// Default to showing the native address; prefer Ethereum if provided in context.
+		displayAddr := native
+		if ethMap, ok := ctx.Value(ContextKeyAccountEthAddresses).(AccountEthAddresses); ok && ethMap != nil {
+			if ethHex, ok := ethMap[native]; ok && ethHex != "" {
+				displayAddr = ethHex
 			}
+		}
+		// If a friendly name is available, show: "<name> (<address>)".
+		if an, ok := ctx.Value(ContextKeyAccountNames).(AccountNames); ok && an != nil {
+			if name, ok := an[native]; ok && name != "" {
+				toStr = fmt.Sprintf("%s (%s)", name, displayAddr)
+			} else {
+				toStr = displayAddr
+			}
+		} else {
+			toStr = displayAddr
 		}
 	}
 	fmt.Fprintf(w, "%sTo: %s\n", prefix, toStr)
