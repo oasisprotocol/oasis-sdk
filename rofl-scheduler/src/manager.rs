@@ -1,7 +1,7 @@
 use std::{
     collections::{btree_map::Entry, BTreeMap, BTreeSet},
     io::Write,
-    sync::{Arc, RwLock},
+    sync::{Arc, LazyLock, RwLock},
     time::{Instant, SystemTime},
 };
 
@@ -23,7 +23,7 @@ use oasis_runtime_sdk_rofl_market::{
     policy::{ProviderLabel, LABEL_PROVIDER},
     types::{Deployment, Instance, InstanceId, InstanceStatus},
 };
-use rand::Rng;
+use rand::{rngs::OsRng, Rng, RngCore};
 use rofl_app_core::{prelude::*, secrets};
 use rofl_proxy::{LABEL_PROXY, PROXY_LABEL_ENCRYPTION_CONTEXT};
 use sha2::{Digest, Sha512_256};
@@ -1511,10 +1511,25 @@ pub fn labels_for_instance(id: InstanceId) -> BTreeMap<String, String> {
     )])
 }
 
+/// A unique scheduler instance ID.
+static SCHEDULER_INSTANCE_ID: LazyLock<[u8; 32]> = LazyLock::new(|| {
+    let mut instance_id = [0u8; 32];
+    OsRng.fill_bytes(&mut instance_id);
+    instance_id
+});
+
 /// Generate deployment hash for a given deployment.
+///
+/// Note that the deployment hash is unique for each scheduler initialization. Restarting the
+/// scheduler changes the deployment hash and causes instances to be redeployed. This is
+/// required because some information (eg. proxy state) is stateful and needs to be refreshed.
 fn deployment_hash(deployment: &Deployment) -> String {
-    format!(
-        "{:x}",
-        Hash::digest_bytes(&cbor::to_vec(deployment.clone()))
-    )
+    deployment_hash_for_scheduler(&SCHEDULER_INSTANCE_ID, deployment)
+}
+
+/// Generate deployment hash for a given scheduler instance ID and deployment.
+fn deployment_hash_for_scheduler(scheduler_id: &[u8; 32], deployment: &Deployment) -> String {
+    let hash = Hash::digest_bytes_list(&[scheduler_id, &cbor::to_vec(deployment.clone())]);
+
+    format!("{:x}", hash)
 }
