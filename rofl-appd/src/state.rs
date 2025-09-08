@@ -1,5 +1,7 @@
 use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
 use rofl_app_core::{client::SubmitTxOpts, prelude::*};
+use oasis_runtime_sdk::types::transaction::UnverifiedTransaction;
+
 
 /// ROFL app environment.
 #[async_trait]
@@ -17,6 +19,14 @@ pub trait Env: Send + Sync {
         tx: transaction::Transaction,
         opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult>;
+
+    /// Submit a prepared UnverifiedTransaction directly.
+    async fn submit_prepared_tx(
+        &self,
+        prepared_tx: UnverifiedTransaction,
+    ) -> Result<transaction::CallResult>;
+
+
 }
 
 pub(crate) struct EnvImpl<A: App> {
@@ -50,4 +60,16 @@ impl<A: App> Env for EnvImpl<A> {
             .multi_sign_and_submit_tx_opts(&[signer], tx, opts)
             .await
     }
+
+    async fn submit_prepared_tx(
+        &self,
+        prepared_tx: UnverifiedTransaction,
+    ) -> Result<transaction::CallResult> {
+        self.env
+            .client()
+            .submit_prepared_tx(prepared_tx)
+            .await
+    }
+
+
 }

@@ -29,7 +29,7 @@ mod registration;
 pub mod secrets;
 mod watchdog;
 
-pub use client::Client;
+pub use client::{Client, ClientImpl};
 pub use env::Environment;
 pub use oasis_runtime_sdk::modules::rofl::app_id::AppId;
 

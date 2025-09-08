@@ -8,7 +8,6 @@ use std::{
 };
 
 use anyhow::{anyhow, Context as _, Result};
-use k256::{elliptic_curve::sec1::ToEncodedPoint, sha2::Digest as Sha2Digest};
 use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
 
@@ -37,14 +36,16 @@ use oasis_runtime_sdk::{
     types::{
         address::{Address, SignatureAddressSpec},
         callformat, token,
-        transaction::{self, AuthProof, CallerAddress, UnverifiedTransaction},
+        transaction::{self, CallerAddress, UnverifiedTransaction},
     },
 };
 
 use super::{processor, App};
 
+
 /// Size of various command queues.
 const CMDQ_BACKLOG: usize = 16;
+
 
 /// EnclaveRPC endpoint for communicating with the RONL component.
 const ENCLAVE_RPC_ENDPOINT_RONL: &str = "ronl";
@@ -59,8 +60,6 @@ pub struct SubmitTxOpts {
     pub encrypt: bool,
     /// Whether to verify the transaction result (true by default).
     pub verify: bool,
-    /// Use Oasis transaction format for EVM transactions instead of Ethereum format (false by default).
-    pub evm_use_oasis_tx: bool,
 }
 
 impl Default for SubmitTxOpts {
@@ -69,7 +68,6 @@ impl Default for SubmitTxOpts {
             timeout: Some(Duration::from_millis(60_000)), // 60 seconds.
             encrypt: true,
             verify: true,
-            evm_use_oasis_tx: false,
         }
     }
 }
@@ -183,6 +181,17 @@ where
         self.multi_sign_and_submit_tx(&[signer], tx).await
     }
 
+    /// Submit a prepared UnverifiedTransaction directly.
+    pub async fn submit_prepared_tx(
+        &self,
+        prepared_tx: UnverifiedTransaction,
+    ) -> Result<transaction::CallResult> {
+        self.submission_mgr
+            .submit_prepared_tx(prepared_tx)
+            .await
+    }
+
+
     /// Run a closure inside a `CurrentState` context with store for the given round.
     pub async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
     where
@@ -216,6 +225,12 @@ where
         let response = self.sign_and_submit_tx(signer, tx).await?;
         Ok(cbor::from_value(response.ok()?)?)
     }
+
+    /// Get access to the underlying client implementation.
+    /// This is primarily used for transaction preparation.
+    pub fn client_impl(&self) -> &ClientImpl<A> {
+        &self.imp
+    }
 }
 
 impl<A> Clone for Client<A>
@@ -231,7 +246,7 @@ where
     }
 }
 
-struct ClientImpl<A: App> {
+pub struct ClientImpl<A: App> {
     state: Arc<processor::State<A>>,
     cmdq: mpsc::WeakSender<processor::Command>,
     latest_round: Arc<AtomicU64>,
@@ -263,7 +278,7 @@ where
     }
 
     /// Retrieve the latest known runtime round.
-    async fn latest_round(&self) -> Result<u64> {
+    pub async fn latest_round(&self) -> Result<u64> {
         let cmdq = self
             .cmdq
             .upgrade()
@@ -278,13 +293,13 @@ where
     }
 
     /// Retrieve the nonce for the given account.
-    async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
+    pub async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
         self.query(round, "accounts.Nonce", NonceQuery { address })
             .await
     }
 
     /// Retrieve the gas price in the given denomination.
-    async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
+    pub async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
         let mgp: BTreeMap<token::Denomination, u128> =
             self.query(round, "core.MinGasPrice", ()).await?;
         mgp.get(denom)
@@ -293,13 +308,13 @@ where
     }
 
     /// Retrieve the calldata encryption public key.
-    async fn call_data_public_key(&self) -> Result<CallDataPublicKeyQueryResponse> {
+    pub async fn call_data_public_key(&self) -> Result<CallDataPublicKeyQueryResponse> {
         let round = self.latest_round().await?;
         self.query(round, "core.CallDataPublicKey", ()).await
     }
 
     /// Securely query the on-chain runtime component.
-    async fn query<Rq, Rs>(&self, round: u64, method: &str, args: Rq) -> Result<Rs>
+    pub async fn query<Rq, Rs>(&self, round: u64, method: &str, args: Rq) -> Result<Rs>
     where
         Rq: cbor::Encode,
         Rs: cbor::Decode + Send + 'static,
@@ -348,7 +363,7 @@ where
     }
 
     /// Securely perform gas estimation.
-    async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
+    pub async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
         let round = self.latest_round().await?;
         self.query(round, "core.EstimateGas", req).await
     }
@@ -408,6 +423,10 @@ enum Cmd {
         SubmitTxOpts,
         oneshot::Sender<Result<transaction::CallResult>>,
     ),
+    SubmitPreparedTx(
+        UnverifiedTransaction,
+        oneshot::Sender<Result<transaction::CallResult>>,
+    ),
 }
 
 /// Transaction submission manager for avoiding nonce conflicts.
@@ -453,6 +472,19 @@ where
             .await?;
         rx.await?
     }
+
+    /// Submit a prepared transaction directly.
+    async fn submit_prepared_tx(
+        &self,
+        prepared_tx: UnverifiedTransaction,
+    ) -> Result<transaction::CallResult> {
+        let (ch, rx) = oneshot::channel();
+        self.cmdq_tx
+            .send(Cmd::SubmitPreparedTx(prepared_tx, ch))
+            .await?;
+        rx.await?
+    }
+
 }
 
 struct SubmissionManagerImpl<A: App> {
@@ -519,6 +551,15 @@ where
                             let _ = notify_tx.send(signer_set).await;
                         });
                     }
+                    Cmd::SubmitPreparedTx(prepared_tx, ch) => {
+                        // For prepared transactions, we submit them directly without nonce management
+                        // since the preparation function already handled that.
+                        let client = self.client.clone();
+                        tokio::spawn(async move {
+                            let result = Self::submit_prepared_tx(client, prepared_tx).await;
+                            let _ = ch.send(result);
+                        });
+                    }
                 }
             }
             queue = new_queue;
@@ -526,6 +567,10 @@ where
     }
 
     /// Sign a given transaction, submit it and wait for block inclusion.
+    /// 
+    /// This method now uses the standard Oasis transaction preparation approach.
+    /// For custom transaction formats (e.g., Ethereum), use rofl-appd's preparation
+    /// layer and submit_prepared_tx instead.
     async fn multi_sign_and_submit_tx(
         client: ClientImpl<A>,
         signers: &[Arc<dyn Signer>],
@@ -536,7 +581,7 @@ where
             return Err(anyhow!("no signers specified"));
         }
 
-        // Resolve signer addresses.
+        // Resolve signer addresses and nonces.
         let addresses = signers
             .iter()
             .map(|signer| -> Result<_> {
@@ -548,17 +593,14 @@ where
 
         let round = client.latest_round().await?;
 
-        // Resolve account nonces.
         for (address, sigspec) in &addresses {
             let nonce = client.account_nonce(round, *address).await?;
-
             tx.append_auth_signature(sigspec.clone(), nonce);
         }
 
-        // Perform gas estimation after all signer infos have been added as otherwise we may
-        // underestimate the amount of gas needed.
+        // Basic gas estimation if needed.
         if tx.fee_gas() == 0 {
-            let signer = &signers[0]; // Checked to have at least one signer above.
+            let signer = &signers[0];
             let gas = client
                 .estimate_gas(EstimateGasQuery {
                     caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
@@ -566,38 +608,36 @@ where
                             pk.to_eth_address().try_into().unwrap(),
                         ))
                     } else {
-                        Some(CallerAddress::Address(addresses[0].0)) // Checked above.
+                        Some(CallerAddress::Address(addresses[0].0))
                     },
                     tx: tx.clone(),
                     propagate_failures: false,
                 })
                 .await?;
 
-            // The estimate may be off due to current limitations in confidential gas estimation.
-            // Inflate the estimated gas by 20%.
-            let mut gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
+            tx.set_fee_gas(gas.saturating_add(gas.saturating_mul(20).saturating_div(100)));
+        }
 
-            // When encrypting transactions, also add the cost of calldata encryption.
-            if opts.encrypt {
-                let envelope_size_estimate = cbor::to_vec(callformat::CallEnvelopeX25519DeoxysII {
-                    epoch: u64::MAX,
-                    ..Default::default()
-                })
-                .len()
-                .try_into()
-                .unwrap();
+        // Account for encryption costs in gas estimation.
+        if opts.encrypt && tx.fee_gas() > 0 {
+            let envelope_size_estimate = cbor::to_vec(callformat::CallEnvelopeX25519DeoxysII {
+                epoch: u64::MAX,
+                ..Default::default()
+            })
+            .len()
+            .try_into()
+            .unwrap();
 
-                let params: modules::core::Parameters =
-                    client.query(round, "core.Parameters", ()).await?;
-                gas = gas.saturating_add(params.gas_costs.callformat_x25519_deoxysii);
-                gas = gas.saturating_add(
-                    params
-                        .gas_costs
-                        .tx_byte
-                        .saturating_mul(envelope_size_estimate),
-                );
-            }
-
+            let params: modules::core::Parameters =
+                client.query(round, "core.Parameters", ()).await?;
+            let mut gas = tx.fee_gas();
+            gas = gas.saturating_add(params.gas_costs.callformat_x25519_deoxysii);
+            gas = gas.saturating_add(
+                params
+                    .gas_costs
+                    .tx_byte
+                    .saturating_mul(envelope_size_estimate),
+            );
             tx.set_fee_gas(gas);
         }
 
@@ -634,30 +674,21 @@ where
             None
         };
 
-        // Determine gas price. Currently we always use the native denomination.
+        // Set gas price if needed.
         if tx.fee_amount().amount() == 0 {
-            let mgp = client
-                .gas_price(round, &token::Denomination::NATIVE)
-                .await?;
+            let mgp = client.gas_price(round, &token::Denomination::NATIVE).await?;
             let fee = mgp.saturating_mul(tx.fee_gas().into());
             tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
         }
 
-        // Sign the transaction.
-        let (raw_tx, tx_hash) = if !opts.evm_use_oasis_tx
-            && matches!(tx.call.method.as_str(), "evm.Call" | "evm.Create")
-        {
-            sign_and_encode_as_ethereum_tx(&tx, signers)?
-        } else {
-            let mut tx = tx.prepare_for_signing();
-            for signer in signers {
-                tx.append_sign(signer)?;
-            }
-            let tx = tx.finalize();
-            let raw_tx = cbor::to_vec(tx);
-            let tx_hash = Hash::digest_bytes(&raw_tx);
-            (raw_tx, tx_hash)
-        };
+        // Sign the transaction in standard Oasis format.
+        let mut tx = tx.prepare_for_signing();
+        for signer in signers {
+            tx.append_sign(signer)?;
+        }
+        let tx = tx.finalize();
+        let raw_tx = cbor::to_vec(tx);
+        let tx_hash = Hash::digest_bytes(&raw_tx);
 
         // Submit the transaction.
         let submit_tx_task = client.state.host.submit_tx(
@@ -675,8 +706,6 @@ where
         let result = result?.ok_or(anyhow!("missing result"))?;
 
         if opts.verify {
-            // TODO: Ensure consensus verifier is up to date.
-
             // Verify transaction inclusion and result.
             let io_tree = new_mkvs_tree_for_round(
                 client.state.host.clone(),
@@ -686,8 +715,6 @@ where
                 mkvs::RootType::IO,
             )
             .await?;
-            // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
-            // TODO: Remove spawn once we have async MKVS.
             let verified_result = tokio::task::spawn_blocking(move || -> Result<_> {
                 let key = [b"T", tx_hash.as_ref(), &[0x02]].concat();
                 let output_artifacts = io_tree
@@ -732,367 +759,35 @@ where
             _ => Ok(result),
         }
     }
-}
 
-/// Sign and encode a transaction as an Ethereum RLP-encoded transaction.
-fn sign_and_encode_as_ethereum_tx(
-    tx: &transaction::Transaction,
-    signers: &[Arc<dyn Signer>],
-) -> Result<(Vec<u8>, Hash)> {
-    // Ensure a single signer.
-    if signers.len() != 1 {
-        return Err(anyhow!(
-            "ethereum transactions support only a single signer"
-        ));
-    }
-
-    // Ensure we have a secp256k1 signer for Ethereum.
-    let signer = &signers[0];
-    if signer.public_key().key_type() != "secp256k1" {
-        return Err(anyhow!("ethereum transactions require secp256k1 signer"));
-    }
-
-    // Extract transaction parameters based on method using existing EVM types.
-    let (action, value, data) = match tx.call.method.as_str() {
-        "evm.Call" => {
-            let call: oasis_runtime_sdk_evm::types::Call =
-                cbor::from_value(tx.call.body.clone())
-                    .map_err(|e| anyhow!("failed to decode evm.Call body: {}", e))?;
-            ("call", call.value, call.data)
-        }
-        "evm.Create" => {
-            let create: oasis_runtime_sdk_evm::types::Create =
-                cbor::from_value(tx.call.body.clone())
-                    .map_err(|e| anyhow!("failed to decode evm.Create body: {}", e))?;
-            ("create", create.value, create.init_code)
-        }
-        _ => {
-            return Err(anyhow!("not an EVM transaction"));
-        }
-    };
-
-    // Transaction parameters.
-    let nonce = tx
-        .auth_info
-        .signer_info
-        .first()
-        .ok_or_else(|| anyhow!("no signer info"))?
-        .nonce;
-    let gas_price = tx.auth_info.fee.gas_price();
-    let gas_limit = tx.auth_info.fee.gas;
-
-    // Create Ethereum transaction action.
-    let eth_action = match action {
-        "call" => {
-            let call: oasis_runtime_sdk_evm::types::Call = cbor::from_value(tx.call.body.clone())?;
-            let address: primitive_types::H160 = call.address.0.into();
-            ethereum::TransactionAction::Call(address)
-        }
-        "create" => ethereum::TransactionAction::Create,
-        _ => return Err(anyhow!("invalid action type")),
-    };
-
-    // Create EIP-2930 Ethereum transaction.
-    let eth_tx = ethereum::EIP2930Transaction {
-        chain_id: 123, // TODO: Get actual chain id (or create a Legacy transaction without a Chain ID).
-        nonce: primitive_types::U256::from(nonce),
-        gas_price: primitive_types::U256::from(gas_price),
-        gas_limit: primitive_types::U256::from(gas_limit),
-        action: eth_action,
-        value: primitive_types::U256(value.0),
-        input: data,
-        access_list: vec![],
-        signature: ethereum::eip2930::TransactionSignature::new(
-            false,
-            primitive_types::H256::from_low_u64_be(1),
-            primitive_types::H256::from_low_u64_be(1),
-        )
-        .unwrap(),
-    };
-
-    // Sign the transaction.
-    let signed_tx = sign_ethereum_transaction(eth_tx, signer.as_ref())?;
-    let unverified_tx = UnverifiedTransaction(
-        signed_tx,
-        vec![AuthProof::Module("evm.ethereum.v0".to_string())],
-    );
-    let raw_tx = cbor::to_vec(unverified_tx);
-    let tx_hash = Hash::digest_bytes(&raw_tx);
-
-    Ok((raw_tx, tx_hash))
-}
-
-fn sign_ethereum_transaction(
-    mut tx: ethereum::EIP2930Transaction,
-    signer: &dyn Signer,
-) -> Result<Vec<u8>> {
-    let message = tx.clone().to_message();
-    let hash: [u8; 32] = message.hash().as_bytes().try_into().unwrap();
-
-    let sig = signer
-        .sign_raw(&hash)
-        .map_err(|e| anyhow!("failed to sign Ethereum transaction: {}", e))?;
-
-    let sig = k256::ecdsa::Signature::from_der(sig.as_ref())
-        .map_err(|e| anyhow!("failed parsing ecdsa signature: {e}"))?;
-
-    // Normalize to low-S.
-    let sig = match sig.normalize_s() {
-        Some(normalized) => normalized,
-        None => sig, // Already low-S.
-    };
-
-    // Determine recovery id (0/1).
-    let pk = signer.public_key();
-    let vk = k256::ecdsa::VerifyingKey::from_sec1_bytes(pk.as_bytes())
-        .map_err(|e| anyhow!("invalid public key: {}", e))?;
-    let recid_u8 = [0u8, 1u8]
-        .iter()
-        .find_map(|&rid| {
-            let recid = k256::ecdsa::recoverable::Id::new(rid).ok()?;
-            let rsig = k256::ecdsa::recoverable::Signature::new(&sig, recid).ok()?;
-            let recovered = rsig
-                .recover_verifying_key_from_digest(k256::sha2::Sha256::new().chain_update(&hash))
-                .ok()?;
-
-            if recovered.to_encoded_point(false) == vk.to_encoded_point(false) {
-                Some(rid)
-            } else {
-                None
-            }
-        })
-        .ok_or_else(|| anyhow!("could not determine recovery id"))?;
-
-    // Fill r,s,y.
-    let mut r_be = [0u8; 32];
-    let mut s_be = [0u8; 32];
-    r_be.copy_from_slice(sig.r().to_bytes().as_slice());
-    s_be.copy_from_slice(sig.s().to_bytes().as_slice());
-    tx.signature = ethereum::eip2930::TransactionSignature::new(
-        recid_u8 == 1,
-        primitive_types::H256::from_slice(&r_be),
-        primitive_types::H256::from_slice(&s_be),
-    )
-    .unwrap();
-
-    let mut result = vec![0x01];
-    result.extend_from_slice(&rlp::encode(&tx));
-    Ok(result)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-
-    use sha3::Digest;
-
-    use oasis_runtime_sdk::{
-        crypto::signature::{ed25519, secp256k1},
-        types::{
-            token,
-            transaction::{AuthInfo, Call, CallFormat, Fee, Transaction},
-        },
-    };
-    use oasis_runtime_sdk_evm::{
-        raw_tx,
-        types::{Call as EvmCall, Create as EvmCreate, H160, U256},
-    };
-
-    use super::*;
-
-    const TEST_NONCE: u64 = 42;
-    const TEST_CHAIN_ID: u64 = 123;
-    const TEST_ADDRESS: [u8; 20] = [1u8; 20];
-    const TEST_VALUE: u64 = 1000;
-    const TEST_DATA: [u8; 3] = [0x42, 0x43, 0x44];
-    const TEST_GAS: u64 = 21000;
-
-    fn create_test_signer() -> Arc<dyn Signer> {
-        let seed = sha3::Keccak256::digest(b"test_seed");
-        Arc::new(secp256k1::MemorySigner::new_from_seed(&seed).unwrap())
-    }
-
-    fn create_test_evm_tx(is_create: bool) -> Transaction {
-        let (method, body) = if is_create {
-            let create_body = EvmCreate {
-                value: U256::from(TEST_VALUE),
-                init_code: TEST_DATA.to_vec(),
-            };
-            ("evm.Create".to_string(), cbor::to_value(create_body))
-        } else {
-            let call_body = EvmCall {
-                address: H160(TEST_ADDRESS),
-                value: U256::from(TEST_VALUE),
-                data: TEST_DATA.to_vec(),
-            };
-            ("evm.Call".to_string(), cbor::to_value(call_body))
-        };
-
-        Transaction {
-            version: 1,
-            call: Call {
-                format: CallFormat::Plain,
-                method,
-                body,
+    /// Submit a prepared UnverifiedTransaction directly.
+    async fn submit_prepared_tx(
+        client: ClientImpl<A>,
+        prepared_tx: UnverifiedTransaction,
+    ) -> Result<transaction::CallResult> {
+        // Submit the prepared transaction directly.
+        let _tx_hash = Hash::digest_bytes(&prepared_tx.0);
+        let submit_tx_task = client.state.host.submit_tx(
+            prepared_tx.0,
+            host::SubmitTxOpts {
+                wait: true,
                 ..Default::default()
             },
-            auth_info: AuthInfo {
-                fee: Fee {
-                    gas: TEST_GAS,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-        }
-    }
-
-    #[test]
-    fn test_encode_ethereum_tx_multiple_signers_fails() {
-        let signer1 = create_test_signer();
-        let signer2 = create_test_signer();
-        let tx = create_test_evm_tx(false);
-
-        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer1, signer2]);
-        assert!(result.is_err(), "Should fail with multiple signers");
-        assert!(result.unwrap_err().to_string().contains("single signer"));
-    }
-
-    #[test]
-    fn test_encode_ethereum_tx_non_secp256k1_fails() {
-        // Create an Ed25519 signer (not secp256k1).
-        let seed = sha3::Keccak256::digest(b"test_ed25519");
-        let ed25519_signer = Arc::new(ed25519::MemorySigner::new_from_seed(&seed).unwrap());
-
-        let tx = create_test_evm_tx(false);
-
-        let result = sign_and_encode_as_ethereum_tx(&tx, &[ed25519_signer]);
-        assert!(result.is_err(), "Should fail with non-secp256k1 signer");
-        assert!(result.unwrap_err().to_string().contains("secp256k1"));
-    }
-
-    #[test]
-    fn test_encode_ethereum_tx_non_evm_method_fails() {
-        let signer = create_test_signer();
-        let mut tx = create_test_evm_tx(false);
-        tx.call.method = "accounts.Transfer".to_string(); // Not an EVM method
-
-        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
-        assert!(
-            result.is_err(),
-            "Should fail with non-EVM transaction method"
         );
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("not an EVM transaction"));
-    }
+        let result = submit_tx_task.await?.ok_or(anyhow!("missing result"))?;
 
-    #[test]
-    fn test_encode_ethereum_call_transaction() {
-        let signer = create_test_signer();
-        let mut tx = create_test_evm_tx(false);
+        // Update latest known round.
+        client
+            .latest_round
+            .fetch_max(result.round, Ordering::SeqCst);
 
-        tx.append_auth_signature(
-            SignatureAddressSpec::try_from_pk(&signer.public_key()).unwrap(),
-            TEST_NONCE,
-        );
-
-        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
-        assert!(
-            result.is_ok(),
-            "Should successfully encode EVM call transaction: {:?}",
-            result.err()
-        );
-
-        // Verify we got non-empty encoded transaction and hash.
-        let (raw_tx, tx_hash) = result.unwrap();
-        assert!(
-            !raw_tx.is_empty(),
-            "Encoded transaction should not be empty"
-        );
-        assert_ne!(
-            tx_hash,
-            Hash::empty_hash(),
-            "Transaction hash should not be empty"
-        );
-
-        // Decode the transaction and verify it contains an UnverifiedTransaction with EVM module auth.
-        let unverified_tx: UnverifiedTransaction =
-            cbor::from_slice(&raw_tx).expect("Should be able to decode as UnverifiedTransaction");
-        // Verify it has the EVM ethereum auth proof.
-        assert_eq!(unverified_tx.1.len(), 1);
-        assert!(matches!(unverified_tx.1[0], AuthProof::Module(ref s) if s == "evm.ethereum.v0"));
-
-        // Verify the inner transaction can be decoded as an Ethereum transaction.
-        let eth_tx_bytes = &unverified_tx.0;
-        let decoded_tx = raw_tx::decode(
-            eth_tx_bytes,
-            Some(TEST_CHAIN_ID),
-            0, // Min gas price
-            &token::Denomination::NATIVE,
-        )
-        .expect("Should be able to decode inner transaction as Ethereum transaction");
-
-        // Verify transaction parameters match our input.
-        assert_eq!(decoded_tx.auth_info.signer_info[0].nonce, TEST_NONCE);
-        assert_eq!(decoded_tx.auth_info.fee.gas, TEST_GAS);
-
-        // Decode the call body to verify EVM transaction parameters.
-        let call_body: EvmCall = cbor::from_value(decoded_tx.call.body).unwrap();
-        assert_eq!(call_body.value, U256::from(TEST_VALUE));
-        assert_eq!(call_body.data, TEST_DATA.to_vec());
-        assert_eq!(call_body.address, H160(TEST_ADDRESS));
-    }
-
-    #[test]
-    fn test_encode_ethereum_create_transaction() {
-        let signer = create_test_signer();
-        let mut tx = create_test_evm_tx(true);
-
-        tx.append_auth_signature(
-            SignatureAddressSpec::try_from_pk(&signer.public_key()).unwrap(),
-            TEST_NONCE,
-        );
-
-        let result = sign_and_encode_as_ethereum_tx(&tx, &[signer]);
-        assert!(
-            result.is_ok(),
-            "Should successfully encode EVM create transaction"
-        );
-
-        // Verify we got non-empty encoded transaction and hash.
-        let (raw_tx, tx_hash) = result.unwrap();
-        assert!(
-            !raw_tx.is_empty(),
-            "Encoded transaction should not be empty"
-        );
-        assert_ne!(
-            tx_hash,
-            Hash::empty_hash(),
-            "Transaction hash should not be empty"
-        );
-
-        // Decode and verify the transaction structure.
-        let unverified_tx: UnverifiedTransaction =
-            cbor::from_slice(&raw_tx).expect("Should be able to decode as UnverifiedTransaction");
-
-        // Verify the inner transaction can be decoded as an Ethereum transaction.
-        let eth_tx_bytes = &unverified_tx.0;
-        let decoded_tx = raw_tx::decode(
-            eth_tx_bytes,
-            Some(TEST_CHAIN_ID),
-            0, // Min gas price
-            &token::Denomination::NATIVE,
-        )
-        .expect("Should be able to decode inner transaction as Ethereum transaction");
-        assert_eq!(decoded_tx.auth_info.signer_info[0].nonce, TEST_NONCE);
-        assert_eq!(decoded_tx.auth_info.fee.gas, TEST_GAS);
-        assert_eq!(decoded_tx.call.method, "evm.Create");
-
-        // Decode the create body to verify EVM transaction parameters.
-        let create_body: EvmCreate = cbor::from_value(decoded_tx.call.body).unwrap();
-        assert_eq!(create_body.value, U256::from(TEST_VALUE));
-        assert_eq!(create_body.init_code, TEST_DATA.to_vec());
+        // Return the result directly (prepared transactions handle their own encryption).
+        let result: transaction::CallResult =
+            cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))?;
+        Ok(result)
     }
 
 }
+
+
+

@@ -12,6 +12,8 @@ rofl-app-core = { path = "../rofl-app-core", features = ["tdx"] }
 
 # Third party.
 anyhow = "1.0.86"
+async-trait = "0.1.77"
+rand = "0.8.5"
 # TODO: Replace with a released version once it includes UNIX socket support.
 rocket = { git = "https://github.com/rwf2/Rocket", rev = "28891e8072136f4641a33fb8c3f2aafce9d88d5b", features = [
     "json",
@@ -29,6 +31,13 @@ tokio = { version = "1.38", features = [
 ] }
 tokio-retry = "0.3.0"
 zeroize = "1.7"
+
+# Ethereum.
+ethereum = "0.18.2"
+k256 = { version = "0.11.6", default-features = false, features = ["ecdsa"] }
+primitive-types = { version = "0.13", default-features = false, features = ["rlp", "num-traits"] }
+rlp = "0.6.1"
+sha3 = "0.10"
 
 [dev-dependencies]
 rustc-hex = "2.0.1"
