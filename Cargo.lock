@@ -5967,9 +5967,9 @@ dependencies = [
 
 [[package]]
 name = "solabi"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a05e216e6d7e93fcd8bda50df6c57960998b22bd926638fd9aa14b786bc53bf2"
+checksum = "005d001dd520582887445fb55b8d392fe3d3fca556d10f14b30522d8c25efb29"
 dependencies = [
  "ethprim",
  "serde",
