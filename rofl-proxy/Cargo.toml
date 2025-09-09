@@ -13,7 +13,7 @@ anyhow = "1.0.86"
 backoff = { version = "0.4", features = ["tokio"] }
 base64 = "0.22.1"
 byteorder = "1"
-defguard_wireguard_rs = "0.7.5"
+defguard_wireguard_rs = "0.7.6"
 instant-acme = "0.8.2"
 ptrie = "0.7.2"
 rcgen = "0.14.2"
