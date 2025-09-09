@@ -7,6 +7,8 @@ use std::{
     time::Duration,
 };
 
+use x25519_dalek::{PublicKey as X25519PublicKey, StaticSecret};
+
 use anyhow::{anyhow, Context as _, Result};
 use rand::{rngs::OsRng, Rng};
 use tokio::sync::{mpsc, oneshot};
@@ -41,6 +43,48 @@ use oasis_runtime_sdk::{
 };
 
 use super::{processor, App};
+
+/// Encryption metadata returned alongside encrypted transactions.
+pub type EncryptionMeta = (
+    CallDataPublicKeyQueryResponse,
+    (X25519PublicKey, StaticSecret),
+);
+
+/// Trait providing capabilities that preparers need from the client.
+#[async_trait::async_trait]
+pub trait PrepareClient: Send + Sync {
+    /// Retrieve the latest known runtime round.
+    async fn latest_round(&self) -> Result<u64>;
+    
+    /// Retrieve the nonce for the given account.
+    async fn account_nonce(&self, round: u64, address: Address) -> Result<u64>;
+    
+    /// Retrieve the gas price in the given denomination.
+    async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128>;
+    
+    /// Retrieve the calldata encryption public key.
+    async fn call_data_public_key(&self) -> Result<CallDataPublicKeyQueryResponse>;
+    
+    /// Securely perform gas estimation.
+    async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64>;
+    
+    /// Query core parameters.
+    async fn query_core_parameters(&self, round: u64) -> Result<modules::core::Parameters>;
+}
+
+/// Function type for transaction preparers.
+pub type Preparer = for<'a> fn(
+    &'a dyn PrepareClient,
+    &'a [Arc<dyn Signer>],
+    transaction::Transaction,
+    bool,
+) -> std::pin::Pin<
+    Box<
+        dyn std::future::Future<
+            Output = Result<(transaction::UnverifiedTransaction, Option<EncryptionMeta>)>,
+        > + Send + 'a,
+    >,
+>;
 
 /// Size of various command queues.
 const CMDQ_BACKLOG: usize = 16;
@@ -179,6 +223,19 @@ where
         self.multi_sign_and_submit_tx(&[signer], tx).await
     }
 
+    /// Sign a given transaction using a custom preparer, submit it and wait for block inclusion.
+    pub async fn sign_and_submit_tx_with_preparer(
+        &self,
+        signers: &[Arc<dyn Signer>],
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+        preparer: Preparer,
+    ) -> Result<transaction::CallResult> {
+        self.submission_mgr
+            .sign_and_submit_tx_with_preparer(signers.to_vec(), tx, opts, preparer)
+            .await
+    }
+
     /// Run a closure inside a `CurrentState` context with store for the given round.
     pub async fn with_store_for_round<F, R>(&self, round: u64, f: F) -> Result<R>
     where
@@ -227,7 +284,7 @@ where
     }
 }
 
-struct ClientImpl<A: App> {
+pub struct ClientImpl<A: App> {
     state: Arc<processor::State<A>>,
     cmdq: mpsc::WeakSender<processor::Command>,
     latest_round: Arc<AtomicU64>,
@@ -397,11 +454,46 @@ where
     }
 }
 
+#[async_trait::async_trait]
+impl<A: App> PrepareClient for ClientImpl<A> {
+    async fn latest_round(&self) -> Result<u64> {
+        ClientImpl::latest_round(self).await
+    }
+    
+    async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
+        ClientImpl::account_nonce(self, round, address).await
+    }
+    
+    async fn gas_price(&self, round: u64, denom: &token::Denomination) -> Result<u128> {
+        ClientImpl::gas_price(self, round, denom).await
+    }
+    
+    async fn call_data_public_key(&self) -> Result<CallDataPublicKeyQueryResponse> {
+        ClientImpl::call_data_public_key(self).await
+    }
+    
+    async fn estimate_gas(&self, req: EstimateGasQuery) -> Result<u64> {
+        ClientImpl::estimate_gas(self, req).await
+    }
+    
+    async fn query_core_parameters(&self, round: u64) -> Result<modules::core::Parameters> {
+        self.query(round, "core.Parameters", ()).await
+    }
+}
+
+
 enum Cmd {
     SubmitTx(
         Vec<Arc<dyn Signer>>,
         transaction::Transaction,
         SubmitTxOpts,
+        oneshot::Sender<Result<transaction::CallResult>>,
+    ),
+    SubmitTxWithPreparer(
+        Vec<Arc<dyn Signer>>,
+        transaction::Transaction,
+        SubmitTxOpts,
+        Preparer,
         oneshot::Sender<Result<transaction::CallResult>>,
     ),
 }
@@ -446,6 +538,21 @@ where
         let (ch, rx) = oneshot::channel();
         self.cmdq_tx
             .send(Cmd::SubmitTx(signers.to_vec(), tx, opts, ch))
+            .await?;
+        rx.await?
+    }
+
+    /// Sign a given transaction using a custom preparer function, submit it and wait for block inclusion.
+    async fn sign_and_submit_tx_with_preparer(
+        &self,
+        signers: Vec<Arc<dyn Signer>>,
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+        preparer: Preparer,
+    ) -> Result<transaction::CallResult> {
+        let (ch, rx) = oneshot::channel();
+        self.cmdq_tx
+            .send(Cmd::SubmitTxWithPreparer(signers, tx, opts, preparer, ch))
             .await?;
         rx.await?
     }
@@ -515,6 +622,31 @@ where
                             let _ = notify_tx.send(signer_set).await;
                         });
                     }
+                    Cmd::SubmitTxWithPreparer(signers, tx, opts, preparer, ch) => {
+                        // Check if transaction can be executed (no conflicts with in-flight txs).
+                        let signer_set =
+                            HashSet::from_iter(signers.iter().map(|signer| signer.public_key()));
+                        if !signer_set.is_disjoint(&pending) {
+                            // Defer any non-executable commands.
+                            new_queue.push(Cmd::SubmitTxWithPreparer(signers, tx, opts, preparer, ch));
+                            continue;
+                        }
+                        // Include all signers in the pending set.
+                        pending.extend(signer_set.iter().cloned());
+
+                        // Execute in a separate task.
+                        let client = self.client.clone();
+                        let notify_tx = notify_tx.clone();
+
+                        tokio::spawn(async move {
+                            let result =
+                                Self::submit_tx_with_preparer(client, signers, tx, opts, preparer).await;
+                            let _ = ch.send(result);
+
+                            // Notify the submission manager task that submission is done.
+                            let _ = notify_tx.send(signer_set).await;
+                        });
+                    }
                 }
             }
             queue = new_queue;
@@ -525,127 +657,13 @@ where
     async fn multi_sign_and_submit_tx(
         client: ClientImpl<A>,
         signers: &[Arc<dyn Signer>],
-        mut tx: transaction::Transaction,
+        tx: transaction::Transaction,
         opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult> {
-        if signers.is_empty() {
-            return Err(anyhow!("no signers specified"));
-        }
+        // Use the SDK preparer implementation
+        let (prepared_tx, meta) = prepare_sdk_impl(&client, signers, tx, opts.encrypt).await?;
 
-        // Resolve signer addresses.
-        let addresses = signers
-            .iter()
-            .map(|signer| -> Result<_> {
-                let sigspec = SignatureAddressSpec::try_from_pk(&signer.public_key())
-                    .ok_or(anyhow!("signature scheme not supported"))?;
-                Ok((Address::from_sigspec(&sigspec), sigspec))
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        let round = client.latest_round().await?;
-
-        // Resolve account nonces.
-        for (address, sigspec) in &addresses {
-            let nonce = client.account_nonce(round, *address).await?;
-
-            tx.append_auth_signature(sigspec.clone(), nonce);
-        }
-
-        // Perform gas estimation after all signer infos have been added as otherwise we may
-        // underestimate the amount of gas needed.
-        if tx.fee_gas() == 0 {
-            let signer = &signers[0]; // Checked to have at least one signer above.
-            let gas = client
-                .estimate_gas(EstimateGasQuery {
-                    caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
-                        Some(CallerAddress::EthAddress(
-                            pk.to_eth_address().try_into().unwrap(),
-                        ))
-                    } else {
-                        Some(CallerAddress::Address(addresses[0].0)) // Checked above.
-                    },
-                    tx: tx.clone(),
-                    propagate_failures: false,
-                })
-                .await?;
-
-            // The estimate may be off due to current limitations in confidential gas estimation.
-            // Inflate the estimated gas by 20%.
-            let mut gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
-
-            // When encrypting transactions, also add the cost of calldata encryption.
-            if opts.encrypt {
-                let envelope_size_estimate = cbor::to_vec(callformat::CallEnvelopeX25519DeoxysII {
-                    epoch: u64::MAX,
-                    ..Default::default()
-                })
-                .len()
-                .try_into()
-                .unwrap();
-
-                let params: modules::core::Parameters =
-                    client.query(round, "core.Parameters", ()).await?;
-                gas = gas.saturating_add(params.gas_costs.callformat_x25519_deoxysii);
-                gas = gas.saturating_add(
-                    params
-                        .gas_costs
-                        .tx_byte
-                        .saturating_mul(envelope_size_estimate),
-                );
-            }
-
-            tx.set_fee_gas(gas);
-        }
-
-        // Optionally perform calldata encryption.
-        let meta = if opts.encrypt {
-            // Obtain runtime's current ephemeral public key.
-            let runtime_pk = client.call_data_public_key().await?;
-            // Generate local key pair and nonce.
-            let client_kp = deoxysii::generate_key_pair();
-            let mut nonce = [0u8; deoxysii::NONCE_SIZE];
-            OsRng.fill(&mut nonce);
-            // Encrypt and encode call.
-            let call = transaction::Call {
-                format: transaction::CallFormat::EncryptedX25519DeoxysII,
-                method: "".to_string(),
-                body: cbor::to_value(callformat::CallEnvelopeX25519DeoxysII {
-                    pk: client_kp.0.into(),
-                    nonce,
-                    epoch: runtime_pk.epoch,
-                    data: deoxysii::box_seal(
-                        &nonce,
-                        cbor::to_vec(std::mem::take(&mut tx.call)),
-                        vec![],
-                        &runtime_pk.public_key.key.0,
-                        &client_kp.1,
-                    )?,
-                }),
-                ..Default::default()
-            };
-            tx.call = call;
-
-            Some((runtime_pk, client_kp))
-        } else {
-            None
-        };
-
-        // Determine gas price. Currently we always use the native denomination.
-        if tx.fee_amount().amount() == 0 {
-            let mgp = client
-                .gas_price(round, &token::Denomination::NATIVE)
-                .await?;
-            let fee = mgp.saturating_mul(tx.fee_gas().into());
-            tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
-        }
-
-        // Sign the transaction.
-        let mut tx = tx.prepare_for_signing();
-        for signer in signers {
-            tx.append_sign(signer)?;
-        }
-        let tx = tx.finalize();
-        let raw_tx = cbor::to_vec(tx);
+        let raw_tx = cbor::to_vec(prepared_tx);
         let tx_hash = Hash::digest_bytes(&raw_tx);
 
         // Submit the transaction.
@@ -721,4 +739,234 @@ where
             _ => Ok(result),
         }
     }
+    /// Submit a transaction using a custom preparer function and wait for block inclusion.
+    async fn submit_tx_with_preparer(
+        client: ClientImpl<A>,
+        signers: Vec<Arc<dyn Signer>>,
+        tx: transaction::Transaction,
+        opts: SubmitTxOpts,
+        preparer: Preparer,
+    ) -> Result<transaction::CallResult> {
+        // Call the preparer function to get the prepared transaction
+        let (prepared_tx, meta) = preparer(&client, &signers, tx, opts.encrypt).await?;
+
+        let raw_tx = cbor::to_vec(prepared_tx);
+        let tx_hash = Hash::digest_bytes(&raw_tx);
+
+        // Submit the transaction.
+        let submit_tx_task = client.state.host.submit_tx(
+            raw_tx,
+            host::SubmitTxOpts {
+                wait: true,
+                ..Default::default()
+            },
+        );
+        let result = if let Some(timeout) = opts.timeout {
+            tokio::time::timeout(timeout, submit_tx_task).await?
+        } else {
+            submit_tx_task.await
+        };
+        let result = result?.ok_or(anyhow!("missing result"))?;
+
+        if opts.verify {
+            // TODO: Ensure consensus verifier is up to date.
+
+            // Verify transaction inclusion and result.
+            let io_tree = new_mkvs_tree_for_round(
+                client.state.host.clone(),
+                &client.state.consensus_verifier,
+                client.state.host.get_runtime_id(),
+                result.round,
+                mkvs::RootType::IO,
+            )
+            .await?;
+            // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
+            // TODO: Remove spawn once we have async MKVS.
+            let verified_result = tokio::task::spawn_blocking(move || -> Result<_> {
+                let key = [b"T", tx_hash.as_ref(), &[0x02]].concat();
+                let output_artifacts = io_tree
+                    .get(&key)
+                    .context("failed to verify transaction result")?
+                    .ok_or(anyhow!("failed to verify transaction result"))?;
+
+                let output_artifacts: (Vec<u8>,) = cbor::from_slice(&output_artifacts)
+                    .context("malformed output transaction artifacts")?;
+                Ok(output_artifacts.0)
+            })
+            .await??;
+            if result.output != verified_result {
+                return Err(anyhow!("failed to verify transaction result"));
+            }
+        }
+
+        // Update latest known round.
+        client
+            .latest_round
+            .fetch_max(result.round, Ordering::SeqCst);
+
+        // Decrypt result if it is encrypted.
+        let result: transaction::CallResult =
+            cbor::from_slice(&result.output).map_err(|_| anyhow!("malformed result"))?;
+        match result {
+            transaction::CallResult::Unknown(raw) => {
+                let meta = meta.ok_or(anyhow!("unknown result but calldata was not encrypted"))?;
+                let envelope: callformat::ResultEnvelopeX25519DeoxysII =
+                    cbor::from_value(raw).map_err(|_| anyhow!("malformed encrypted result"))?;
+                let data = deoxysii::box_open(
+                    &envelope.nonce,
+                    envelope.data,
+                    vec![],
+                    &meta.0.public_key.key.0,
+                    &meta.1 .1,
+                )
+                .map_err(|_| anyhow!("malformed encrypted result"))?;
+
+                cbor::from_slice(&data).map_err(|_| anyhow!("malformed encrypted result"))
+            }
+            _ => Ok(result),
+        }
+    }
+}
+
+
+pub async fn estimate_gas(
+    signer: &dyn Signer,
+    address: Address,
+    tx: transaction::Transaction,
+    encrypt: bool,
+    round: u64,
+    client: &dyn PrepareClient,
+) -> Result<u64> {
+    let gas = client
+        .estimate_gas(EstimateGasQuery {
+            caller: if let PublicKey::Secp256k1(pk) = signer.public_key() {
+                Some(CallerAddress::EthAddress(
+                    pk.to_eth_address().try_into().unwrap(),
+                ))
+            } else {
+                Some(CallerAddress::Address(address))
+            },
+            tx: tx,
+            propagate_failures: false,
+        })
+        .await?;
+
+    // The estimate may be off due to current limitations in confidential gas estimation.
+    // Inflate the estimated gas by 20%.
+    let mut gas = gas.saturating_add(gas.saturating_mul(20).saturating_div(100));
+
+    // When encrypting transactions, also add the cost of calldata encryption.
+    if encrypt {
+        let envelope_size_estimate = cbor::to_vec(callformat::CallEnvelopeX25519DeoxysII {
+            epoch: u64::MAX,
+            ..Default::default()
+        })
+        .len()
+        .try_into()
+        .unwrap();
+
+        let params = client.query_core_parameters(round).await?;
+        gas = gas.saturating_add(params.gas_costs.callformat_x25519_deoxysii);
+        gas = gas.saturating_add(
+            params
+                .gas_costs
+                .tx_byte
+                .saturating_mul(envelope_size_estimate),
+        );
+    }
+
+    Ok(gas)
+}
+
+/// Prepare an SDK transaction.
+pub async fn prepare_sdk_impl(
+    client: &dyn PrepareClient,
+    signers: &[Arc<dyn Signer>],
+    mut tx: transaction::Transaction,
+    encrypt: bool,
+) -> Result<(transaction::UnverifiedTransaction, Option<EncryptionMeta>)> {
+    if signers.is_empty() {
+        return Err(anyhow!("no signers specified"));
+    }
+
+    // Resolve signer addresses.
+    let addresses = signers
+        .iter()
+        .map(|signer| -> Result<_> {
+            let sigspec = SignatureAddressSpec::try_from_pk(&signer.public_key())
+                .ok_or(anyhow!("signature scheme not supported"))?;
+            Ok((Address::from_sigspec(&sigspec), sigspec))
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    let round = client.latest_round().await?;
+
+    // Resolve account nonces.
+    for (address, sigspec) in &addresses {
+        let nonce = client.account_nonce(round, *address).await?;
+        tx.append_auth_signature(sigspec.clone(), nonce);
+    }
+
+    // Perform gas estimation after all signer infos have been added.
+    if tx.fee_gas() == 0 {
+        let gas = estimate_gas(
+            &signers[0],
+            addresses[0].0,
+            tx.clone(),
+            encrypt,
+            round,
+            client,
+        )
+        .await?;
+        tx.set_fee_gas(gas);
+    }
+
+    // Optionally perform calldata encryption.
+    let meta = if encrypt {
+        // Obtain runtime's current ephemeral public key.
+        let runtime_pk = client.call_data_public_key().await?;
+        // Generate local key pair and nonce.
+        let client_kp = deoxysii::generate_key_pair();
+        let mut nonce = [0u8; deoxysii::NONCE_SIZE];
+        OsRng.fill(&mut nonce);
+        // Encrypt and encode call.
+        let call = transaction::Call {
+            format: transaction::CallFormat::EncryptedX25519DeoxysII,
+            method: "".to_string(),
+            body: cbor::to_value(callformat::CallEnvelopeX25519DeoxysII {
+                pk: client_kp.0.into(),
+                nonce,
+                epoch: runtime_pk.epoch,
+                data: deoxysii::box_seal(
+                    &nonce,
+                    cbor::to_vec(std::mem::take(&mut tx.call)),
+                    vec![],
+                    &runtime_pk.public_key.key.0,
+                    &client_kp.1,
+                )?,
+            }),
+            ..Default::default()
+        };
+        tx.call = call;
+
+        Some((runtime_pk, client_kp))
+    } else {
+        None
+    };
+
+    // Determine gas price. Currently we always use the native denomination.
+    if tx.fee_amount().amount() == 0 {
+        let mgp = client
+            .gas_price(round, &token::Denomination::NATIVE)
+            .await?;
+        let fee = mgp.saturating_mul(tx.fee_gas().into());
+        tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+    }
+
+    // Sign the transaction.
+    let mut tx = tx.prepare_for_signing();
+    for signer in signers {
+        tx.append_sign(signer)?;
+    }
+    Ok((tx.finalize(), meta))
 }

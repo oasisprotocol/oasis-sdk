@@ -23,6 +23,9 @@ tokio = { version = "1.38", features = [
     "time",
     "macros",
 ] }
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
+
+
 
 [dev-dependencies]
 hex = "0.4.3"

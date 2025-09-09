@@ -1,5 +1,8 @@
 use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
-use rofl_app_core::{client::SubmitTxOpts, prelude::*};
+use rofl_app_core::{
+    client::{Preparer, SubmitTxOpts},
+    prelude::*,
+};
 
 /// ROFL app environment.
 #[async_trait]
@@ -10,12 +13,13 @@ pub trait Env: Send + Sync {
     /// Transaction signer.
     fn signer(&self) -> Arc<dyn Signer>;
 
-    /// Sign a given transaction, submit it and wait for block inclusion.
-    async fn sign_and_submit_tx(
+    /// Sign a given transaction using a custom preparer, submit it and wait for block inclusion.
+    async fn sign_and_submit_tx_with_preparer(
         &self,
         signer: Arc<dyn Signer>,
         tx: transaction::Transaction,
         opts: SubmitTxOpts,
+        preparer: Preparer,
     ) -> Result<transaction::CallResult>;
 }
 
@@ -39,15 +43,16 @@ impl<A: App> Env for EnvImpl<A> {
         self.env.signer()
     }
 
-    async fn sign_and_submit_tx(
+    async fn sign_and_submit_tx_with_preparer(
         &self,
         signer: Arc<dyn Signer>,
         tx: transaction::Transaction,
         opts: SubmitTxOpts,
+        preparer: Preparer,
     ) -> Result<transaction::CallResult> {
         self.env
             .client()
-            .multi_sign_and_submit_tx_opts(&[signer], tx, opts)
+            .sign_and_submit_tx_with_preparer(&[signer], tx, opts, preparer)
             .await
     }
 }

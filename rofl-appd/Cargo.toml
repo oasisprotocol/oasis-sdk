@@ -28,7 +28,16 @@ tokio = { version = "1.38", features = [
     "macros",
 ] }
 tokio-retry = "0.3.0"
+rand = "0.8.5"
+x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
 zeroize = "1.7"
+
+# Ethereum.
+ethereum = "0.18.2"
+k256 = { version = "0.11.6", default-features = false, features = ["ecdsa"] }
+primitive-types = { version = "0.13", default-features = false, features = ["rlp", "num-traits"] }
+rlp = "0.6.1"
+sha3 = "0.10"
 
 [dev-dependencies]
 rustc-hex = "2.0.1"
