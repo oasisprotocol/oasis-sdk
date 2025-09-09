@@ -551,3 +551,26 @@ jobs:
       - name: Run end-to-end benchmarks
         working-directory: tests/benchmark
         run: ./run-benchmarks.sh
+
+  test-python-rofl-client:
+    name: test-python-rofl-client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        working-directory: rofl-client/py
+        run: uv sync --dev
+
+      - name: Run tests
+        working-directory: rofl-client/py
+        run: uv run pytest tests
