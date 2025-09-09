@@ -121,20 +121,21 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
     let mut arg_decls: Vec<TokenStream> = Vec::new();
     for (i, evm_ty) in sig.args.iter().enumerate() {
         let arg_name = format_ident!("arg_{}", i);
+        let field_index = syn::Index::from(i);
         call_args.push(arg_name.clone());
         match evm_ty.as_str() {
             "address" => {
-                decoder_list.push(quote!(::ethabi::ParamType::Address));
+                decoder_list.push(quote!(::solabi::Address));
                 arg_decls.push(quote! {
-                    let #arg_name = decoded_args[#i].clone().into_address().unwrap();
+                    let #arg_name = ::primitive_types::H160(decoded_args.#field_index.0);
                 });
             }
             "uint256" => {
-                decoder_list.push(quote!(::ethabi::ParamType::Uint(256)));
+                decoder_list.push(quote!(::solabi::U256));
                 let temp_name = format_ident!("{}_uint", arg_name);
                 arg_decls.push(quote! {
-                    let #temp_name = decoded_args[#i].clone().into_uint().unwrap();
-                    if #temp_name.bits() > (u128::BITS as usize) {
+                    let #temp_name = decoded_args.#field_index.clone();
+                    if *#temp_name.high() != 0 {
                         return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                             exit_status: ::evm::ExitError::Other("integer overflow".into()),
                         }));
@@ -152,8 +153,17 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
         }
     }
     let method_name = sig.name.clone();
+    let decode_type = if decoder_list.is_empty() {
+        quote!(())
+    } else if decoder_list.len() == 1 {
+        let single_type = &decoder_list[0];
+        quote!((#single_type,))
+    } else {
+        quote!((#(#decoder_list,)*))
+    };
+
     Some(quote! { {
-        let decoded_args = match ::ethabi::decode(&[#(#decoder_list),*], &handle.input()[#SELECTOR_LENGTH..]) {
+        let decoded_args: #decode_type = match ::solabi::decode(&handle.input()[#SELECTOR_LENGTH..]) {
             Err(e) => return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
                 exit_status: ::evm::ExitError::Other("invalid argument".into()),
             })),
@@ -329,7 +339,7 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
     let topics: Vec<TokenStream> = fields.iter().filter_map(|f| {
         if f.indexed.is_present() {
             let name = f.ident.as_ref().unwrap();
-            Some(quote! { ::primitive_types::H256::from_slice(::ethabi::encode(&[self.#name.clone()]).as_slice()) })
+            Some(quote! { ::primitive_types::H256::from_slice(::solabi::encode(&[self.#name.clone()]).as_slice()) })
         } else {
             None
         }
@@ -350,7 +360,7 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
         quote! { vec![] }
     } else {
         quote! {
-            ::ethabi::encode(&[
+            ::solabi::encode(&[
                 #(#data ,)*
             ])
         }
@@ -408,19 +418,19 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                 "address" => {
                     // The tuple field for this should be a primitive_types::H160.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::Address(*#field_ident)
+                        solabi::Address((*#field_ident).into())
                     });
                 }
                 "uint256" => {
                     // The tuple field for this should be a u128.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::Uint((*#field_ident).into())
+                        solabi::U256::new(*#field_ident as u128)
                     });
                 }
                 "string" => {
                     // The tuple field for this should be anything that has a to_string() method.
                     abi_tokens.push(quote! {
-                        ::ethabi::Token::String(#field_ident.to_string())
+                        #field_ident.to_string()
                     });
                 }
                 ty => {
@@ -439,7 +449,7 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
         } else {
             (
                 quote! { Self::#ident(#(#match_fields,)*) },
-                quote! { output.extend(::ethabi::encode(&[#(#abi_tokens,)*]).as_slice()); },
+                quote! { output.extend(::solabi::encode(&(#(#abi_tokens,)*)).as_slice()); },
             )
         };
         variant_encoders.push(quote! {

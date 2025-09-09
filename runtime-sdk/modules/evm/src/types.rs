@@ -204,7 +204,7 @@ mod eth {
     construct_fixed_hash!(H256(32));
     construct_uint!(U256(4));
 
-    macro_rules! impl_upstream_conversions {
+    macro_rules! impl_upstream_conversions_primitive_types {
         ($($ty:ident),* $(,)?) => {
             $(
                 impl From<$ty> for primitive_types::$ty {
@@ -222,6 +222,68 @@ mod eth {
         }
     }
 
-    impl_upstream_conversions!(H160, H256, U256);
+    impl_upstream_conversions_primitive_types!(H160, H256, U256);
+
+    /// Add solabi::Decode implementation for H160.
+    impl solabi::decode::Decode for H160 {
+        fn is_dynamic() -> bool {
+            false // Addresses are fixed-size.
+        }
+
+        fn decode(
+            decoder: &mut solabi::decode::Decoder,
+        ) -> Result<Self, solabi::decode::DecodeError> {
+            // Decode as solabi::Address, then convert to H160.
+            let solabi_addr = solabi::Address::decode(decoder)?;
+            Ok(H160::from(solabi_addr))
+        }
+    }
+
+    // Add solabi::Encode implementation for H160.
+    impl solabi::encode::Encode for H160 {
+        fn size(&self) -> solabi::encode::Size {
+            // Delegate to solabi::Address's size implementation.
+            solabi::Address::from(*self).size()
+        }
+
+        fn encode(&self, encoder: &mut solabi::encode::Encoder) {
+            // Convert to solabi::Address and encode.
+            solabi::Address::from(*self).encode(encoder);
+        }
+    }
+
+    impl From<solabi::Address> for H160 {
+        fn from(addr: solabi::Address) -> Self {
+            H160(addr.0)
+        }
+    }
+
+    impl From<H160> for solabi::Address {
+        fn from(addr: H160) -> Self {
+            solabi::Address(addr.0)
+        }
+    }
+
+    impl From<solabi::U256> for U256 {
+        fn from(u: solabi::U256) -> Self {
+            let u64_array: [u64; 4] = [
+                (u.0[0] >> 64) as u64, // High 64 bits of first u128.
+                u.0[0] as u64,         // Low 64 bits of first u128.
+                (u.0[1] >> 64) as u64, // High 64 bits of second u128.
+                u.0[1] as u64,         // Low 64 bits of second u128.
+            ];
+            U256(u64_array)
+        }
+    }
+
+    impl From<U256> for solabi::U256 {
+        fn from(u: U256) -> Self {
+            let u128_array: [u128; 2] = [
+                ((u.0[0] as u128) << 64) | (u.0[1] as u128), // Combine first two u64s into first u128.
+                ((u.0[2] as u128) << 64) | (u.0[3] as u128), // Combine last two u64s into second u128.
+            ];
+            solabi::U256(u128_array)
+        }
+    }
 }
 pub use eth::{H160, H256, U256};

@@ -2,8 +2,8 @@
 use std::{collections::BTreeMap, str::FromStr as _};
 
 use base64::prelude::*;
-use ethabi::{ParamType, Token};
 use sha3::Digest as _;
+use solabi;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
@@ -331,7 +331,7 @@ fn test_c10l_evm_balance_transfer() {
         parameters: Default::default(),
     });
 
-    let recipient = ethabi::Address::repeat_byte(42);
+    let recipient = solabi::Address::from_slice(&[42; 20]);
     let transfer_tx = transaction::Transaction {
         version: 1,
         call: transaction::Call {
@@ -858,13 +858,10 @@ fn test_c10l_queries() {
 
     // Call the `test` method on the contract via a query.
     let result = signer
-        .query_evm_call(&ctx, contract_address, "test", &[], &[])
+        .query_evm_call(&ctx, contract_address, solabi::selector!("test()"), &())
         .expect("query should succeed");
 
-    let mut result =
-        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
-
-    let test = result.pop().unwrap().into_address().unwrap();
+    let test: H160 = solabi::decode(&result).expect("output should be correct");
     assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 
     // Test call with confidential envelope.
@@ -872,9 +869,8 @@ fn test_c10l_queries() {
         .query_evm_call_opts(
             &ctx,
             contract_address,
-            "test",
-            &[],
-            &[],
+            solabi::selector!("test()"),
+            &(),
             QueryOptions {
                 encrypt: true,
                 ..Default::default()
@@ -882,10 +878,7 @@ fn test_c10l_queries() {
         )
         .expect("query should succeed");
 
-    let mut result =
-        ethabi::decode(&[ParamType::Address], &result).expect("output should be correct");
-
-    let test = result.pop().unwrap().into_address().unwrap();
+    let test: H160 = solabi::decode(&result).expect("output should be correct");
     assert_eq!(test, Default::default(), "msg.signer should be zeroized");
 }
 
@@ -921,9 +914,8 @@ fn test_fee_refunds() {
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "name",
-        &[],
-        &[],
+        solabi::selector!("name()"),
+        &(),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -971,12 +963,11 @@ fn test_fee_refunds() {
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "transfer",
-        &[ParamType::Address, ParamType::Uint(256)],
-        &[
-            Token::Address(contract_address.into()),
-            Token::Uint(u128::MAX.into()), // Too much so it reverts.
-        ],
+        solabi::selector!("transfer(address,uint256)"),
+        &(
+            solabi::Address(contract_address.into()),
+            solabi::U256::new(u128::MAX.into()), // Too much so it reverts.
+        ),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1056,9 +1047,8 @@ fn test_transfer_event() {
     let dispatch_result = signer.call_evm_opts(
         &mut ctx,
         contract_address,
-        "withdraw",
-        &[ParamType::Uint(256)],
-        &[Token::Uint(1_000_000_000.into())],
+        solabi::selector!("withdraw(uint256)"),
+        &(solabi::U256::new(1_000_000_000_u128),),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1147,17 +1137,17 @@ fn test_whitelisted_magic_slots() {
     let non_whitelisted_slot =
         &<[u8; 32]>::from_hex("0000000000000000000000000000000000000000000000000000000000000123")
             .unwrap();
+    let slot_value: &[u8; 32] = b"Hello, world!\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
 
     // Call the `setSlot` method on the contract.
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "setSlot",
-        &[ParamType::FixedBytes(32), ParamType::FixedBytes(32)],
-        &[
-            Token::FixedBytes(eip_1967_implementation_slot.to_vec()),
-            Token::FixedBytes(b"Hello, world!".to_vec()),
-        ],
+        solabi::selector!("setSlot(bytes32,bytes32)"),
+        &(
+            solabi::Bytes(*eip_1967_implementation_slot),
+            solabi::Bytes(*slot_value),
+        ),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1174,12 +1164,11 @@ fn test_whitelisted_magic_slots() {
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "setSlot",
-        &[ParamType::FixedBytes(32), ParamType::FixedBytes(32)],
-        &[
-            Token::FixedBytes(non_whitelisted_slot.to_vec()),
-            Token::FixedBytes(b"Hello, world!".to_vec()),
-        ],
+        solabi::selector!("setSlot(bytes32,bytes32)"),
+        &(
+            solabi::Bytes(*non_whitelisted_slot),
+            solabi::Bytes(*slot_value),
+        ),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1206,6 +1195,10 @@ fn test_whitelisted_magic_slots() {
     let result: Vec<u8> = cbor::from_value(result).unwrap();
     let mut expected = b"Hello, world!".to_vec();
     expected.extend(vec![0; 32 - expected.len()]);
+    assert_eq!(
+        expected, slot_value,
+        "expected result should be equal to slot_value"
+    );
     assert_eq!(result, expected, "result should be correct");
 
     // Query the storage slot for the non-whitelisted slot.
@@ -1259,9 +1252,8 @@ fn test_return_value_limits() {
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "testSuccess",
-        &[],
-        &[],
+        solabi::selector!("testSuccess()"),
+        &(),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1281,9 +1273,8 @@ fn test_return_value_limits() {
     let dispatch_result = signer.call_evm_opts(
         &ctx,
         contract_address,
-        "testRevert",
-        &[],
-        &[],
+        solabi::selector!("testRevert()"),
+        &(),
         CallOptions {
             fee: Fee {
                 amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
@@ -1316,9 +1307,8 @@ fn test_return_value_limits() {
         .query_evm_call_opts(
             &ctx,
             contract_address,
-            "testSuccess",
-            &[],
-            &[],
+            solabi::selector!("testSuccess()"),
+            &(),
             Default::default(),
         )
         .expect("query should succeed");
@@ -1373,13 +1363,6 @@ impl AccountToken for TestErcToken {
     }
 }
 
-fn downcast_uint(uint: &ethabi::Uint) -> u128 {
-    if uint.bits() > 128 {
-        panic!("ethabi::uint too large");
-    }
-    uint.as_u128()
-}
-
 #[test]
 fn test_erc20_dispatch() {
     let mut mock = mock::Mock::default();
@@ -1399,79 +1382,71 @@ fn test_erc20_dispatch() {
 
     // Test dispatch.
     let result = signer
-        .query_evm_call(&ctx, contract_address, "name", &[], &[])
+        .query_evm_call(&ctx, contract_address, solabi::selector!("name()"), &())
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_string().unwrap();
-    assert_eq!(test, "Test Token", "token name should be correct");
+    let (result,) = solabi::decode::<(String,)>(&result).expect("output should be correct");
+    assert_eq!(result, "Test Token", "token name should be correct");
 
     let result = signer
-        .query_evm_call(&ctx, contract_address, "symbol", &[], &[])
+        .query_evm_call(&ctx, contract_address, solabi::selector!("symbol()"), &())
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::String], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_string().unwrap();
-    assert_eq!(test, "TTOK", "token symbol should be correct");
+    let (result,) = solabi::decode::<(String,)>(&result).expect("output should be correct");
+    assert_eq!(result, "TTOK", "token symbol should be correct");
 
     let result = signer
-        .query_evm_call(&ctx, contract_address, "decimals", &[], &[])
+        .query_evm_call(&ctx, contract_address, solabi::selector!("decimals()"), &())
         .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 18, "decimals should be correct");
-
-    let result = signer
-        .query_evm_call(&ctx, contract_address, "totalSupply", &[], &[])
-        .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "total supply should be correct");
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 18, "decimals should be correct");
 
     let result = signer
         .query_evm_call(
             &ctx,
             contract_address,
-            "balanceOf",
-            &[ParamType::Address],
-            &[Token::Address(dave)],
+            solabi::selector!("totalSupply()"),
+            &(),
         )
         .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "dave's balance should be correct");
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "total supply should be correct");
 
     let result = signer
         .query_evm_call(
             &ctx,
             contract_address,
-            "transfer",
-            &[ParamType::Address, ParamType::Uint(256)],
-            &[Token::Address(erin), Token::Uint(0.into())],
+            solabi::selector!("balanceOf(address)"),
+            &(solabi::Address(dave.into()),),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
-    assert_eq!(test, true, "transfer from dave to erin should happen");
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "dave's balance should be correct");
 
     let result = signer
         .query_evm_call(
             &ctx,
             contract_address,
-            "transferFrom",
-            &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
-            &[
-                Token::Address(erin),
-                Token::Address(dave),
-                Token::Uint(0.into()),
-            ],
+            solabi::selector!("transfer(address,uint256)"),
+            &(solabi::Address(erin.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
+    assert_eq!(result, true, "transfer from dave to erin should happen");
+
+    let result = signer
+        .query_evm_call(
+            &ctx,
+            contract_address,
+            solabi::selector!("transferFrom(address,address,uint256)"),
+            &(
+                solabi::Address(erin.into()),
+                solabi::Address(dave.into()),
+                solabi::U256::new(0_u128),
+            ),
+        )
+        .expect("query should succeed");
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
     assert_eq!(
-        test, true,
+        result, true,
         "transfer from erin to dave by dave should happen"
     );
 
@@ -1479,36 +1454,30 @@ fn test_erc20_dispatch() {
         .query_evm_call(
             &ctx,
             contract_address,
-            "approve",
-            &[ParamType::Address, ParamType::Uint(256)],
-            &[Token::Address(erin), Token::Uint(0.into())],
+            solabi::selector!("approve(address,uint256)"),
+            &(solabi::Address(erin.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
-    let result = ethabi::decode(&[ParamType::Bool], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_bool().unwrap();
-    assert_eq!(test, true, "dave's approval for erin should succeed");
+    let result = solabi::decode::<bool>(&result).expect("output should be correct");
+    assert_eq!(result, true, "dave's approval for erin should succeed");
 
     let result = signer
         .query_evm_call(
             &ctx,
             contract_address,
-            "allowance",
-            &[ParamType::Address, ParamType::Address],
-            &[Token::Address(dave), Token::Address(erin)],
+            solabi::selector!("allowance(address,address)"),
+            &(solabi::Address(dave.into()), solabi::Address(erin.into())),
         )
         .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    assert_eq!(downcast_uint(&test), 0, "allowance should be correct");
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    assert_eq!(result.as_u128(), 0, "allowance should be correct");
 
     signer
         .query_evm_call(
             &ctx,
             contract_address,
-            "mint",
-            &[ParamType::Address, ParamType::Uint(256)],
-            &[Token::Address(dave), Token::Uint(0.into())],
+            solabi::selector!("mint(address,uint256)"),
+            &(solabi::Address(dave.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
 
@@ -1516,9 +1485,8 @@ fn test_erc20_dispatch() {
         .query_evm_call(
             &ctx,
             contract_address,
-            "burn",
-            &[ParamType::Address, ParamType::Uint(256)],
-            &[Token::Address(dave), Token::Uint(0.into())],
+            solabi::selector!("burn(address,uint256)"),
+            &(solabi::Address(dave.into()), solabi::U256::new(0_u128)),
         )
         .expect("query should succeed");
 }
@@ -1549,15 +1517,12 @@ fn get_balance<C: Context>(ctx: &C, signer: &EvmSigner, address: &primitive_type
         .query_evm_call(
             ctx,
             contract_address,
-            "balanceOf",
-            &[ParamType::Address],
-            &[Token::Address(*address)],
+            solabi::selector!("balanceOf(address)"),
+            &(solabi::Address((*address).into()),),
         )
         .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    downcast_uint(&test)
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    result.as_u128()
 }
 
 fn get_allowance<C: Context>(
@@ -1571,15 +1536,15 @@ fn get_allowance<C: Context>(
         .query_evm_call(
             ctx,
             contract_address,
-            "allowance",
-            &[ParamType::Address, ParamType::Address],
-            &[Token::Address(*owner), Token::Address(*spender)],
+            solabi::selector!("allowance(address,address)"),
+            &(
+                solabi::Address((*owner).into()),
+                solabi::Address((*spender).into()),
+            ),
         )
         .expect("query should succeed");
-    let result =
-        ethabi::decode(&[ParamType::Uint(256)], &result).expect("output should be correct");
-    let test = result.first().unwrap().clone().into_uint().unwrap();
-    downcast_uint(&test)
+    let result = solabi::decode::<solabi::U256>(&result).expect("output should be correct");
+    result.as_u128()
 }
 
 #[test]
@@ -1614,9 +1579,8 @@ fn test_erc20_minting_burning() {
     let result = signer_dave.call_evm(
         &ctx,
         contract_address,
-        "mint",
-        &[ParamType::Address, ParamType::Uint(256)],
-        &[Token::Address(dave), Token::Uint(10.into())],
+        solabi::selector!("mint(address,uint256)"),
+        &(solabi::Address(dave.into()), solabi::U256::new(10_u128)),
     );
     let logs = decode_evm_logs(&result.tags);
     assert_eq!(logs.len(), 1, "1 evm log should be emitted");
@@ -1635,7 +1599,7 @@ fn test_erc20_minting_burning() {
             // Minting is a transfer from address 0.
             H256::zero(),
             // The recipient was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
         ],
         "transfer event topics should be correct"
     );
@@ -1648,9 +1612,8 @@ fn test_erc20_minting_burning() {
     let result = signer_dave.call_evm(
         &ctx,
         contract_address,
-        "burn",
-        &[ParamType::Address, ParamType::Uint(256)],
-        &[Token::Address(dave), Token::Uint(5.into())],
+        solabi::selector!("burn(address,uint256)"),
+        &(solabi::Address(dave.into()), solabi::U256::new(5_u128)),
     );
     let logs = decode_evm_logs(&result.tags);
     assert_eq!(logs.len(), 1, "1 evm log should be emitted");
@@ -1667,7 +1630,7 @@ fn test_erc20_minting_burning() {
                     .unwrap()
             ),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // Burning is a transfer to address 0.
             H256::zero(),
         ],
@@ -1686,13 +1649,18 @@ fn test_erc20_minting_burning() {
             if s == 0 && r == 0 {
                 continue;
             }
-            for method in &["mint", "burn"] {
+            for method in [
+                solabi::selector!("mint(address,uint256)"),
+                solabi::selector!("burn(address,uint256)"),
+            ] {
                 let result = signer.call_evm(
                     &ctx,
                     contract_address,
                     method,
-                    &[ParamType::Address, ParamType::Uint(256)],
-                    &[Token::Address(*recipient), Token::Uint(3.into())],
+                    &(
+                        solabi::Address((*recipient).into()),
+                        solabi::U256::new(3_u128),
+                    ),
                 );
                 assert_eq!(result.result.is_success(), false, "minting should fail");
                 if let module::CallResult::Failed {
@@ -1753,9 +1721,8 @@ fn test_erc20_allowances() {
     let result = signer_dave.call_evm(
         &ctx,
         contract_address,
-        "approve",
-        &[ParamType::Address, ParamType::Uint(256)],
-        &[Token::Address(erin), Token::Uint(5.into())],
+        solabi::selector!("approve(address,uint256)"),
+        &(solabi::Address(erin.into()), solabi::U256::new(5_u128)),
     );
     assert_eq!(result.result.is_success(), true, "approve should succeed");
     let logs = decode_evm_logs(&result.tags);
@@ -1773,9 +1740,9 @@ fn test_erc20_allowances() {
                     .unwrap()
             ),
             // Owner is dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // Happy spender is erin.
-            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(erin.into())])),
         ],
         "approval event topics should be correct"
     );
@@ -1789,13 +1756,12 @@ fn test_erc20_allowances() {
     let result = signer_erin.call_evm(
         &ctx,
         contract_address,
-        "transferFrom",
-        &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
-        &[
-            Token::Address(dave),
-            Token::Address(erin),
-            Token::Uint(7.into()),
-        ],
+        solabi::selector!("transferFrom(address,address,uint256)"),
+        &(
+            solabi::Address(dave.into()),
+            solabi::Address(erin.into()),
+            solabi::U256::new(7_u128),
+        ),
     );
     assert_eq!(
         result.result.is_success(),
@@ -1817,13 +1783,12 @@ fn test_erc20_allowances() {
     let result = signer_erin.call_evm(
         &ctx,
         contract_address,
-        "transferFrom",
-        &[ParamType::Address, ParamType::Address, ParamType::Uint(256)],
-        &[
-            Token::Address(dave),
-            Token::Address(erin),
-            Token::Uint(3.into()),
-        ],
+        solabi::selector!("transferFrom(address,address,uint256)"),
+        &(
+            solabi::Address(dave.into()),
+            solabi::Address(erin.into()),
+            solabi::U256::new(3_u128),
+        ),
     );
     assert_eq!(
         result.result.is_success(),
@@ -1845,9 +1810,9 @@ fn test_erc20_allowances() {
                     .unwrap()
             ),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(dave)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(dave.into())])),
             // The sender was dave.
-            H256::from_slice(&ethabi::encode(&[Token::Address(erin)])),
+            H256::from_slice(&solabi::encode(&[solabi::Address(erin.into())])),
         ],
         "transfer event topics should be correct"
     );
