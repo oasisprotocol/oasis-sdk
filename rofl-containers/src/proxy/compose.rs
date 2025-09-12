@@ -50,8 +50,15 @@ impl ParsedCompose {
                     .and_then(|mode| mode.parse().ok())
                     .unwrap_or_default();
 
+                let custom_domain = annotations
+                    .get(
+                        &format!("net.oasis.proxy.ports.{}.custom_domain", port.host_port).as_str(),
+                    )
+                    .map(|domain| domain.to_string());
+
                 result.port_mappings.push(PortMapping {
                     service: service_name.to_string(),
+                    custom_domain,
                     port,
                     mode,
                 });
@@ -103,6 +110,8 @@ impl FromStr for PortMappingMode {
 pub struct PortMapping {
     /// Service name.
     pub service: String,
+    /// Optional custom domain.
+    pub custom_domain: Option<String>,
     /// Port descriptor.
     pub port: ParsedPort,
     /// Mode for the proxy behavior on this port.
@@ -331,6 +340,7 @@ services:
         annotations:
             net.oasis.proxy.ports.5678.mode: passthrough
             net.oasis.proxy.ports.8888.mode: ignore
+            net.oasis.proxy.ports.8888.custom_domain: example.com
         ports:
             - "5678:5678"
             - target: 1234
@@ -347,6 +357,7 @@ services:
         assert_eq!(mapping.port.host_port, 5678);
         assert_eq!(mapping.port.container_port, 5678);
         assert_eq!(mapping.mode, PortMappingMode::Passthrough);
+        assert_eq!(mapping.custom_domain, None);
 
         let mapping = &parsed.port_mappings[1];
         assert_eq!(&mapping.service, "frontend");
@@ -355,5 +366,6 @@ services:
         assert_eq!(mapping.port.host_port, 8888);
         assert_eq!(mapping.port.container_port, 1234);
         assert_eq!(mapping.mode, PortMappingMode::Ignore);
+        assert_eq!(mapping.custom_domain, Some("example.com".to_string()));
     }
 }

@@ -157,7 +157,10 @@ async fn run(proxy_label: ProxyLabel, compose: ParsedCompose) -> Result<()> {
     http.start();
 
     for mapping in compose.port_mappings {
-        let name = format!("p{}.{}", mapping.port.host_port, proxy_label.http.host);
+        let name = match mapping.custom_domain {
+            Some(domain) => domain,
+            None => format!("p{}.{}", mapping.port.host_port, proxy_label.http.host),
+        };
 
         slog::info!(logger, "adding mapping for port";
             "service" => &mapping.service,
