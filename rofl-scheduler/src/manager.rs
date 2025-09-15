@@ -81,6 +81,9 @@ const OCI_CLIENT_CONNECT_TIMEOUT_SECS: u64 = 5;
 /// OCI client manifest and config pull timeout in seconds.
 const OCI_CLIENT_PULL_MANIFEST_TIMEOUT_SECS: u64 = 5;
 
+/// Maximum number of discovery passes to wait before wiping an instance that is deemed unknown.
+const UNKNOWN_INSTANCE_WIPE_DELAY_COUNT: usize = 10;
+
 #[derive(Clone, Default)]
 struct InstanceUpdates {
     complete_cmds: Option<market::types::CommandId>,
@@ -176,12 +179,20 @@ impl Manager {
         };
         let mut last_round = 0;
 
+        // Map of instances that don't have known configuration. To ensure that instances are not
+        // removed immediately due to temporary lookup failures, we keep track of them and only
+        // remove them after a certain amount of time has passed.
+        let mut maybe_unknown_instances = BTreeMap::new();
+
         loop {
             // Wait a bit before doing another pass.
             time::sleep(time::Duration::from_secs(self.cfg.processing_interval_secs)).await;
 
             // Discover local state.
-            let mut local_state = match self.discover(local_node_id).await {
+            let mut local_state = match self
+                .discover(local_node_id, &mut maybe_unknown_instances)
+                .await
+            {
                 Ok(local_state) => local_state,
                 Err(err) => {
                     slog::error!(self.logger, "failed to discover bundles"; "err" => ?err);
@@ -222,7 +233,11 @@ impl Manager {
     }
 
     /// Discover local state.
-    async fn discover(&self, local_node_id: PublicKey) -> Result<LocalState> {
+    async fn discover(
+        &self,
+        local_node_id: PublicKey,
+        maybe_unknown_instances: &mut BTreeMap<InstanceId, usize>,
+    ) -> Result<LocalState> {
         let now = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
@@ -315,6 +330,7 @@ impl Manager {
 
             // Remove known instances. Any remaining unknown instances will be stopped.
             running_unknown.remove(&instance.id);
+            maybe_unknown_instances.remove(&instance.id);
 
             // Check if the instance is still paid for. If not, we immediately stop it and schedule
             // its removal.
@@ -479,12 +495,21 @@ impl Manager {
             }
         }
 
-        // Stop any unknown instances.
+        // Process any unknown instances.
         for instance_id in running_unknown {
+            *maybe_unknown_instances.entry(instance_id).or_default() += 1;
+        }
+        let unknown_instances: Vec<_> = maybe_unknown_instances
+            .iter()
+            .filter(|(_, c)| **c > UNKNOWN_INSTANCE_WIPE_DELAY_COUNT)
+            .map(|(instance_id, _)| *instance_id)
+            .collect();
+        for instance_id in unknown_instances {
             slog::info!(self.logger, "stopping unknown instance";
                 "id" => ?instance_id,
             );
 
+            maybe_unknown_instances.remove(&instance_id);
             local_state.pending_stop.push((instance_id, true));
         }
 
