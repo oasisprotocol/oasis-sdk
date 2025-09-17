@@ -211,7 +211,12 @@ impl CertificateProvisioner {
         let sni = &sni;
 
         // First attempt to load existing certificate from persistent storage.
-        let _ = self.try_load_certificate(sni);
+        if let Err(err) = self.try_load_certificate(sni) {
+            slog::info!(self.logger, "failed to load existing certificate";
+                "err" => ?err,
+                "sni" => sni,
+            );
+        }
 
         loop {
             let delay = match self.provision_wait_time(sni) {
@@ -494,7 +499,7 @@ where
     let metadata = fs::metadata(&path)?;
     let age = metadata.created()?.elapsed()?;
     if age > Duration::from_secs(expiry) {
-        return Err(anyhow!("expired"));
+        return Err(anyhow!("existing file expired"));
     }
     Ok(fs::read_to_string(path)?)
 }
