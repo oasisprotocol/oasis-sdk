@@ -96,6 +96,31 @@ impl Proxy {
 
         self.http.start();
         self.domain_verifier.start();
+
+        // Spawn task that periodically dumps Wireguard interface status.
+        let logger = self.logger.clone();
+        let wireguard = self.wireguard.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                match wireguard.current_status() {
+                    Ok(status) => {
+                        for (key, peer) in status.peers {
+                            slog::info!(logger, "wireguard peer status";
+                               "peer" => ?key,
+                               "endpoint" => ?peer.endpoint,
+                               "last_handshake" => ?peer.last_handshake,
+                               "tx_bytes" => peer.tx_bytes,
+                               "rx_bytes" => peer.rx_bytes,
+                            );
+                        }
+                    }
+                    Err(err) => {
+                        slog::warn!(logger, "failed to get wireguard status"; "err" => ?err)
+                    }
+                }
+            }
+        });
     }
 
     /// Add a static HTTP proxy mapping.
