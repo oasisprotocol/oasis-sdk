@@ -8,8 +8,10 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use defguard_wireguard_rs::{
-    host::Peer, key::Key, net::IpAddrMask, InterfaceConfiguration, Kernel, WGApi,
-    WireguardInterfaceApi,
+    host::{self, Peer},
+    key::Key,
+    net::IpAddrMask,
+    InterfaceConfiguration, Kernel, WGApi, WireguardInterfaceApi,
 };
 use oasis_runtime_sdk::core::common::crypto::x25519;
 
@@ -25,6 +27,7 @@ pub const WG_NETWORK: &str = "100.64.0.0/10";
 pub const WG_DEFAULT_LISTEN_PORT: u16 = 4040;
 
 /// Hub configuration.
+#[derive(Clone)]
 pub struct HubConfig {
     /// External IP address of the hub.
     pub external_address: String,
@@ -38,9 +41,10 @@ struct HubState {
 }
 
 /// A Wireguard hub that accepts connections from configured peers.
+#[derive(Clone)]
 pub struct Hub {
     cfg: HubConfig,
-    wg: WGApi<Kernel>,
+    wg: Arc<WGApi<Kernel>>,
     pk: x25519::PublicKey,
     address: IpAddrMask,
     state: Arc<Mutex<HubState>>,
@@ -75,7 +79,7 @@ impl Hub {
 
         Ok(Self {
             cfg,
-            wg,
+            wg: Arc::new(wg),
             pk,
             address,
             state: Arc::new(Mutex::new(HubState {
@@ -83,6 +87,11 @@ impl Hub {
                 clients: HashMap::new(),
             })),
         })
+    }
+
+    /// Returns the current status of the WireGuard interface.
+    pub fn current_status(&self) -> Result<host::Host> {
+        Ok(self.wg.read_interface_data()?)
     }
 
     /// Provision a new client key pair, assign addresses and return its config.

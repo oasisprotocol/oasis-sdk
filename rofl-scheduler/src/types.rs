@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use base64::prelude::*;
+use tiny_keccak::{Hasher, TupleHash};
+
 use oasis_runtime_sdk::types::address::Address;
-use oasis_runtime_sdk_rofl_market::types::Deployment;
+use oasis_runtime_sdk_rofl_market::types::{Deployment, Instance};
 
 /// Name of the Deploy command.
 pub const METHOD_DEPLOY: &str = "Deploy";
@@ -51,6 +54,43 @@ pub const ACTION_LOG_VIEW: &str = "log.view";
 
 /// Instance permissions for different actions.
 pub type Permissions = BTreeMap<String, BTreeSet<Address>>;
+
+/// Metadata key used to configure custom domains for the deployment.
+pub const METADATA_KEY_PROXY_CUSTOM_DOMAINS: &str = "net.oasis.proxy.custom_domains";
+
+/// Domain verification token context.
+pub const DOMAIN_VERIFICATION_TOKEN_CONTEXT: &[u8] =
+    b"rofl-scheduler/proxy: domain verification token";
+
+/// Derive the verification token for a given domain.
+///
+/// The token is derived using a cryptographic hash function and is used to verify
+/// that the domain is owned by the instance. More specifically, the token is derived
+/// as follows:
+///
+///   TupleHash[DOMAIN_VERIFICATION_TOKEN_CONTEXT](
+///     deployment.app_id,
+///     instance.provider,
+///     instance.id,
+///     domain
+///   )
+///
+/// The result is then encoded using base64.
+pub fn domain_verification_token(
+    instance: &Instance,
+    deployment: &Deployment,
+    domain: &str,
+) -> String {
+    let mut hasher = TupleHash::v256(DOMAIN_VERIFICATION_TOKEN_CONTEXT);
+    hasher.update(deployment.app_id.as_ref());
+    hasher.update(instance.provider.as_ref());
+    hasher.update(instance.id.as_ref());
+    hasher.update(domain.as_bytes());
+
+    let mut output = Vec::new();
+    hasher.finalize(&mut output);
+    BASE64_STANDARD.encode(output)
+}
 
 #[cfg(test)]
 mod test {
