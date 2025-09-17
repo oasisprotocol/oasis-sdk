@@ -348,3 +348,32 @@ impl CustomDomainVerifier {
         Err(anyhow::anyhow!("TXT record not found"))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_domain_verification_ordering() {
+        let handle = Arc::new(CancelVerificationsOnDrop::new());
+        let mut verification1 = DomainVerification::new(
+            Default::default(),
+            Default::default(),
+            Default::default(),
+            &handle,
+        );
+        verification1.retry_at = Instant::now() + Duration::from_secs(10);
+
+        let mut verification2 = verification1.clone();
+        verification2.retry_at = Instant::now() + Duration::from_secs(5);
+
+        assert!(verification2 > verification1);
+
+        let mut heap = BinaryHeap::new();
+        heap.push(verification1.clone());
+        heap.push(verification2.clone());
+
+        assert!(heap.pop().unwrap() == verification2);
+        assert!(heap.pop().unwrap() == verification1);
+    }
+}
