@@ -33,10 +33,12 @@ jobs:
       run: uv python install 3.12
     
     - name: Build package
+      working-directory: rofl-client/py
       run: uv build
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
+      working-directory: rofl-client/py
       with:
         name: python-package-distributions
         path: dist/
@@ -51,6 +53,7 @@ jobs:
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v4
+      working-directory: rofl-client/py
       with:
         name: python-package-distributions
         path: dist/
@@ -59,5 +62,6 @@ jobs:
       uses: astral-sh/setup-uv@v4
     
     - name: Publish to PyPI
+      working-directory: rofl-client/py
       run: |
         uv publish dist/*
