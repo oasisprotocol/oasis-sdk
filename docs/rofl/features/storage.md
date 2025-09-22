@@ -11,13 +11,13 @@ local persistent storage with the following settings:
 
 This type of a storage is particularly useful for caching. Docker images defined
 in the `compose.yaml` file are automatically stored to persistent storage. This
-way they are fetched only the first time a ROFL app is deployed, otherwise
+way they are fetched only the first time an app is deployed, otherwise
 a cached version is considered.
 
 All non-external container volumes will automatically reside in persistent
 storage. In the example below, we [define a new volume] called `my-volume` and
 make `.ollama` in the home folder persistent. This way we avoid downloading
-ollama models each time a machine hosting the ROFL app is restarted:
+ollama models each time a machine hosting the app is restarted:
 
 ```yaml title="compose.yaml"
 services:

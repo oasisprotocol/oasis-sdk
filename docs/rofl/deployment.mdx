@@ -9,14 +9,14 @@ required functionality.
 
 [sapphire]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
 
-Your ROFL app will be deployed to a [ROFL node]. This is a light Oasis Node with
+Your app will be deployed to a [ROFL node]. This is a light Oasis Node with
 support for TEE and configured Sapphire ParaTime. There are two ways to deploy your app:
 
 1. The preferred option is to rent a ROFL node using the [ROFL
    marketplace](#deploy-on-rofl-marketplace) and deploy your app directly via
    the [Oasis CLI].
 2. Alternatively, you can copy over the ROFL bundle to your ROFL node manually
-   and configure it. In this case, consult the [ROFL node &rightarrow; Hosting the ROFL app bundle directly][rofl-node-hosting] section.
+   and configure it. In this case, consult the [ROFL node &rightarrow; Hosting the app bundle directly][rofl-node-hosting] section.
 
 [ROFL node]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/rofl-node.mdx
 [rofl-node-hosting]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/rofl-node.mdx#hosting-the-rofl-app-bundle-directly
@@ -126,9 +126,9 @@ the standard or error outputs!
 [ROFL marketplace]: ./features/marketplace.mdx
 [oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
 
-## Check That the ROFL App is Running
+## Check That the App is Running
 
-To check out all active ROFL app replicas regardless of the
+To check out all active app replicas regardless of the
 deployment procedure, use the following command:
 
 ```shell
@@ -167,14 +167,14 @@ Policy:
   Expiration: 9
 ```
 
-Here you can see that a single instance of the ROFL app is running on the given
-node, its public runtime attestation key (RAK) and the epoch at which its
-registration will expire if not refreshed. ROFL apps must periodically refresh
-their registrations to ensure they don't expire.
+Here you can see that a single instance of the app is running on the given node,
+its public runtime attestation key (RAK) and the epoch at which its
+registration will expire if not refreshed. Apps in ROFL must periodically
+refresh their registrations to ensure they don't expire.
 
-You can also check out the status of your ROFL app on the [Oasis Explorer]:
+You can also check out the status of your app on the [Oasis Explorer]:
 
-![Oasis Explorer - ROFL app](./images/demo-rofl-tgbot-explorer.png)
+![Oasis Explorer - App](./images/demo-rofl-tgbot-explorer.png)
 
 [Oasis Explorer]: https://explorer.oasis.io
 

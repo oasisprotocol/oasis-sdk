@@ -1,10 +1,10 @@
 # ROFL Proxy
 
 The ROFL proxy automatically generates public HTTPS URLs for services in your
-ROFL app. Simply publish a port in your `compose.yaml` and the proxy handles
+app. Simply publish a port in your `compose.yaml` and the proxy handles
 TLS certificates and routing.
 
-TLS is terminated inside the ROFL app, providing end-to-end encryption so that
+TLS is terminated inside the app, providing end-to-end encryption so that
 even the provider cannot see the traffic.
 
 ## Enabling the Proxy
@@ -20,7 +20,7 @@ services:
       - "5678:5678" # Expose container port 5678 on host port 5678
 ```
 
-After deploying your ROFL app, you can find the generated URL by
+After deploying your app, you can find the generated URL by
 running `oasis rofl machine show`:
 
 ```shell

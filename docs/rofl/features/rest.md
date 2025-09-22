@@ -1,9 +1,9 @@
 # `appd` REST API
 
-Each containerized ROFL app runs a special daemon (called `rofl-appd`) that
-exposes additional functions via a simple HTTP REST API. In order to make it
-easier to isolate access, the API is exposed via a UNIX socket located at
-`/run/rofl-appd.sock` which can be passed to containers via volumes.
+Each containerized app running in ROFL runs a special daemon (called
+`rofl-appd`) that exposes additional functions via a simple HTTP REST API. In
+order to make it easier to isolate access, the API is exposed via a UNIX socket
+located at `/run/rofl-appd.sock` which can be passed to containers via volumes.
 
 An example using the [short syntax for Compose volumes][compose-volumes]:
 
@@ -30,7 +30,7 @@ format.
 
 ## App Identifier
 
-This endpoint can be used to retrieve the current ROFL app's identifier.
+This endpoint can be used to retrieve the current app's identifier.
 
 **Endpoint:** `/rofl/v1/app/id` (`GET`)
 
@@ -42,12 +42,12 @@ rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 
 ## Key Generation
 
-Each registered ROFL app automatically gets access to a decentralized on-chain
-key management system.
+Each registered app automatically gets access to a decentralized on-chain key
+management system.
 
-All generated keys can only be generated inside properly attested ROFL app
-instances and will remain the same even in case the app is deployed somewhere
-else or its state is erased.
+All generated keys can only be generated inside properly attested app instances
+and will remain the same even in case the app is deployed somewhere else or its
+state is erased.
 
 **Endpoint:** `/rofl/v1/keys/generate` (`POST`)
 
@@ -85,13 +85,13 @@ The generated `key` is returned as a hexadecimal string.
 
 ## Authenticated Transaction Submission
 
-A ROFL app can also submit _authenticated transactions_ to the chain where it is
-registered at. The special feature of these transactions is that they are signed
-by an endorsed key and are therefore automatically authenticated as coming from
-the ROFL app itself.
+An app running in ROFL can also submit _authenticated transactions_ to the chain
+where it is registered at. The special feature of these transactions is that
+they are signed by an endorsed key and are therefore automatically authenticated
+as coming from the app itself.
 
-This makes it possible to easily authenticate ROFL apps in smart contracts by
-simply invoking an [appropriate subcall], for example:
+This makes it possible to easily authenticate apps in smart contracts by simply
+invoking an [appropriate subcall], for example:
 
 ```solidity
 Subcall.roflEnsureAuthorizedOrigin(roflAppID);

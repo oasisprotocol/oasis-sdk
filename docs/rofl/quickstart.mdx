@@ -18,7 +18,7 @@ If you already have a working containerized app, you should run the following
 [Oasis CLI][oasis-cli-dl] commands to ROFLize it:
 
 1. [`oasis rofl init`] to initialize the ROFL manifest in the existing folder.
-2. [`oasis rofl create`] to register a new ROFL app on the selected chain.
+2. [`oasis rofl create`] to register a new app on the selected chain.
 3. [`oasis rofl build`] to compile a ROFL bundle.
 4. [`oasis rofl secret set`] to encrypt and store any secrets required by your
    app.
@@ -181,8 +181,7 @@ official [Oasis Testnet faucet] or reach out to us on the
 [discord]: https://oasis.io/discord
 
 Next, inside our project folder, run the following command to generate the
-initial `rofl.yaml` manifest file and to register a new ROFL app on Sapphire
-Testnet:
+initial `rofl.yaml` manifest file and to register a new app on Sapphire Testnet:
 
 ```shell
 oasis rofl init
@@ -222,19 +221,19 @@ components on-chain run:
 oasis rofl update
 ```
 
-Finally, we deploy our ROFL app to a Testnet node instance offered by one of the
-ROFL providers:
+Finally, we deploy our app to a Testnet node instance offered by one of the ROFL
+providers:
 
 ```shell
 oasis rofl deploy
 ```
 
-Congratulations, you have just deployed your first ROFL app! 🎉
+Congratulations, you have just deployed your first app in ROFL! 🎉
 
 Go ahead and test it by sending the `/hello` message in the Telegram app. You
-can also check out your ROFL app on the [Oasis Explorer]:
+can also check out your app on the [Oasis Explorer]:
 
-![Oasis Explorer - ROFL app](./images/demo-rofl-tgbot-explorer.png)
+![Oasis Explorer - App](./images/demo-rofl-tgbot-explorer.png)
 
 :::info Example: demo-rofl-tgbot
 

@@ -3,8 +3,8 @@ import TabItem from '@theme/TabItem';
 
 # Application
 
-ROFL apps come in different flavors and the right choice is a tradeoff between
-the Trusted Computing Base (TCB) size and ease of use:
+Apps running in ROFL come in different flavors and the right choice is a
+tradeoff between the Trusted Computing Base (TCB) size and ease of use:
 
 - **TDX containers ROFL (default)**: A Docker compose-based container services
   packed in a secure virtual machine.
@@ -14,34 +14,33 @@ the Trusted Computing Base (TCB) size and ease of use:
   a single secure binary.
 
 This chapter will show you how to quickly create, build and test a minimal
-containerized ROFL app that authenticates and communicates with a confidential
-smart contract on [Oasis Sapphire]. We will build a TDX container-based ROFL
-app.
+containerized app that authenticates and communicates with a confidential smart
+contract on [Oasis Sapphire]. We will build a TDX container-based app.
 
 [Oasis Sapphire]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/README.mdx
 
-## How do ROFL Apps Work?
+## How do Apps in ROFL Work?
 
 ![ROFL diagram](images/rofl.svg)
 
-Each ROFL app runs in its own Trusted Execution Environment (TEE) which is
-provisioned by an Oasis Node from its _ORC bundle_ (a zip archive containing the
-program binaries and metadata required for execution). ROFL apps register to
-the Oasis Network in order to be able to easily authenticate to on-chain smart
-contracts and transparently gain access to the decentralized per-app key
-management system.
+Each app running in ROFL runs in its own Trusted Execution Environment (TEE)
+which is provisioned by an Oasis Node from its _ORC bundle_ (a zip archive
+containing the program binaries and metadata required for execution). Apps in
+ROFL register to the Oasis Network in order to be able to easily authenticate to
+on-chain smart contracts and transparently gain access to the decentralized
+per-app key management system.
 
-Inside the TEE, the ROFL app performs important functions that ensure its
-security and enable secure communication with the outside world. This includes
-using a light client to establish a fresh view of the Oasis consensus layer
-which provides a source of rough time and integrity for verification of all
-on-chain state. The ROFL app also generates a set of ephemeral cryptographic
-keys which are used in the process of remote attestation and on-chain
-registration. These processes ensure that the ROFL app can authenticate to
-on-chain modules (e.g. smart contracts running on [Sapphire]) by
-signing and submitting special transactions.
+Inside the TEE, the app performs important functions that ensure its security
+and enable secure communication with the outside world. This includes using a
+light client to establish a fresh view of the Oasis consensus layer which
+provides a source of rough time and integrity for verification of all on-chain
+state. The app also generates a set of ephemeral cryptographic keys which are
+used in the process of remote attestation and on-chain registration. These
+processes ensure that the app can authenticate to on-chain modules (e.g. smart
+contracts running on [Sapphire]) by signing and submitting special
+transactions.
 
-The ROFL app can then perform arbitrary work and interact with the outside world
+The app can then perform arbitrary work and interact with the outside world
 through (properly authenticated) network connections. Connections can be
 authenticated via HTTPS/TLS or use other methods (e.g. light clients for other
 chains).
@@ -52,15 +51,14 @@ chains).
 
 ## App Directory and Manifest
 
-First we create the basic directory structure for the ROFL app using the [Oasis
-CLI]:
+First we create the basic directory structure for the app using the [Oasis CLI]:
 
 ```shell
 oasis rofl init myapp
 ```
 
 This will create the `myapp` directory and initialize some boilerplate needed to
-build a TDX container-based ROFL app. The rest of the guide assumes that you are
+build a TDX container-based app. The rest of the guide assumes that you are
 executing commands from within this directory.
 
 The command will output a summary of what is being created:
@@ -73,7 +71,7 @@ TEE:      tdx
 Kind:     container
 Git repository initialized.
 Created manifest in 'rofl.yaml'.
-Run `oasis rofl create` to register your ROFL app and configure an app ID.
+Run `oasis rofl create` to register your app and configure an app ID.
 ```
 
 The directory structure (omitting git artifacts) will look as follows:
@@ -81,12 +79,11 @@ The directory structure (omitting git artifacts) will look as follows:
 ```
 myapp
 ├── compose.yaml        # Container compose file.
-└── rofl.yaml           # ROFL app manifest.
+└── rofl.yaml           # App manifest.
 ```
 
-The [manifest] contains things like ROFL app [metadata], [secrets],
-[requested resources] and can be modified either manually or by using the CLI
-commands.
+The [manifest] contains things like app [metadata], [secrets], [requested
+resources] and can be modified either manually or by using the CLI commands.
 
 [manifest]: features/manifest.md
 [metadata]: features/manifest.md#metadata
@@ -96,7 +93,7 @@ commands.
 
 ## Create
 
-Before the ROFL app can be built it needs to be created on chain to assign it a
+Before the app can be built it needs to be created on chain to assign it a
 unique identifier (the app ID) which can be used by on-chain smart contracts to
 ensure that they are talking to the right app and also gives the app access to a
 decentralized key management system.
@@ -106,9 +103,9 @@ tokens][stake-requirements].
 
 :::tip
 
-In order to obtain TEST tokens needed for creating and running your ROFL apps
-use [the faucet] or [ask on Discord]. To make things easier you should
-[create or import a `secp256k1-bip44` account] that you can also use with the
+In order to obtain TEST tokens needed for creating and running your apps use
+[the faucet] or [ask on Discord]. To make things easier you should [create or
+import a `secp256k1-bip44` account] that you can also use with the
 Ethereum-compatible tooling like Hardhat.
 
 <!-- markdownlint-disable line-length -->
@@ -120,9 +117,9 @@ Ethereum-compatible tooling like Hardhat.
 :::
 
 We also need to select the network (in this case `testnet`) and the account
-that will be the initial administrator of the ROFL app (in this case
-`myaccount`). The CLI will automatically update the app manifest (`rofl.yaml`)
-with the assigned app identifier.
+that will be the initial administrator of the app (in this case `myaccount`). The
+CLI will automatically update the app manifest (`rofl.yaml`) with the assigned
+app identifier.
 
 ```shell
 oasis rofl create --network testnet --account myaccount
@@ -141,9 +138,9 @@ by the current admin.
 :::info
 
 While the CLI implements a simple governance mechanism where the admin of the
-ROFL app is a single account, even a smart contract can be the admin. This
-allows for implementation of advanced agent governance mechanisms, like using
-multi-sigs or DAOs with veto powers to control the upgrade process.
+app is a single account, even a smart contract can be the admin. This allows for
+implementation of advanced agent governance mechanisms, like using multi-sigs or
+DAOs with veto powers to control the upgrade process.
 
 :::
 
@@ -157,7 +154,7 @@ App ID is derived using one of the two schemes:
 - **Creator address + block round number + index of the `rofl.Create`
   transaction in the block**: This approach is non-deterministic and preferred
   in production environments so that the potential attacker cannot simply
-  determine ROFL app ID in advance, even if they knew what the creator address
+  determine the app ID in advance, even if they knew what the creator address
   is.
 
 You can select the app ID derivation scheme by passing the
@@ -185,21 +182,20 @@ part can be anything from a [WASM-based smart contract] to a dedicated
 
 We have prepared a simple oracle contract for this example. You can find it by
 checking out the [prepared example project]. It contains a simple [Oracle.sol]
-contract which collects observations from authenticated ROFL app instances,
-performs trivial aggregation and stores the final aggregated result. Read the
-[Sapphire quickstart] chapter to learn how to build and deploy Sapphire smart
-contracts, but to get you up and running for this part, simply copy the example
-project from above, install dependencies and compile the smart contract by
-executing:
+contract which collects observations from authenticated app instances, performs
+trivial aggregation and stores the final aggregated result. Read the [Sapphire
+quickstart] chapter to learn how to build and deploy Sapphire smart contracts,
+but to get you up and running for this part, simply copy the example project
+from above, install dependencies and compile the smart contract by executing:
 
 ```shell
 npm install
 npx hardhat compile
 ```
 
-Configure the `PRIVATE_KEY` of the deployment account and the ROFL app
-identifier (be sure to use the identifier that you received during
-registration), then deploy the contract by running, for example:
+Configure the `PRIVATE_KEY` of the deployment account and the app identifier (be
+sure to use the identifier that you received during registration), then deploy
+the contract by running, for example:
 
 ```shell
 PRIVATE_KEY="0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" \
@@ -209,10 +205,10 @@ npx hardhat deploy rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf --network sapph
 After successful deployment you will see a message like:
 
 ```
-Oracle for ROFL app rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf deployed to 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+Oracle for app rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf deployed to 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
 ```
 
-You can now proceed to building and deploying the ROFL app itself. Remember the
+You can now proceed to building and deploying the app itself. Remember the
 address where the oracle contract was deployed to as you will need it in the
 next step.
 
@@ -224,10 +220,10 @@ next step.
 
 ## Define Containerized Services
 
-What the core of the ROFL app does is defined with services running in Podman
+What the core of the app does is defined with services running in Podman
 containers defined in [the compose file]. Anything that can run as a bunch of
-containers can also be run as a ROFL app. This includes exposing web services
-to the internet using the [ROFL Proxy].
+containers can also be run as an app in ROFL. This includes exposing web
+services to the internet using the [ROFL Proxy].
 
 For an easier start, we will use the `docker.io/oasisprotocol/demo-rofl` image
 defined in [the `demo-rofl` repository] and which implements [a trivial oracle]
@@ -265,17 +261,15 @@ name e.g. `docker.io/ollama/ollama` and not just `ollama/ollama`.
 
 ## Build
 
-Whenever you make changes to your ROFL app and want to deploy it, you first need
-to build it. The build process takes the compose file together with other ROFL
-app artifacts and deterministically generates a bundle that can later be
-deployed.
+Whenever you make changes to your app and want to deploy it, you first need to
+build it. The build process takes the compose file together with other app
+artifacts and deterministically generates a bundle that can later be deployed.
 
 The build process also computes the _enclave identity_ of the bundle which is
 used during the process of remote attestation to authenticate the app instances
 before granting them access to the key management system and [other features].
 
-To build a ROFL app and update the enclave identity in the app manifest, simply
-run:
+To build an app and update the enclave identity in the app manifest, simply run:
 
 <Tabs>
     <TabItem value="Native Linux">
@@ -290,19 +284,19 @@ run:
     </TabItem>
 </Tabs>
 
-This will generate the resulting ROFL app bundle which can be used for later
+This will generate the resulting app bundle which can be used for later
 deployment and output something like:
 
 ```
-ROFL app built and bundle written to 'myapp.default.orc'.
+App built and bundle written to 'myapp.default.orc'.
 ```
 
 [other features]: features/
 
 ## Update On-chain App Config
 
-After any changes to the ROFL app policy defined in the manifest, the on-chain
-app config needs to be updated in order for the changes to take effect.
+After any changes to the app policy defined in the manifest, the on-chain app
+config needs to be updated in order for the changes to take effect.
 
 The designated admin account is able to update this policy by issuing an update
 transaction which can be done via the CLI by running:
