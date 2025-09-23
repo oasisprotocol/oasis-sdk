@@ -38,10 +38,9 @@ jobs:
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
-      working-directory: rofl-client/py
       with:
         name: python-package-distributions
-        path: dist/
+        path: rofl-client/py/dist/
 
   publish-to-pypi:
     needs: build
@@ -53,10 +52,9 @@ jobs:
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v4
-      working-directory: rofl-client/py
       with:
         name: python-package-distributions
-        path: dist/
+        path: rofl-client/py/dist/
     
     - name: Install uv
       uses: astral-sh/setup-uv@v4
