@@ -22,8 +22,10 @@ jobs:
     - name: Get version info
       id: version
       run: |
-        echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
-    
+        TAG=${{ github.ref_name }}
+        VERSION=${TAG##*/}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
     - name: Install uv
       uses: astral-sh/setup-uv@v4
       with:
