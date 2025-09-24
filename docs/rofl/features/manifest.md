@@ -4,10 +4,10 @@
 
 The following fields are valid in your yaml root:
 
-- `name`: A short, human-readabe name for your ROFL app. e.g. `my-rofl-app`
+- `name`: A short, human-readabe name for your app. e.g. `my-app`
 - `version`: ROFL version. e.g. `0.1.1`
 - `repository`: A path to the git repository. e.g.
-  `https://github.com/user/my-rofl-app`
+  `https://github.com/user/my-app`
 - `author`: The author name and their e-mail address. e.g.
   `John Doe <john@doe.com>`
 - `license`: The ROFL license in [SPDX] format. e.g. `Apache-2.0`
@@ -20,9 +20,9 @@ The following fields are valid in your yaml root:
 
 ## App Resources (`resources`) {#resources}
 
-Each containerized ROFL app must define what kind of resources it needs for its
-execution. This includes the number of assigned vCPUs, amount of memory, storage
-requirements, GPUs, etc.
+Each containerized app running in ROFL must define what kind of resources it
+needs for its execution. This includes the number of assigned vCPUs, amount of
+memory, storage requirements, GPUs, etc.
 
 Resources are specified in the app manifest file under the `resources` section
 as follows:
@@ -41,7 +41,7 @@ This chapter describes the set of supported resources.
 :::warning
 
 Changing the requested resources will result in a different enclave identity of
-the ROFL app and will require the policy to be updated!
+the app and will require the policy to be updated!
 
 :::
 
@@ -57,9 +57,9 @@ The number of vCPUs allocated to the VM. By default this value is initialized to
 
 ### Storage (`storage`) {#resources-storage}
 
-Each ROFL app can request different storage options, depending on its use case.
-The storage kind is specified in the `kind` field with the following values
-currently supported:
+Each app running in ROFL can request different storage options, depending on its
+use case. The storage kind is specified in the `kind` field with the following
+values currently supported:
 
 - `disk-persistent` provisions a persistent disk of the given size. The disk is
   encrypted and authenticated using a key derived by the decentralized on-chain
@@ -85,17 +85,17 @@ This section contains ROFL deployments on specific networks.
 
 #### `policy`
 
-Contains the policy under which the ROFL app will be allowed to spin up:
+Contains the policy under which the app will be allowed to spin up:
 
 - `quotes`: defines a TEE-specific policy requirements such as the TCB validity
   period, and the minimum TCB-R number which indicates what security updates
   must be applied to the given platform.
-- `enclaves`: defines the allowed enclave IDs for running this ROFL app.
-- `endorsements`: a list of nodes which can run this ROFL app.
-  - `- any: {}`: any node is allowed to run this ROFL app.
+- `enclaves`: defines the allowed enclave IDs for running this app.
+- `endorsements`: a list of nodes which can run this app.
+  - `- any: {}`: any node is allowed to run this app.
   - `- node: <node_id>`: node with a specific node ID is allowed to run this
-    ROFL app. You can provide multiple `node` entries to allow the execution by
+    app. You can provide multiple `node` entries to allow the execution by
     any of the listed nodes.
 - `fees: <fee_policy>`: who pays for the registration and other fees:
-  - `endorsing_node`: the node running ROFL app pays the fees.
-  - `instance`: ROFL app instance pays the fees.
+  - `endorsing_node`: the node running the app pays the fees.
+  - `instance`: The app instance pays the fees.

@@ -2,9 +2,9 @@
 
 ## SGX ROFL
 
-SGX ROFL apps are fully supported by the [`sapphire-localnet`] Docker image.
-Simply bind-mount your ROFL app folder and any ORC bundles will automatically be
-registered and executed on startup:
+Apps running in SGX ROFL are fully supported by the [`sapphire-localnet`] Docker
+image. Simply bind-mount your app folder and any ORC bundles will automatically
+be registered and executed on startup:
 
 ```shell
 docker run -it -p8544-8548:8544-8548 -v .:/rofls ghcr.io/oasisprotocol/sapphire-localnet

@@ -2,9 +2,9 @@
 
 Sometimes containers need access to data that should not be disclosed publicly,
 for example API keys to access certain services. This data can be passed to
-containers running inside ROFL apps via _secrets_. Secrets are arbitrary
-key-value pairs which are end-to-end encrypted so that they can only be
-decrypted inside a correctly attested ROFL app instance.
+containers running in ROFL via _secrets_. Secrets are arbitrary key-value pairs
+which are end-to-end encrypted so that they can only be decrypted inside a
+correctly attested app instance.
 
 Secrets can be easily managed via the Oasis CLI, for example to create a secret
 called `mysecret` you can use:
@@ -34,7 +34,7 @@ end-to-end encrypted and cannot be read even by the administrator who set them.
 
 When a secret is created, a new ephemeral key is generated that is used in the
 encryption process. The ephemeral key is then immediately discarded so only the
-ROFL app itself can decrypt the secret.
+app itself can decrypt the secret.
 
 :::
 
@@ -68,7 +68,7 @@ services:
 
 Each secret is also defined as a [container secret] and can be passed to the
 container as such. Note that the secret needs to be defined as an _external_
-secret as it is created by the ROFL app during boot.
+secret as it is created by the app during boot.
 
 ```yaml
 services:
