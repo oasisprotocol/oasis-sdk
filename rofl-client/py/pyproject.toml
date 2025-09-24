@@ -44,6 +44,9 @@ build-backend = "hatchling.build"
 source = "vcs"
 fallback-version = "0.0.0"
 
+[tool.hatch.version.raw-options]
+tag_regex = '^rofl-client/py/v(?P<version>\d+\.\d+\.\d+(?:[\w.-]*)?)$'
+
 [tool.hatch.build.hooks.vcs]
 version-file = "src/oasis_rofl_client/_version.py"
 
