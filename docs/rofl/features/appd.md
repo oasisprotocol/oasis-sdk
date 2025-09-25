@@ -30,7 +30,7 @@ format.
 
 ## App Identifier
 
-This endpoint can be used to retrieve the current app's identifier.
+This endpoint can be used to retrieve the app ID.
 
 **Endpoint:** `/rofl/v1/app/id` (`GET`)
 
@@ -87,11 +87,11 @@ The generated `key` is returned as a hexadecimal string.
 
 An app running in ROFL can also submit _authenticated transactions_ to the chain
 where it is registered at. The special feature of these transactions is that
-they are signed by an endorsed key and are therefore automatically authenticated
-as coming from the app itself.
+they are signed by an **endorsed ephemeral key** and are therefore automatically
+authenticated as coming from the app itself.
 
-This makes it possible to easily authenticate apps in smart contracts by simply
-invoking an [appropriate subcall], for example:
+This makes it possible to easily authenticate the transaction origin in smart
+contracts by simply invoking an [appropriate subcall]:
 
 ```solidity
 Subcall.roflEnsureAuthorizedOrigin(roflAppID);

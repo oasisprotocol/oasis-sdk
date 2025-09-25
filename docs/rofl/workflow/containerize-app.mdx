@@ -1,0 +1,147 @@
+---
+description: Containerize your app inside a Docker-like container
+---
+
+# Containerize an App
+
+Services are best maintained if they are run in a **controlled environment**
+also known as *a container*. This includes the exact version of the operating
+system, both system and user libraries, and your carefully configured service.
+The image of the container is uploaded to an *OCI file server* (e.g.
+[docker.io], [ghcr.io]) from where the server hosting your bot downloads it.
+
+[docker.io]: https://docker.io
+[ghcr.io]: https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry
+
+Let's have the following project consisting of two files:
+
+```
+my-bot
+├── bot.py           # A python bot script
+└── requirements.txt # Python dependencies
+```
+
+For containerization we will use [Docker][docker], but you can also use
+alternatives such as [Podman][podman]. In fact, when your app is deployed to
+a ROFL node the containers there will be orchestrated by Podman, so feel free to
+use it instead for better compatibility.
+
+## Dockerfile
+
+Inside the project folder create a file called `Dockerfile`. This will
+instruct Docker to compile a **python-based image** and add **our python bot
+script on top of it**.
+
+```dockerfile title="Dockerfile"
+FROM python:alpine3.17
+
+WORKDIR /bot
+COPY ./bot.py ./requirements.txt /bot
+RUN pip install -r requirements.txt
+
+ENTRYPOINT ["python", "bot.py"]
+```
+
+## Compose
+
+[Docker Compose][compose] orchestrates your containers. It makes sure
+they are spun up in correct order, defines storage points, networking and other
+functionalities. Create `compose.yaml` with the following example content:
+
+```yaml title="compose.yaml"
+services:
+  python-bot:
+    build: .
+    image: "docker.io/YOUR_USERNAME/YOUR_PROJECT"
+    platform: linux/amd64
+    environment:
+      - TOKEN=${TOKEN}
+```
+
+[compose]: https://docs.docker.com/reference/compose-file/
+
+### Adjust `image:` field to fit your needs
+
+The `image:` field(s) in `compose.yaml` above must point to a **publicly
+accessible OCI registry** where your image will be downloaded from for
+execution.
+
+In your case replace the `image:` field with a fully qualified domain of the OCI
+server you use followed by your username, for example:
+
+- `docker.io/your_username/my-bot`
+- `ghcr.io/your_username/my-bot`
+
+:::warning Always specify FQDN image URL
+
+When specifying the container image URL, make sure to use fully qualified domain
+name e.g. `docker.io/ollama/ollama` and not just `ollama/ollama`.
+
+:::
+
+## Build and Push
+
+Build the container image and tag it using `docker compose`:
+
+```shell
+docker compose build
+```
+
+:::tip
+
+You can also test the compose setup locally with:
+
+```shell
+docker compose up
+```
+
+To stop it:
+
+```shell
+docker compose down
+```
+
+:::
+
+After building and tagging the images you need to push the container images to
+publicly accessible OCI registry (e.g. [docker.io], [ghcr.io]). If this is the
+first time you're pushing images on your computer, you will first need to
+authenticacte with:
+
+```shell
+docker login
+```
+
+Then run the following to upload the container images to the registry:
+
+```shell
+docker compose push
+```
+
+:::warning Make sure your image is public
+
+If you're pushing the image to GitHub containers for the first time, make sure
+you [configure public package visibility][ghcr-package-visibility]!
+
+:::
+
+[ghcr-package-visibility]: https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility#configuring-visibility-of-packages-for-your-personal-account
+
+## Pin Your Image Hash
+
+To prevent another container image being pulled inside ROFL, pin the **image
+digest** inside `compose.yaml`. Fetch the `sha256:...` digest by invoking:
+
+```shell
+docker images --digest
+```
+
+Then append `@` and the digest next to the image tag in your `compose.yaml`, for
+example:
+
+```yaml
+    image: "docker.io/MY_USERNAME/my-bot@sha256:9633593eb9e8395023cb0d926982602978466ec003efa189d94a34e7bea6ec0d"
+```
+
+[docker]: https://www.docker.com/
+[podman]: https://www.podman.io/

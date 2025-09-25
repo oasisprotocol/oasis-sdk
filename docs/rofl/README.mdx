@@ -3,30 +3,49 @@ description: Build your own ROFL-Powered App
 ---
 
 import DocCardList from '@theme/DocCardList';
-import {findSidebarItem} from '@site/src/sidebarUtils';
+import { findSidebarItem } from '@site/src/sidebarUtils';
 
-# Build ROFL-Powered Apps
+# Runtime Off-Chain Logic (ROFL)
 
-![ROFL diagram](images/rofl.svg)
+*ROFL-powered apps* are applications running on Oasis nodes inside a *Trusted
+Execution Environment (TEE)* that are managed through the Oasis Sapphire
+blockchain.
 
-*Runtime OFf-chain Logic (ROFL)* is a mechanism to augment the
-deterministic on-chain backend with verifiable off-chain applications.
-Applications in ROFL are stateless (with support for encrypted persistent local
-volumes), have access to the network and can perform expensive and/or
-non-deterministic computation.
+ROFL supports:
 
-These apps run in *Trusted Execution Environments (TEEs)*, similar to the
-on-chain confidential runtimes. This enables them to securely authenticate to
-the on-chain backend which is handled transparently by the framework. Together
-they allow one to implement secure decentralized oracles, bridges, AI agents and
-more.
+- **Docker-like containers** or **single-executable** apps depending on your
+  TCB demand and threat model
+- **Privacy and integrity** through Intel SGX/TDX including fully auditable
+  history of updates
+- **Uncensorable** registration, management and deployment of your app on a
+  permissionless pool of ROFL nodes **including billing**
+- **Built-in Key Management Service** (KMS) for storing your app secrets and
+  secure derivation of keys within TEE
+- **Integration with Oasis Sapphire** enables EVM-compatible smart contracts to
+  verify the ROFL transaction origin
 
-The following chapters will teach you how to build your own app with the help of
-the [Oasis Runtime SDK].
+![ROFL diagram](./images/rofl-simplified.svg)
+
+ROFL powers private trading and chat bots, provable AI learning, price
+oracles, home automation, VPNs and fair gaming!
+
+## Build Your Application for ROFL
+
+Developers can easily wrap their existing apps into a ROFL-powered app!
+
+<DocCardList items={[
+  findSidebarItem('/build/rofl/quickstart'),
+  findSidebarItem('/build/use-cases/price-oracle'),
+  findSidebarItem('/build/use-cases/tgbot'),
+]} />
+
+[Prerequisites]: ./workflow/prerequisites.mdx
 
 ## See also
 
 <DocCardList items={[
+    findSidebarItem('/build/rofl/features/'),
+    findSidebarItem('/build/rofl/workflow/'),
     findSidebarItem('/build/sapphire/'),
     findSidebarItem('/node/run-your-node/rofl-node'),
 ]} />

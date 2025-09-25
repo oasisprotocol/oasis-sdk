@@ -1,0 +1,113 @@
+---
+description: Prerequisites for Building ROFL-Powered Apps
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Prerequisites
+
+The following tools are used for ROFL development and deployment:
+
+- **Oasis CLI**: The [`oasis`][oasis-cli] command will be used to manage your
+  wallet and your app, including registering, building, deploying and managing
+  your ROFL replicas.
+- **Docker** (or **Podman**): Having build environment inside container to build
+  your ROFL is perfect because you don't need to install a handful of
+  Intel-specific libraries and dependencies on your system. Also, Compose is
+  useful for testing your ROFL locally before deploying on-chain.
+
+Pick among the three setups below.
+
+[oasis-cli]: ../../tools/cli/README.md
+
+### Preferred: Native Oasis CLI + Container for building and testing
+
+1. [Download and install][oasis-cli-setup] the Oasis CLI to your platform.
+
+2. For building apps for ROFL, the Oasis team prepared the
+   [`ghcr.io/oasisprotocol/rofl-dev`][rofl-dev] image. It contains all
+   the tools needed to compile any ROFL flavor of your app. You can test it out
+   by running:
+
+   ```shell
+   docker run --platform linux/amd64 --rm -v .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+   ```
+
+   :::info --platform linux/amd64
+
+   Always provide the `--platform linux/amd64` parameter to the `rofl-dev` image,
+   no matter which processor your computer has or the operating system you're running.
+
+   :::
+
+[rofl-dev]: https://github.com/oasisprotocol/oasis-sdk/pkgs/container/rofl-dev
+[oasis-cli-setup]: ../../tools/cli/setup.mdx
+
+### Conservative: Containers Everywhere
+
+If you're having issues installing the Oasis CLI locally or you simply don't
+want to, you can run the `oasis` command from the [`rofl-dev`][rofl-dev] image.
+
+:::danger Oasis CLI config
+
+You will need to carefully bind-mount the Oasis CLI config folder which contains
+your wallet. Failing to do so will result in losing access to your (funded)
+accounts.
+
+:::
+
+1. Invoke `oasis` from the `rofl-dev` image:
+
+   <Tabs>
+    <TabItem value="Linux">
+        ```shell
+        docker run --platform linux/amd64 --rm -v .:/src -v ~/.config/oasis:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis
+        ```
+    </TabItem>
+    <TabItem value="MacOS">
+        ```shell
+        docker run --platform linux/amd64 --rm -v .:/src -v "~/Library/Application Support/oasis/":/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis
+        ```
+    </TabItem>
+    <TabItem value="Windows">
+        ```shell
+        docker run --platform linux/amd64 --rm -v .:/src -v %USERPROFILE%/AppData/Local/oasis/:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis
+        ```
+    </TabItem>
+   </Tabs>
+
+2. (optionally) Add `oasis` alias to your shell startup script to get the same
+   behavior as if Oasis CLI was installed locally:
+
+   <Tabs>
+    <TabItem value="Linux">
+        ```bash title="~/.bashrc"
+        alias oasis='docker run --platform linux/amd64 --rm -v .:/src -v ~/.config/oasis:/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis'
+        ```
+    </TabItem>
+    <TabItem value="MacOS">
+        ```bash title="~/.bash_profile"
+        alias oasis='docker run --platform linux/amd64 --rm -v .:/src -v "~/Library/Application Support/oasis/":/root/.config/oasis -it ghcr.io/oasisprotocol/rofl-dev:main oasis'
+        ```
+    </TabItem>
+   </Tabs>
+
+### Advanced: Native Oasis CLI and ROFL build utils (`linux/amd64` only)
+
+1. Install the [Oasis CLI][oasis-cli] locally.
+
+2. Install tools for creating and encrypting partitions and QEMU. On a
+   Debian-based Linux you can do so by running:
+
+   ```
+   sudo apt install squashfs-tools cryptsetup-bin qemu-utils
+   ```
+
+3. If you want to build SGX and TDX-raw ROFL bundles, you will need to follow
+   the installation of the Rust toolchain and Fortanix libraries as described in
+   the [Oasis Core prerequisites] chapter. For building ROFL natively, you do
+   not need a working SGX/TDX TEE, just the Intel-based CPU and the
+   corresponding libraries.
+
+[Oasis Core prerequisites]: https://github.com/oasisprotocol/oasis-core/blob/master/docs/development-setup/prerequisites.md
