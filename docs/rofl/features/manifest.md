@@ -91,11 +91,28 @@ Contains the policy under which the app will be allowed to spin up:
   period, and the minimum TCB-R number which indicates what security updates
   must be applied to the given platform.
 - `enclaves`: defines the allowed enclave IDs for running this app.
-- `endorsements`: a list of nodes which can run this app.
-  - `- any: {}`: any node is allowed to run this app.
-  - `- node: <node_id>`: node with a specific node ID is allowed to run this
-    app. You can provide multiple `node` entries to allow the execution by
-    any of the listed nodes.
+- `endorsements`: a list of conditions that define who can run this app.
+  - `- any: {}`: any node is allowed to run the app.
+  - `- node: <node_id>`: node with a specific node ID is allowed to run the app.
+  - `- provider: <address>`: nodes belonging to the specified ROFL provider
+    are allowed to run the app.
+  - `- provider_instance_admin: <address>`: machines having the specified admin
+    are allowed to run the app.
+
+  You can also nest conditions with `and` and `or` operators. For example:
+
+  ```yaml title="policy.yaml"
+  endorsements:
+    - and:
+      - provider: oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz
+      - or:
+        - provider_instance_admin: oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt
+        - provider_instance_admin: oasis1qqcd0qyda6gtwdrfcqawv3s8cr2kupzw9v967au6
+  ```
+
+  In the example the app will only run on a specified provider and on machines
+  owned by either of the two admin addresses.
+
 - `fees: <fee_policy>`: who pays for the registration and other fees:
   - `endorsing_node`: the node running the app pays the fees.
   - `instance`: The app instance pays the fees.
