@@ -83,7 +83,7 @@ This section contains ROFL deployments on specific networks.
 
 ### `<deployment name>`
 
-#### `policy`
+#### `policy` {#policy}
 
 Contains the policy under which the app will be allowed to spin up:
 
