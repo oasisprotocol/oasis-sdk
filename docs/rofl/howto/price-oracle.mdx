@@ -1,0 +1,341 @@
+---
+description: Build an app that fetches latest price quotes from a centralized exchange and stores them to the blockchain.
+keywords: [appd, sapphire]
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Trustless Price Oracle
+
+This chapter will show you how to quickly create, build and test a minimal
+containerized ROFL app that authenticates and communicates with a confidential
+smart contract on [Oasis Sapphire].
+
+[Oasis Sapphire]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/README.mdx
+
+## Prerequisites
+
+This guide requires:
+- a working Docker (or Podman),
+- [Oasis CLI] and
+- at least 120 TEST tokens in your wallet.
+
+Check out the [Quickstart Prerequisites] section for details.
+
+[Quickstart Prerequisites]: ../quickstart#prerequisites
+[Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/README.md
+
+## Init App
+
+First we init the basic directory structure for the ROFL app using the [Oasis
+CLI]:
+
+```shell
+oasis rofl init rofl-price-oracle
+cd rofl-price-oracle
+```
+
+## Create App
+
+Now create an app on Testnet (requires deposit of 100 TEST):
+
+```shell
+oasis rofl create --network testnet
+```
+
+After successful creation, the CLI will also output the new identifier, for
+example:
+
+```
+Created ROFL application: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+```
+
+## Oracle Contract
+
+:::info
+
+While we are using [EVM-based smart contracts] in this example, the on-chain
+part can be anything from a [WASM-based smart contract] to a dedicated
+[runtime module].
+
+[EVM-based smart contracts]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/README.mdx
+[WASM-based smart contract]: https://github.com/oasisprotocol/docs/blob/main/docs/build/tools/other-paratimes/cipher/README.mdx
+[runtime module]: https://github.com/oasisprotocol/oasis-sdk/blob/main/docs/runtime/modules.md
+
+:::
+
+We will use the following smart contract:
+
+<details>
+    <summary>Oracle.sol</summary>
+```solidity
+pragma solidity >=0.8.9 <=0.8.24;
+
+import {Subcall} from "@oasisprotocol/sapphire-contracts/contracts/Subcall.sol";
+
+contract Oracle {
+    // Maximum age of observations.
+    uint private constant MAX_OBSERVATION_AGE = 10;
+
+    // Configuration.
+    uint8 public threshold;
+    bytes21 public roflAppID;
+
+    // Observations.
+    struct Observation {
+        uint128 value;
+        uint block;
+    }
+        uint128[] private observations;
+        Observation private lastObservation;
+
+        constructor(bytes21 _roflAppID, uint8 _threshold) {
+        require(_threshold > 0, "Invalid threshold");
+
+        roflAppID = _roflAppID;
+        threshold = _threshold;
+        lastObservation.value = 0;
+        lastObservation.block = 0;
+    }
+
+    function submitObservation(uint128 _value) external {
+        // Ensure only the authorized ROFL app can submit.
+        Subcall.roflEnsureAuthorizedOrigin(roflAppID);
+
+        // NOTE: This is a naive oracle implementation for ROFL example purposes.
+        // A real oracle must do additional checks and better aggregation before
+        // accepting values.
+
+        // Add observation and check if we have enough for this round.
+        observations.push(_value);
+        if (observations.length < threshold) {
+            return;
+        }
+
+        // Simple averaging.
+        uint256 _agg = 0;
+        for (uint i = 0; i < observations.length; i++) {
+            _agg += uint256(observations[i]);
+        }
+        _agg = _agg / uint128(observations.length);
+
+        lastObservation.value = uint128(_agg);
+        lastObservation.block = block.number;
+        delete observations;
+    }
+
+    function getLastObservation() external view returns (uint128 _value, uint _block) {
+        // Last observation must be fresh enough, otherwise we don't disclose it.
+        require(
+            lastObservation.block + MAX_OBSERVATION_AGE > block.number,
+            "No observation available"
+        );
+
+        _value = lastObservation.value;
+        _block = lastObservation.block;
+    }
+}
+```
+</details>
+
+This contract collects observations from **authenticated application on ROFL**,
+performs trivial aggregation and stores the final aggregated result. Read the
+[Sapphire quickstart] chapter to learn how to build and deploy smart contracts
+on Sapphire, but to get you up and running for this part, simply copy the `oracle`
+folder from the [example project], install dependencies and compile the smart
+contract by executing:
+
+```shell
+cd oracle
+npm install
+npx hardhat compile
+```
+
+Then configure the `PRIVATE_KEY` of the **deployment account** and the **app
+ID** you received in the previous step.
+
+Then deploy the contract by running:
+
+```shell
+PRIVATE_KEY="0xYOUR_PRIVATE_KEY" \
+npx hardhat deploy YOUR_APP_ID --network sapphire-testnet
+```
+
+After successful deployment you will see a message like:
+
+```
+Oracle for ROFL app rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf deployed to 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+```
+
+Remember the address where the oracle contract was deployed to as you will need
+it in the next step.
+
+<!-- markdownlint-disable line-length -->
+[Oracle.sol]: https://github.com/oasisprotocol/oasis-sdk/blob/main/examples/runtime-sdk/rofl-oracle/oracle/contracts/Oracle.sol
+[example project]: https://github.com/oasisprotocol/demo-rofl
+[Sapphire quickstart]: https://github.com/oasisprotocol/sapphire-paratime/blob/main/docs/quickstart.mdx
+<!-- markdownlint-enable line-length -->
+
+## Oracle Worker in Container
+
+Inside `docker` folder add a [simple shell script] which downloads price quotes
+from a centralized exchange (Binance in our case) and sends it to
+our contract using the [appd REST API][appd].
+
+<details>
+    <summary>app.sh</summary>
+```shell
+#!/bin/sh
+
+while true; do
+	# Fetch a recent price from Binance.
+	price=$(curl -s "https://www.binance.com/api/v3/ticker/price?symbol=${TICKER}" | jq '(.price | tonumber) * 1000000 | trunc')
+	if [ -z "$price" ]; then
+		sleep 15
+		continue
+	fi
+
+	# Format calldata to call submitObservation(uint128) method with the price.
+	price_u128=$(printf '%064x' ${price})
+	method="dae1ee1f" # Keccak4("submitObservation(uint128)")
+	data="${method}${price_u128}"
+
+	# Submit it to the Sapphire contract.
+	curl -s \
+		--json '{"tx": {"kind": "eth", "data": {"gas_limit": 200000, "to": "'${CONTRACT_ADDRESS}'", "value": 0, "data": "'${data}'"}}}' \
+		--unix-socket /run/rofl-appd.sock \
+  		http://localhost/rofl/v1/tx/sign-submit >/dev/null
+
+  	# Sleep for a while.
+	sleep 60
+done
+```
+</details>
+
+Similarly, inside the `docker` folder add a `Dockerfile` that copies over the
+shell script to a container:
+
+<details>
+    <summary>Dockerfile</summary>
+```dockerfile
+FROM docker.io/alpine:3.21.2
+
+# Add some dependencies.
+RUN apk add --no-cache curl jq
+
+# The entire application is defined as a shell script.
+ADD app.sh /app.sh
+ENTRYPOINT ["/app.sh"]
+```
+</details>
+
+[appd]: ../features/appd.md
+[simple shell script]: https://github.com/oasisprotocol/demo-rofl/blob/main/docker/app.sh
+
+## Compose
+
+Add a `compose.yaml` to the root of your project:
+
+<details>
+    <summary>compose.yaml</summary>
+```yaml
+services:
+    oracle:
+        build: ./docker
+        image: docker.io/YOUR_USERNAME/rofl-price-oracle:latest
+        platform: linux/amd64
+        environment:
+            # Address of the oracle contract deployed on Sapphire Testnet.
+            - CONTRACT_ADDRESS=YOUR_CONTRACT_ADDRESS
+            # Ticker.
+            - TICKER=ROSEUSDT
+        volumes:
+            - /run/rofl-appd.sock:/run/rofl-appd.sock
+```
+</details>
+
+Now build and push the image to a registry
+
+```shell
+docker compose build
+docker compose push
+```
+
+For extra security, you can **pin the image digest** inside `compose.yaml`.
+
+## Build
+
+To build an app and update the enclave identity in the app manifest, run:
+
+<Tabs>
+    <TabItem value="Native Linux">
+        ```shell
+        oasis rofl build
+        ```
+    </TabItem>
+    <TabItem value="Docker (Windows, Mac, Linux)">
+        ```shell
+        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+        ```
+    </TabItem>
+</Tabs>
+
+This will generate the ROFL bundle which can be used for later deployment and
+output something like:
+
+```
+ROFL app built and bundle written to 'rofl-price-oracle.default.orc'.
+```
+
+[other features]: features/
+
+## Update On-chain App Config
+
+The on-chain app config needs to be updated in order for the changes to take
+effect:
+
+```shell
+oasis rofl update
+```
+
+## Deploy to ROFL provider
+
+Deploy the price oracle to one of the ROFL providers:
+
+```shell
+oasis rofl deploy
+```
+
+By default, the
+provider maintained by the Oasis foundation will be picked.
+
+## Check That the Oracle Contract is Getting Updated
+
+To check whether the oracle is actually working, you can use the prepared
+`oracle-query` task in the Hardhat project. Simply run:
+
+```shell
+cd oracle
+npx hardhat oracle-query 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20 --network sapphire-testnet
+```
+
+And you should get an output like the following:
+
+```
+Using oracle contract deployed at 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
+ROFL app:  rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+Threshold: 1
+Last observation: 63990
+Last update at:   656
+```
+
+That's it! Your first ROFL oracle that authenticates with an Oasis Sapphire
+smart contract is running! 🎉
+
+:::example Price Oracle Demo
+
+You can fetch a complete example shown in this chapter from
+https://github.com/oasisprotocol/demo-rofl.
+
+:::

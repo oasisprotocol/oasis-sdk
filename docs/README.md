@@ -35,7 +35,7 @@ part.
 ROFL-powered applications run in Trusted Execution Environments (TEEs), similar
 to the on-chain confidential runtimes. This enables them to securely
 authenticate to the on-chain backend which is handled transparently by the
-framework. Together, they allow one to implement secure decentralized oracles,
+framework. Together they allow one to implement secure decentralized oracles,
 bridges, AI agents and more.
 
 ### Contract SDK
