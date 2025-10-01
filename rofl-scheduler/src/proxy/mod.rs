@@ -112,6 +112,7 @@ impl Proxy {
                                "last_handshake" => ?peer.last_handshake,
                                "tx_bytes" => peer.tx_bytes,
                                "rx_bytes" => peer.rx_bytes,
+                               "allowed_ips" => ?peer.allowed_ips,
                             );
                         }
                     }
@@ -202,6 +203,7 @@ impl Proxy {
         slog::info!(self.logger, "provisioned keys for instance";
             "id" => ?instance.id,
             "host" => &http_host,
+            "address" => &dst_address,
         );
 
         let label = ProxyLabel {

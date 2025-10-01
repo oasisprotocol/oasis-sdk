@@ -208,7 +208,12 @@ impl Proxy {
                     let state = state.clone();
 
                     tokio::spawn(async move {
-                        let _ = Self::handle_connection_with_timeout(state, stream).await;
+                        let logger = get_logger("proxy/http");
+
+                        if let Err(err) = Self::handle_connection_with_timeout(state, stream).await
+                        {
+                            slog::error!(logger, "failed to handle connection"; "err" => ?err);
+                        }
                         drop(connection_permit);
                     });
                 }
@@ -239,7 +244,7 @@ impl Proxy {
         let mapping = state
             .mappings
             .get(&tls_hello.sni)
-            .ok_or(anyhow!("unknown host"))?;
+            .ok_or(anyhow!("unknown host ({})", tls_hello.sni))?;
 
         let connect_to_destination = async || -> Result<_> {
             let dst = timeout(
@@ -247,8 +252,14 @@ impl Proxy {
                 TcpStream::connect((mapping.dst_address.clone(), mapping.dst_port)),
             )
             .await
-            .context("connect to destination timeout")?
-            .context("failed to connect to destination")?;
+            .context(format!(
+                "connect to destination ({}) timeout",
+                mapping.dst_address
+            ))?
+            .context(format!(
+                "failed to connect to destination ({})",
+                mapping.dst_address
+            ))?;
             Ok(dst)
         };
 
