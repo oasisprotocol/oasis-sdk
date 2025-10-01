@@ -98,7 +98,6 @@ impl Hub {
     pub fn provision_client(&self) -> Result<ClientConfig> {
         let mut state = self.state.lock().unwrap();
         let mut host = state.pool.allocate_host()?;
-        host.cidr = self.address.cidr;
 
         let sk = x25519::PrivateKey::generate();
         let pk = sk.public_key();
@@ -113,6 +112,9 @@ impl Hub {
         }
 
         state.clients.insert(pk, host.ip);
+
+        // Update CIDR in client configuration so the client doesn't need extra routes.
+        host.cidr = self.address.cidr;
 
         Ok(ClientConfig {
             sk,
