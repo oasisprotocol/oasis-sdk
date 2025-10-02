@@ -1,32 +1,31 @@
-import DocCardList from '@theme/DocCardList';
-import {findSidebarItem} from '@site/src/sidebarUtils';
+# Deploy
 
-# Deployment
-
-ROFLs can be deployed to any ParaTime that has the ROFL module installed. In our
-case we will be using the [Sapphire Testnet][sapphire] which has all the
-required functionality.
+ROFLs can be deployed to any ParaTime that has the ROFL module installed. Most
+common is [Sapphire][sapphire] which implements all ROFL functionalities.
 
 [sapphire]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
 
 Your app will be deployed to a [ROFL node]. This is a light Oasis Node with
-support for TEE and configured Sapphire ParaTime. There are two ways to deploy your app:
+support for TEE and configured Sapphire ParaTime. There are two ways to deploy
+your app:
 
 1. The preferred option is to rent a ROFL node using the [ROFL
-   marketplace](#deploy-on-rofl-marketplace) and deploy your app directly via
-   the [Oasis CLI].
+   marketplace](#deploy-on-rofl-marketplace) and deploy your app
+   directly via the [Oasis CLI].
 2. Alternatively, you can copy over the ROFL bundle to your ROFL node manually
-   and configure it. In this case, consult the [ROFL node &rightarrow; Hosting the app bundle directly][rofl-node-hosting] section.
+   and configure it. In this case, consult the [ROFL node &rightarrow; Hosting
+   the ROFL bundle directly][rofl-node-hosting] section.
 
 [ROFL node]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/rofl-node.mdx
 [rofl-node-hosting]: https://github.com/oasisprotocol/docs/blob/main/docs/node/run-your-node/rofl-node.mdx#hosting-the-rofl-app-bundle-directly
 [Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/README.md
+<!-- markdownlint-disable line-length -->
 
-## Deploy on ROFL Marketplace {#deploy-on-rofl-marketplace}
+## Deploy on ROFL Marketplace
 
 The Oasis CLI has built-in support for renting a machine on the [ROFL
-marketplace] and deploying your app to it. To list offers of the default
-Oasis-managed ROFL provider, run:
+marketplace][rofl-marketplace] and deploying your app to it. To list offers of
+the default Oasis-managed ROFL provider, run:
 
 ```shell
 oasis rofl deploy --show-offers
@@ -45,7 +44,7 @@ You can select a different provider and offer by using the
 [`--provider`][oasis-rofl-deploy] and [`--offer`][oasis-rofl-deploy] parameters
 respectively.
 
-For now, let's just go with defaults and execute: 
+For now, let's just go with defaults and execute:
 
 ```shell
 oasis rofl deploy
@@ -62,7 +61,7 @@ The command above performed the following actions:
 
 1. copied over ROFL bundle .orc to an Oasis-managed OCI repository `rofl.sh`,
 2. paid an offer `playground_short` with ID `0000000000000001` to provider
-  `oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz`,
+`oasis1qp2ens0hsp7gh23wajxa4hpetkdek3swyyulyrmz`,
 3. obtained the machine ID and stored it to the manifest file.
 
 You can check the status of your active ROFL machine by invoking:
@@ -123,13 +122,13 @@ the standard or error outputs!
 
 :::
 
-[ROFL marketplace]: ./features/marketplace.mdx
+[rofl-marketplace]: ../features/marketplace.mdx
 [oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
 
 ## Check That the App is Running
 
-To check out all active app replicas regardless of the
-deployment procedure, use the following command:
+To check out all active app replicas regardless of the deployment procedure, use
+the following command:
 
 ```shell
 oasis rofl show
@@ -138,7 +137,7 @@ oasis rofl show
 ```
 App ID:        rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
 Admin:         oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx
-Staked amount: 10000.0 
+Staked amount: 10000.0
 Policy:
   {
     "quotes": {
@@ -172,37 +171,8 @@ its public runtime attestation key (RAK) and the epoch at which its
 registration will expire if not refreshed. Apps in ROFL must periodically
 refresh their registrations to ensure they don't expire.
 
-You can also check out the status of your app on the [Oasis Explorer]:
+You can also check out the status of your app on the Oasis Explorer
+&rightarrow; Sapphire &rightarrow; ROFL ([Mainnet], [Testnet]):
 
-![Oasis Explorer - App](./images/demo-rofl-tgbot-explorer.png)
-
-[Oasis Explorer]: https://explorer.oasis.io
-
-## Check That the Oracle Contract is Getting Updated
-
-To check whether the oracle is actually working, you can use the prepared
-`oracle-query` task in the Hardhat project. Simply run:
-
-```shell
-npx hardhat oracle-query 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20 --network sapphire-testnet
-```
-
-And you should get an output like the following:
-
-```
-Using oracle contract deployed at 0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20
-ROFL app:  rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
-Threshold: 1
-Last observation: 63990
-Last update at:   656
-```
-
-That's it! Your first ROFL oracle that authenticates with an Oasis Sapphire
-smart contract is running!
-
-## See also
-
-<DocCardList items={[
-    findSidebarItem('/build/rofl/features/marketplace'),
-    findSidebarItem('/node/run-your-node/rofl-node'),
-]} />
+[Mainnet]: https://explorer.oasis.io/mainnet/sapphire/rofl/app
+[Testnet]: https://explorer.oasis.io/testnet/sapphire/rofl/app

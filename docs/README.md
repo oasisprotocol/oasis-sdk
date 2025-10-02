@@ -26,11 +26,10 @@ Oasis Core node in Rust.
 
 #### ROFL-Powered Applications
 
-Runtime OFf-chain Logic (ROFL)-powered applications are a mechanism to augment
-the deterministic on-chain backend with verifiable off-chain applications. These
-applications are stateless, have access to the network and can perform expensive
-and/or non-deterministic computation. Consider them the _off-chain backend_
-part.
+Runtime off-chain logic (ROFL) augments the deterministic on-chain backend with
+verifiable off-chain computation. ROFL-powered applications are stateless, have
+access to the network and can perform expensive and/or non-deterministic
+computation. Consider them the _off-chain backend_ part.
 
 ROFL-powered applications run in Trusted Execution Environments (TEEs), similar
 to the on-chain confidential runtimes. This enables them to securely
