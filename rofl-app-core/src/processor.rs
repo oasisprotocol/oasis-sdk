@@ -115,19 +115,14 @@ where
         );
 
         // Register for notifications.
-        if let Err(err) = self
+        let _ = self
             .state
             .host
             .register_notify(host::RegisterNotifyOpts {
                 runtime_block: true,
                 runtime_event: vec![],
             })
-            .await
-        {
-            slog::error!(self.logger, "failed to register for notifications";
-                "err" => ?err,
-            );
-        }
+            .await;
 
         // Start the tasks.
         self.tasks.registration.start();
