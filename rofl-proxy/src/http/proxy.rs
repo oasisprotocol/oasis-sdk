@@ -53,8 +53,8 @@ impl Default for Config {
             listen_port: 443,
             timeout_handshake: Duration::from_secs(1),
             timeout_connect: Duration::from_secs(1),
-            timeout_connection: Duration::from_secs(30),
-            timeout_rw: Duration::from_secs(5),
+            timeout_connection: Duration::from_secs(45),
+            timeout_rw: Duration::from_secs(30),
             max_connections: 1024,
         }
     }
