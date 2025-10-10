@@ -191,7 +191,7 @@ func QueryTest(ctx context.Context, env *scenario.Env) error {
 	if err != nil {
 		return err
 	}
-	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	ev, err := scenario.WaitForRuntimeEventUntil(waitCtx, ch, func(ev *rofl.Event) bool {
 		return ev.InstanceRegistered != nil

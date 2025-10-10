@@ -167,6 +167,16 @@ impl AppWrapper {
 
 #[async_trait]
 impl app::App for AppWrapper {
+    fn get_config(&self) -> app::Config {
+        // Register for notifications.
+        app::Config {
+            notifications: app::Notifications {
+                blocks: true,
+                ..Default::default()
+            },
+        }
+    }
+
     async fn on_runtime_block(&self, blk: &roothash::AnnotatedBlock) -> Result<()> {
         self.cmdq
             .send(processor::Command::ProcessRuntimeBlock(blk.clone()))
