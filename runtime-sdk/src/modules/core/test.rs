@@ -1118,7 +1118,7 @@ fn test_gas_used_events() {
         assert_eq!(Core::used_tx_gas(), 10);
         Core::after_handle_call(
             &ctx,
-            module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+            &module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
         )
         .expect("after_handle_call should succeed");
 
