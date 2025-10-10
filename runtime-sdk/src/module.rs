@@ -485,10 +485,30 @@ impl TransactionHandler for Tuple {
         ctx: &C,
         mut result: CallResult,
     ) -> Result<CallResult, modules::core::Error> {
+        // Run all handlers unconditionally, but return the first error if encountered.
+        let mut first_err: Option<modules::core::Error> = None;
         for_tuples!( #(
-            result = Tuple::after_handle_call(ctx, result)?;
+            result = match Tuple::after_handle_call(ctx, result) {
+                Ok(r) => r,
+                Err(e) => {
+                    let call_result = CallResult::Failed {
+                        module: e.module_name().to_string(),
+                        code: e.code(),
+                        message: e.to_string(),
+                    };
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                    }
+
+                    call_result
+                }
+            };
         )* );
-        Ok(result)
+
+        match first_err {
+            Some(e) => Err(e),
+            None => Ok(result),
+        }
     }
 
     fn after_dispatch_tx<C: Context>(ctx: &C, tx_auth_info: &AuthInfo, result: &CallResult) {
