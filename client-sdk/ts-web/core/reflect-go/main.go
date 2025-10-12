@@ -1,3 +1,5 @@
+// Package main generates TypeScript client bindings from Oasis Core Go types
+// and APIs.
 package main
 
 import (
