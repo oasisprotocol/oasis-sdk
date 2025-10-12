@@ -1,3 +1,4 @@
+// Package main provides a test for token transfers.
 package main
 
 import (
@@ -77,7 +78,9 @@ func tokenTransfer() error {
 	if err != nil {
 		return fmt.Errorf("failed to establish connection to %s: %w", nodeAddress, err)
 	}
-	defer conn.Close()
+	defer func() {
+		_ = conn.Close()
+	}()
 
 	// Create the runtime client with account module query helpers.
 	c := client.New(conn, runtimeID)
