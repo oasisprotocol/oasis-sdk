@@ -430,7 +430,7 @@ func (st *StakeThresholds) PrettyPrint(ctx context.Context, prefix string, w io.
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (st *StakeThresholds) PrettyType() (interface{}, error) {
+func (st *StakeThresholds) PrettyType() (any, error) {
 	return st, nil
 }
 

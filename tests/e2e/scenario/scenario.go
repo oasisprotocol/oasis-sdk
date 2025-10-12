@@ -299,7 +299,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 		Sentries: []oasis.SentryFixture{},
 		Seeds:    []oasis.SeedFixture{{}},
 		Clients: []oasis.ClientFixture{
-			{Runtimes: []int{1}, RuntimeConfig: map[int]map[string]interface{}{
+			{Runtimes: []int{1}, RuntimeConfig: map[int]map[string]any{
 				1: {
 					"estimate_gas_by_simulating_contracts": true,
 					"allowed_queries":                      []map[string]bool{{"all_expensive": true}},

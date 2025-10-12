@@ -90,7 +90,7 @@ func (fp *FeePolicy) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // MarshalYAML implements yaml.Marshaler.
-func (fp FeePolicy) MarshalYAML() (interface{}, error) {
+func (fp FeePolicy) MarshalYAML() (any, error) {
 	switch fp {
 	case FeePolicyInstancePays:
 		return nameFeePolicyInstancePays, nil

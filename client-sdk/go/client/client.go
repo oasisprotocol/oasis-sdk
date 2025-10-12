@@ -89,7 +89,7 @@ type RuntimeClient interface {
 	WatchEvents(ctx context.Context, decoders []EventDecoder, includeUndecoded bool) (<-chan *BlockEvents, error)
 
 	// Query makes a runtime-specific query.
-	Query(ctx context.Context, round uint64, method types.MethodName, args, rsp interface{}) error
+	Query(ctx context.Context, round uint64, method types.MethodName, args, rsp any) error
 
 	// State returns a MKVS read syncer that can be used to read runtime state from a remote node
 	// and verify it against the trusted local root.
@@ -103,7 +103,7 @@ type EventDecoder interface {
 }
 
 // DecodedEvent is a decoded event.
-type DecodedEvent interface{}
+type DecodedEvent any
 
 // BlockEvents are the events emitted in a block.
 type BlockEvents struct {
@@ -455,7 +455,7 @@ func (rc *runtimeClient) WatchEvents(ctx context.Context, decoders []EventDecode
 }
 
 // Implements RuntimeClient.
-func (rc *runtimeClient) Query(ctx context.Context, round uint64, method types.MethodName, args, rsp interface{}) error {
+func (rc *runtimeClient) Query(ctx context.Context, round uint64, method types.MethodName, args, rsp any) error {
 	raw, err := rc.cc.Query(ctx, &coreClient.QueryRequest{
 		RuntimeID: rc.runtimeID,
 		Round:     round,

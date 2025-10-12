@@ -19,7 +19,7 @@ func (f *Transfer) PrettyPrint(ctx context.Context, prefix string, w io.Writer) 
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (f *Transfer) PrettyType() (interface{}, error) {
+func (f *Transfer) PrettyType() (any, error) {
 	return f, nil
 }
 

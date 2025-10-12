@@ -65,7 +65,7 @@ func RNGTest(ctx context.Context, env *scenario.Env) error {
 	}
 
 	var wg sync.WaitGroup
-	resultCh := make(chan interface{}, len(signers)*iterations)
+	resultCh := make(chan any, len(signers)*iterations)
 	callFn := func(startCh chan struct{}, signer signature.Signer) {
 		defer wg.Done()
 

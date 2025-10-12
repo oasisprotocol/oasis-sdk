@@ -96,7 +96,7 @@ func BasicTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 		upload.ID,
 		contracts.Policy{Everyone: &struct{}{}},
 		// This needs to conform to the contract API.
-		map[string]interface{}{
+		map[string]any{
 			"instantiate": &helloInitiate{counter},
 		},
 		[]types.BaseUnits{},
@@ -153,7 +153,7 @@ func BasicTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 		uploadOas20.ID,
 		contracts.Policy{Everyone: &struct{}{}},
 		// This needs to conform to the contract API.
-		map[string]interface{}{
+		map[string]any{
 			"instantiate": &oas20.Instantiate{
 				Name:     "OAS20 Test token",
 				Symbol:   "OAS20TEST",
@@ -345,7 +345,7 @@ OUTER:
 	// Instantiate oas20 via the hello contract.
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"instantiate_oas20": {
 				"code_id": uploadOas20.ID,
 				"token_instantiation": &oas20.Instantiate{
@@ -372,7 +372,7 @@ OUTER:
 		return fmt.Errorf("failed to call hello contract: %w", err)
 	}
 
-	var instantiateResponse map[string]map[string]interface{}
+	var instantiateResponse map[string]map[string]any
 	if err = cbor.Unmarshal(rawResult, &instantiateResponse); err != nil {
 		return fmt.Errorf("failed to decode contract result: %w", err)
 	}
@@ -418,7 +418,7 @@ OUTER:
 	input = append(input, testSig...)
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"ecdsa_recover": {
 				"input": input,
 			},
@@ -485,7 +485,7 @@ OUTER:
 		for i, checker := range signers {
 			tb = ct.Call(
 				instance.ID,
-				map[string]map[string]interface{}{
+				map[string]map[string]any{
 					"signature_verify": {
 						"kind":      uint32(i), //nolint: gosec
 						"key":       checker.keyBytes,
@@ -540,7 +540,7 @@ OUTER:
 	}
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"x25519_derive_symmetric": {
 				"public_key":  publicKey,
 				"private_key": privateKey,
@@ -582,7 +582,7 @@ OUTER:
 	// Encryption first.
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"deoxysii_seal": {
 				"key":             deoxysiiKey,
 				"nonce":           deoxysiiNonce,
@@ -612,7 +612,7 @@ OUTER:
 	// Now try decrypting what we got, corrupt additional data first to check error roundtrip.
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"deoxysii_open": {
 				"key":             deoxysiiKey,
 				"nonce":           deoxysiiNonce,
@@ -641,7 +641,7 @@ OUTER:
 	// Proper decryption.
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"deoxysii_open": {
 				"key":             deoxysiiKey,
 				"nonce":           deoxysiiNonce,
@@ -670,7 +670,7 @@ OUTER:
 	// Generate some random bytes
 	tb = ct.Call(
 		instance.ID,
-		map[string]map[string]interface{}{
+		map[string]map[string]any{
 			"random_bytes": {
 				"count": 42,
 			},

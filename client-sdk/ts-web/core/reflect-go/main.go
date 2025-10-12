@@ -60,7 +60,7 @@ var (
 	memo      = map[reflect.Type]*usedType{}
 )
 
-func collectPath(fn interface{}, stripComponents string) string {
+func collectPath(fn any, stripComponents string) string {
 	// the idea of sneaking in through runtime.FuncForPC from https://stackoverflow.com/a/54588577/1864688
 	reflectFn := reflect.ValueOf(fn)
 	entryPoint := reflectFn.Pointer()
@@ -699,7 +699,7 @@ func main() {
 	visitClientWithService(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController", "")
 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
-	registeredMethods.Range(func(name, bodyType interface{}) bool {
+	registeredMethods.Range(func(name, bodyType any) bool {
 		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", name)
 		visitType(reflect.TypeOf(bodyType), false)
 		return true

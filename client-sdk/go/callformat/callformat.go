@@ -32,7 +32,7 @@ type metaEncryptedX25519DeoxysII struct {
 // EncodeCall encodes a call based on its configured call format.
 //
 // It returns the encoded call and any metadata needed to successfully decode the result.
-func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*types.Call, interface{}, error) {
+func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*types.Call, any, error) {
 	switch cf {
 	case types.CallFormatPlain:
 		// In case of the plain-text data format, we simply pass on the call unchanged.
@@ -80,7 +80,7 @@ func EncodeCall(call *types.Call, cf types.CallFormat, cfg *EncodeConfig) (*type
 }
 
 // DecodeResult performs result decoding based on the specified call format metadata.
-func DecodeResult(result *types.CallResult, meta interface{}) (*types.CallResult, error) {
+func DecodeResult(result *types.CallResult, meta any) (*types.CallResult, error) {
 	switch m := meta.(type) {
 	case nil:
 		// In case of plain-text data format, we simply pass on the result unchanged.
