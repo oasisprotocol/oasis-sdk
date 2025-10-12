@@ -1,3 +1,4 @@
+// Package secp256k1 provides utilities for signing with the secp256k1 scheme.
 package secp256k1
 
 import (
@@ -86,9 +87,10 @@ func (pk PublicKey) Verify(context, message, signature []byte) bool {
 }
 
 // NewPublicKey creates a new public key from the given Base64 representation or panics.
-func NewPublicKey(text string) (pk PublicKey) {
+func NewPublicKey(text string) PublicKey {
+	var pk PublicKey
 	if err := pk.UnmarshalText([]byte(text)); err != nil {
 		panic(err)
 	}
-	return
+	return pk
 }

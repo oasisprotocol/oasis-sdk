@@ -1,3 +1,4 @@
+// Package evm contains functionality related to the EVM module.
 package evm
 
 import (

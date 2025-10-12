@@ -1,3 +1,4 @@
+// Package core contains functionality related to the core module.
 package core
 
 import (

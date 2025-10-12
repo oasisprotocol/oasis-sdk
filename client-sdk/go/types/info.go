@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"github.com/oasisprotocol/oasis-core/go/common"

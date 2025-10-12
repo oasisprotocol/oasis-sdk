@@ -1,3 +1,4 @@
+// Package client implements the runtime client.
 package client
 
 import (

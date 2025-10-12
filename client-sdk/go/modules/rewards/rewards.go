@@ -1,3 +1,4 @@
+// Package rewards contains functionality related to the rewards module.
 package rewards
 
 import (

@@ -6,6 +6,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/oasisprotocol/oasis-core/go/common/prettyprint"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )

@@ -1,3 +1,4 @@
+// Package callformat provides utilities for call encoding.
 package callformat
 
 import (
@@ -6,6 +7,7 @@ import (
 
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 	"github.com/oasisprotocol/deoxysii"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 

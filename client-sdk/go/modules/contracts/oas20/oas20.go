@@ -1,3 +1,4 @@
+// Package oas20 contains functionality related to the oas20 contracts module.
 package oas20
 
 import (
@@ -136,6 +137,7 @@ type eventDecoder struct {
 	instanceID contracts.InstanceID
 }
 
+// EventDecoder creates a new event decoder.
 func EventDecoder(codeID contracts.CodeID, instanceID contracts.InstanceID) client.EventDecoder {
 	return &eventDecoder{codeID, instanceID}
 }

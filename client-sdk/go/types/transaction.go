@@ -1,5 +1,7 @@
+// Package types provides data types.
+//
 // TODO: Move this package to the Go client-sdk.
-package types
+package types //nolint:revive
 
 import (
 	"context"
@@ -101,11 +103,11 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sHash: %s\n", prefix, ut.Hash())
+	_, _ = fmt.Fprintf(w, "%sHash: %s\n", prefix, ut.Hash())
 
 	var tx Transaction
 	if err := cbor.Unmarshal(ut.Body, &tx); err != nil {
-		fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: malformed transaction body: %w", err))
+		_, _ = fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: malformed transaction body: %w", err))
 		return
 	}
 
@@ -115,23 +117,23 @@ func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string,
 	for i, ap := range ut.AuthProofs {
 		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
 		if err != nil {
-			fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: auth proof %d batch: %w", i, err))
+			_, _ = fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: auth proof %d batch: %w", i, err))
 		}
 		publicKeys = append(publicKeys, pks...)
 		signatures = append(signatures, sigs...)
 	}
 
-	fmt.Fprintf(w, "%sSigner(s):\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sSigner(s):\n", prefix)
 	sigCtx, _ := ctx.Value(signature.ContextKeySigContext).(signature.Context)
 	for i, pk := range publicKeys {
-		fmt.Fprintf(w, "%s  %d. %s\n", prefix, i+1, pk)
-		fmt.Fprintf(w, "%s     (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
+		_, _ = fmt.Fprintf(w, "%s  %d. %s\n", prefix, i+1, pk)
+		_, _ = fmt.Fprintf(w, "%s     (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
 		if !pk.Verify(sigCtx.Derive(), ut.Body, signatures[i]) {
-			fmt.Fprintf(w, "%s     [INVALID SIGNATURE]\n", prefix)
+			_, _ = fmt.Fprintf(w, "%s     [INVALID SIGNATURE]\n", prefix)
 		}
 	}
 
-	fmt.Fprintf(w, "%sContent:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sContent:\n", prefix)
 	tx.PrettyPrint(ctx, prefix+"  ", w)
 }
 
@@ -140,6 +142,7 @@ func (ut *UnverifiedTransaction) PrettyType() (interface{}, error) {
 	return ut, nil
 }
 
+// TransactionSigner os a transaction signer.
 type TransactionSigner struct {
 	tx Transaction
 	ut UnverifiedTransaction
@@ -247,6 +250,7 @@ func (t *Transaction) AppendAuthMultisig(config *MultisigConfig, nonce uint64) {
 	t.AppendSignerInfo(AddressSpec{Multisig: config}, nonce)
 }
 
+// PrepareForSigning prepares transaction for signing.
 func (t *Transaction) PrepareForSigning() *TransactionSigner {
 	return &TransactionSigner{
 		tx: *t,
@@ -260,7 +264,7 @@ func (t *Transaction) PrepareForSigning() *TransactionSigner {
 func (t *Transaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 	pt, err := t.PrettyType()
 	if err != nil {
-		fmt.Fprintf(w, "%s<error: %s>\n", prefix, err)
+		_, _ = fmt.Fprintf(w, "%s<error: %s>\n", prefix, err)
 	}
 	pt.(prettyprint.PrettyPrinter).PrettyPrint(ctx, prefix, w)
 }
@@ -405,20 +409,20 @@ func (f *Fee) GasPrice() *quantity.Quantity {
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sAmount: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sAmount: ", prefix)
 	f.Amount.PrettyPrint(ctx, prefix, w)
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
-	fmt.Fprintf(w, "%s(gas price: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
+	_, _ = fmt.Fprintf(w, "%s(gas price: ", prefix)
 	gp := NewBaseUnits(*f.GasPrice(), f.Amount.Denomination)
 	gp.PrettyPrint(ctx, prefix, w)
-	fmt.Fprintln(w, " per gas unit)")
+	_, _ = fmt.Fprintln(w, " per gas unit)")
 
 	if f.Proxy != nil {
-		fmt.Fprintf(w, "%sFee proxy:\n", prefix)
-		fmt.Fprintf(w, "%s  Module: %s\n", prefix, f.Proxy.Module)
-		fmt.Fprintf(w, "%s  ID:     %x\n", prefix, f.Proxy.ID)
+		_, _ = fmt.Fprintf(w, "%sFee proxy:\n", prefix)
+		_, _ = fmt.Fprintf(w, "%s  Module: %s\n", prefix, f.Proxy.Module)
+		_, _ = fmt.Fprintf(w, "%s  ID:     %x\n", prefix, f.Proxy.ID)
 	}
 }
 
@@ -526,13 +530,13 @@ type PrettyTransaction struct {
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sFormat: %s\n", prefix, ptx.Call.Format)
+	_, _ = fmt.Fprintf(w, "%sFormat: %s\n", prefix, ptx.Call.Format)
 
 	if ptx.Call.Method != "" {
-		fmt.Fprintf(w, "%sMethod: %s\n", prefix, ptx.Call.Method)
+		_, _ = fmt.Fprintf(w, "%sMethod: %s\n", prefix, ptx.Call.Method)
 	}
 
-	fmt.Fprintf(w, "%sBody:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sBody:\n", prefix)
 	// If the body type supports pretty printing, use that.
 	if pp, ok := ptx.Call.Body.(prettyprint.PrettyPrinter); ok {
 		pp.PrettyPrint(ctx, prefix+"  ", w)
@@ -540,18 +544,18 @@ func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w 
 		// Otherwise, just serialize into JSON and display that.
 		data, err := json.MarshalIndent(ptx.Call.Body, prefix+"  ", "  ")
 		if err != nil {
-			fmt.Fprintf(w, "%s<error: %s>\n", prefix+"  ", err)
+			_, _ = fmt.Fprintf(w, "%s<error: %s>\n", prefix+"  ", err)
 		}
-		fmt.Fprintf(w, "%s%s\n", prefix+"  ", data)
+		_, _ = fmt.Fprintf(w, "%s%s\n", prefix+"  ", data)
 	}
 
-	fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
 	for idx, si := range ptx.AuthInfo.SignerInfo {
-		fmt.Fprintf(w, "%s  %d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
-		fmt.Fprintf(w, "%s     Nonce: %d\n", prefix, si.Nonce)
+		_, _ = fmt.Fprintf(w, "%s  %d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
+		_, _ = fmt.Fprintf(w, "%s     Nonce: %d\n", prefix, si.Nonce)
 	}
 
-	fmt.Fprintf(w, "%sFee:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sFee:\n", prefix)
 	ptx.AuthInfo.Fee.PrettyPrint(ctx, prefix+"  ", w)
 }
 
@@ -567,6 +571,7 @@ func prettyAddressSpecSig(spec interface{}) string {
 	return ""
 }
 
+// PrettyType returns a representation of the type that can be used for pretty printing.
 func (ptx *PrettyTransaction) PrettyType() (interface{}, error) {
 	return ptx, nil
 }

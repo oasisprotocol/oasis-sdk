@@ -103,9 +103,10 @@ func newSigningTranscript(context, message []byte) *sr25519.SigningTranscript {
 
 // NewPublicKey creates a new public key from the given Base64 representation or
 // panics.
-func NewPublicKey(text string) (pk PublicKey) {
+func NewPublicKey(text string) PublicKey {
+	var pk PublicKey
 	if err := pk.UnmarshalText([]byte(text)); err != nil {
 		panic(err)
 	}
-	return
+	return pk
 }

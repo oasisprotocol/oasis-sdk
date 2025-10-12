@@ -1,3 +1,4 @@
+// Package consensusaccounts contains functionality related to the consensus accounts module.
 package consensusaccounts
 
 import (
@@ -222,6 +223,7 @@ func (a *v1) DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	return DecodeEvent(event)
 }
 
+// DecodeEvent decodes the given event.
 func DecodeEvent(event *types.Event) ([]client.DecodedEvent, error) {
 	if event.Module != ModuleName {
 		return nil, nil
