@@ -22,6 +22,7 @@ const (
 	oneConsensusMessageGas = 39
 )
 
+// DepositWithdrawalTest tests deposit and withdrawal functionality.
 func DepositWithdrawalTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
@@ -236,6 +237,7 @@ func DepositWithdrawalTest(ctx context.Context, env *scenario.Env) error { //nol
 	return nil
 }
 
+// DelegationTest tests delegation functionality.
 func DelegationTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()

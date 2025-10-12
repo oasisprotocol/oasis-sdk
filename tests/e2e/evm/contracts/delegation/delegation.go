@@ -1,4 +1,5 @@
-package subcall
+// Package delegation provides access to the compiled subcall contract and its ABI.
+package delegation
 
 import (
 	_ "embed"

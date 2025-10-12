@@ -30,7 +30,7 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/tests/e2e/scenario"
 )
 
-type HelloInitiate struct {
+type helloInitiate struct {
 	InitialCounter uint64 `json:"initial_counter"`
 }
 
@@ -97,7 +97,7 @@ func BasicTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 		contracts.Policy{Everyone: &struct{}{}},
 		// This needs to conform to the contract API.
 		map[string]interface{}{
-			"instantiate": &HelloInitiate{counter},
+			"instantiate": &helloInitiate{counter},
 		},
 		[]types.BaseUnits{},
 	).

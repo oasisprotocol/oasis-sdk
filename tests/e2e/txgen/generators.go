@@ -1,3 +1,4 @@
+// Package txgen provides utilities for generating test transactions.
 package txgen
 
 import (
