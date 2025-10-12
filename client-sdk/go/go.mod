@@ -1,8 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
-go 1.24.0
-
-toolchain go1.24.2
+go 1.25.0
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
@@ -17,10 +15,10 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2505.0
+	github.com/oasisprotocol/oasis-core/go v0.2506.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/crypto v0.39.0
+	golang.org/x/crypto v0.42.0
 	google.golang.org/grpc v1.68.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -64,7 +62,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.42.0 // indirect
+	github.com/libp2p/go-libp2p v0.44.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -107,10 +105,10 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240903143218-8af14fe29dc1 // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
