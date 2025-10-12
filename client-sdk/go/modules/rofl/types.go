@@ -28,8 +28,10 @@ type Create struct {
 type IdentifierScheme uint8
 
 const (
+	// CreatorRoundIndex generates identifiers based on creator and round index.
 	CreatorRoundIndex IdentifierScheme = 0
-	CreatorNonce      IdentifierScheme = 1
+	// CreatorNonce generates identifiers based on creator and nonce.
+	CreatorNonce IdentifierScheme = 1
 )
 
 // Update an existing ROFL application call.
@@ -175,10 +177,10 @@ type StakeThresholds struct {
 
 // PrettyPrint writes a pretty-printed representation of the stake thresholds to the given writer.
 func (st *StakeThresholds) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sStake thresholds:\n", prefix)
-	fmt.Fprintf(w, "%s  App create: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sStake thresholds:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%s  App create: ", prefix)
 	st.AppCreate.PrettyPrint(ctx, "", w)
-	fmt.Fprint(w, "\n")
+	_, _ = fmt.Fprint(w, "\n")
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.

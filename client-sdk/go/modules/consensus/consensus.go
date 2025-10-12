@@ -1,3 +1,4 @@
+// Package consensus contains functionality related to the consensus module.
 package consensus
 
 import (

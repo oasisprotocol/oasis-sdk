@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/quote"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 

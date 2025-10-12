@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -29,6 +30,7 @@ type SignedCallDataPack struct {
 	Signature []byte     `json:"signature"`
 }
 
+// Leash defines a leash type.
 type Leash struct {
 	Nonce       uint64 `json:"nonce"`
 	BlockNumber uint64 `json:"block_number"`

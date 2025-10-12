@@ -1,3 +1,4 @@
+// Package contracts contains functionality related to the contracts module.
 package contracts
 
 import (
@@ -357,6 +358,6 @@ func CompressCode(code []byte) []byte {
 	if err != nil {
 		panic(err)
 	}
-	encoder.Close()
+	_ = encoder.Close()
 	return compressedCode.Bytes()
 }
