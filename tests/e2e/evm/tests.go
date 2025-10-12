@@ -265,10 +265,10 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := b.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100000000)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100000000, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Dave's account balance (expected 100000000, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Dave's account")
 	}
 
 	env.Logger.Info("checking Dave's EVM account balance")
@@ -277,7 +277,7 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 		return err
 	}
 	if evmBal.Cmp(quantity.NewFromUint64(100000000)) != 0 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 100000000, got %s)", evmBal) //nolint: stylecheck
+		return fmt.Errorf("wrong Dave's EVM account balance (expected 100000000, got %s)", evmBal)
 	}
 
 	env.Logger.Info("checking Alice's account balance")
@@ -287,10 +287,10 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := b.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(10000000)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 10000000, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Alice's account balance (expected 10000000, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	env.Logger.Info("transferring 10 tokens into Dave's account from Alice's account")
@@ -310,10 +310,10 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := b.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(9999990)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 9999990, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Alice's account balance (expected 9999990, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	env.Logger.Info("re-checking Dave's account balance")
@@ -323,10 +323,10 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := b.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100000010)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100000010, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Dave's account balance (expected 100000010, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Dave's account")
 	}
 
 	env.Logger.Info("re-checking Dave's EVM account balance")
@@ -335,7 +335,7 @@ func DepositWithdrawTest(ctx context.Context, env *scenario.Env) error {
 		return err
 	}
 	if evmBal.Cmp(quantity.NewFromUint64(100000010)) != 0 {
-		return fmt.Errorf("Dave's EVM account balance is wrong (expected 100000010, got %s)", evmBal) //nolint: stylecheck
+		return fmt.Errorf("wrong Dave's EVM account balance (expected 100000010, got %s)", evmBal)
 	}
 
 	return nil
@@ -414,7 +414,7 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 	// Peek into code storage to verify that our contract was indeed stored.
 	storedCode, err := e.Code(ctx, client.RoundLatest, contractAddr)
 	if err != nil {
-		return fmt.Errorf("Code failed: %w", err) //nolint: stylecheck
+		return fmt.Errorf("failed to call code: %w", err)
 	}
 
 	storedCodeHex := hex.EncodeToString(storedCode)
@@ -444,7 +444,7 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 	}
 	simCallResult, err := evmSimulateCall(ctx, rtc, e, daveEVMAddr, testing.Dave.SecretKey, contractAddr, value, []byte{}, gasPriceU256, 64000, c10l)
 	if err != nil {
-		return fmt.Errorf("SimulateCall failed: %w", err)
+		return fmt.Errorf("failed to evm simulate call: %w", err)
 	}
 
 	// Call the created EVM contract.
@@ -457,7 +457,7 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 
 	// Make sure that the result is the same that we got when simulating the call.
 	if !bytes.Equal(callResult, simCallResult) {
-		return fmt.Errorf("SimulateCall and evmCall returned different results")
+		return fmt.Errorf("simulate and evm calls returned different results")
 	}
 
 	// Peek at the EVM storage to get the final result we stored there.
@@ -468,7 +468,7 @@ func evmTest(ctx context.Context, log *logging.Logger, rtc client.RuntimeClient,
 
 	storedVal, err := e.Storage(ctx, client.RoundLatest, contractAddr, index)
 	if err != nil {
-		return fmt.Errorf("Storage failed: %w", err) //nolint: stylecheck
+		return fmt.Errorf("failed to call storage: %w", err)
 	}
 
 	storedValHex := hex.EncodeToString(storedVal)
@@ -592,7 +592,7 @@ func BasicSolTest(ctx context.Context, env *scenario.Env) error {
 	return solEVMTest(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lSolTest does a simple Solidity contract test.
+// C10lBasicSolTest does a simple Solidity contract test.
 func C10lBasicSolTest(ctx context.Context, env *scenario.Env) error {
 	return solEVMTest(ctx, env.Logger, env.Client, c10l)
 }
@@ -654,7 +654,7 @@ func BasicSolTestCreateMulti(ctx context.Context, env *scenario.Env) error {
 	return solEVMTestCreateMulti(ctx, env.Logger, env.Client, nonc10l)
 }
 
-// C10lSolTestCreateMulti does a test of a contract that creates two contracts.
+// C10lBasicSolTestCreateMulti does a test of a contract that creates two contracts.
 func C10lBasicSolTestCreateMulti(ctx context.Context, env *scenario.Env) error {
 	return solEVMTestCreateMulti(ctx, env.Logger, env.Client, c10l)
 }

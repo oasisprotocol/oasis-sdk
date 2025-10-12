@@ -57,6 +57,7 @@ func WaitForRuntimeEventUntil[T client.DecodedEvent](
 	}
 }
 
+// EnsureStakingEvent waits for a staking event that passes the given check.
 func EnsureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check func(*staking.Event) bool) error {
 	log.Info("waiting for expected staking event...")
 	for {
@@ -75,6 +76,7 @@ func EnsureStakingEvent(log *logging.Logger, ch <-chan *staking.Event, check fun
 	}
 }
 
+// MakeTransferCheck returns a check function for a transfer event.
 func MakeTransferCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
 	return func(e *staking.Event) bool {
 		if e.Transfer == nil {
@@ -90,6 +92,7 @@ func MakeTransferCheck(from, to staking.Address, amount *quantity.Quantity) func
 	}
 }
 
+// MakeAddEscrowCheck returns a check function for an escrow add event.
 func MakeAddEscrowCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
 	return func(e *staking.Event) bool {
 		if e.Escrow == nil || e.Escrow.Add == nil {
@@ -105,6 +108,7 @@ func MakeAddEscrowCheck(from, to staking.Address, amount *quantity.Quantity) fun
 	}
 }
 
+// MakeReclaimEscrowCheck returns a check function for an escrow reclaim event.
 func MakeReclaimEscrowCheck(from, to staking.Address, amount *quantity.Quantity) func(e *staking.Event) bool {
 	return func(e *staking.Event) bool {
 		if e.Escrow == nil || e.Escrow.Reclaim == nil {
@@ -141,6 +145,7 @@ func EnsureRuntimeEvent(log *logging.Logger, ch <-chan *client.BlockEvents, chec
 	}
 }
 
+// MakeDepositCheck returns a check function for a deposit event.
 func MakeDepositCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
@@ -169,6 +174,7 @@ func MakeDepositCheck(from types.Address, nonce uint64, to types.Address, amount
 	}
 }
 
+// MakeWithdrawCheck returns a check function for a withdrawal event.
 func MakeWithdrawCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
@@ -197,6 +203,7 @@ func MakeWithdrawCheck(from types.Address, nonce uint64, to types.Address, amoun
 	}
 }
 
+// MakeDelegateCheck returns a check function for a delegation event.
 func MakeDelegateCheck(from types.Address, nonce uint64, to types.Address, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
@@ -225,6 +232,7 @@ func MakeDelegateCheck(from types.Address, nonce uint64, to types.Address, amoun
 	}
 }
 
+// MakeUndelegateStartCheck returns a check function for undelegate start event.
 func MakeUndelegateStartCheck(from types.Address, nonce uint64, to types.Address, shares *types.Quantity) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)
@@ -250,6 +258,7 @@ func MakeUndelegateStartCheck(from types.Address, nonce uint64, to types.Address
 	}
 }
 
+// MakeUndelegateDoneCheck returns a check function for undelegate completion event.
 func MakeUndelegateDoneCheck(from, to types.Address, shares *types.Quantity, amount types.BaseUnits) func(e client.DecodedEvent) bool {
 	return func(e client.DecodedEvent) bool {
 		ae, ok := e.(*consensusAccounts.Event)

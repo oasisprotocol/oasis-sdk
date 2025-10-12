@@ -74,6 +74,7 @@ func SubcallDelegationTest(ctx context.Context, env *scenario.Env) error {
 	return nil
 }
 
+// DelegationReceiptsTest tests delegation functionality.
 func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error { //nolint: gocyclo
 	ctx, cancelFn := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancelFn()
