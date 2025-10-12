@@ -105,7 +105,7 @@ func TestPrettyPrintTransaction(t *testing.T) {
 	require.NoError(err)
 
 	// Try different transaction bodies.
-	cborBody := cbor.Marshal(map[string]interface{}{"to": "oasis123", "amount": "100 BANANAS"})
+	cborBody := cbor.Marshal(map[string]any{"to": "oasis123", "amount": "100 BANANAS"})
 	for _, testBody := range []struct {
 		Format   CallFormat
 		Body     []byte

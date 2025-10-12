@@ -291,7 +291,7 @@ type State struct {
 
 	Client client.RuntimeClient
 
-	State interface{}
+	State any
 }
 
 // RegisterBenchmark registers a new benchmark.

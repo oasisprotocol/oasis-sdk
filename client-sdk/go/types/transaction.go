@@ -138,7 +138,7 @@ func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string,
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (ut *UnverifiedTransaction) PrettyType() (interface{}, error) {
+func (ut *UnverifiedTransaction) PrettyType() (any, error) {
 	return ut, nil
 }
 
@@ -270,15 +270,15 @@ func (t *Transaction) PrettyPrint(ctx context.Context, prefix string, w io.Write
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (t *Transaction) PrettyType() (interface{}, error) {
-	var body interface{}
+func (t *Transaction) PrettyType() (any, error) {
+	var body any
 	bodyType := t.Call.Method.BodyType()
 	if bodyType != nil {
 		// Use the original type.
 		body = reflect.New(reflect.TypeOf(bodyType)).Interface()
 	} else {
 		// Assume a generic map.
-		body = &map[string]interface{}{}
+		body = &map[string]any{}
 	}
 	// Try decoding it. If it fails, just take the raw data.
 	if err := cbor.Unmarshal(t.Call.Body, body); err != nil {
@@ -297,7 +297,7 @@ func (t *Transaction) PrettyType() (interface{}, error) {
 }
 
 // NewTransaction creates a new unsigned transaction.
-func NewTransaction(fee *Fee, method MethodName, body interface{}) *Transaction {
+func NewTransaction(fee *Fee, method MethodName, body any) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
@@ -319,7 +319,7 @@ func NewTransaction(fee *Fee, method MethodName, body interface{}) *Transaction 
 }
 
 // NewEncryptedTransaction creates a new unsigned transaction.
-func NewEncryptedTransaction(fee *Fee, body interface{}) *Transaction {
+func NewEncryptedTransaction(fee *Fee, body any) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
@@ -427,7 +427,7 @@ func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (f *Fee) PrettyType() (interface{}, error) {
+func (f *Fee) PrettyType() (any, error) {
 	return f, nil
 }
 
@@ -559,8 +559,8 @@ func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w 
 	ptx.AuthInfo.Fee.PrettyPrint(ctx, prefix+"  ", w)
 }
 
-func prettyAddressSpecSig(spec interface{}) string {
-	specMap := map[string]interface{}{}
+func prettyAddressSpecSig(spec any) string {
+	specMap := map[string]any{}
 
 	specBytes, _ := json.Marshal(spec)
 	_ = json.Unmarshal(specBytes, &specMap)
@@ -572,15 +572,15 @@ func prettyAddressSpecSig(spec interface{}) string {
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (ptx *PrettyTransaction) PrettyType() (interface{}, error) {
+func (ptx *PrettyTransaction) PrettyType() (any, error) {
 	return ptx, nil
 }
 
 // PrettyCall returns a representation of the type that can be used for pretty printing.
 type PrettyCall struct {
-	Format CallFormat  `json:"format,omitempty"`
-	Method MethodName  `json:"method,omitempty"`
-	Body   interface{} `json:"body"`
+	Format CallFormat `json:"format,omitempty"`
+	Method MethodName `json:"method,omitempty"`
+	Body   any        `json:"body"`
 }
 
 // MethodName is a method name.
@@ -596,7 +596,7 @@ func (m MethodName) SanityCheck() error {
 }
 
 // BodyType returns the registered body type associated with this method.
-func (m MethodName) BodyType() interface{} {
+func (m MethodName) BodyType() any {
 	bodyType, _ := registeredMethods.Load(string(m))
 	return bodyType
 }
@@ -605,7 +605,7 @@ func (m MethodName) BodyType() interface{} {
 //
 // Module and method pair must be unique. If they are not, this method
 // will panic.
-func NewMethodName(name string, bodyType interface{}) MethodName {
+func NewMethodName(name string, bodyType any) MethodName {
 	// Check for duplicate method names.
 	if _, isRegistered := registeredMethods.Load(name); isRegistered {
 		panic(fmt.Errorf("transaction: method already registered: %s", name))
@@ -616,10 +616,10 @@ func NewMethodName(name string, bodyType interface{}) MethodName {
 }
 
 // MethodNames returns a map of all registered method names and its class instances.
-func MethodNames() map[string]interface{} {
+func MethodNames() map[string]any {
 	// Make a copy of method names instead of exposing it directly.
-	cp := map[string]interface{}{}
-	registeredMethods.Range(func(k, v interface{}) bool {
+	cp := map[string]any{}
+	registeredMethods.Range(func(k, v any) bool {
 		cp[fmt.Sprint(k)] = v
 		return true
 	})

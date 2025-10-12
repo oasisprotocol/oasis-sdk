@@ -309,18 +309,18 @@ func main() {
 								vectors = append(vectors, MakeRuntimeTestVector(tx, txBodyChangeUpgradePolicy, meta, t.valid, t.signer, nonce))
 							}
 
-							for _, d := range []map[string]interface{}{
+							for _, d := range []map[string]any{
 								// Valid data, empty.
 								{},
 								// Valid data, one function call with argument.
 								{
-									"instantiate": map[string]interface{}{
+									"instantiate": map[string]any{
 										"initial_counter": 42,
 									},
 								},
 								// Valid data, one function call with argument.
 								{
-									"say_hello": map[string]interface{}{
+									"say_hello": map[string]any{
 										"who": "me",
 									},
 								},
@@ -402,13 +402,14 @@ func main() {
 		// Invalid transaction call format.
 		txBodyCall := &contracts.Call{
 			ID: contracts.InstanceID(10),
-			Data: cbor.Marshal(map[string]interface{}{
+			Data: cbor.Marshal(map[string]any{
 				"test123": "test1234",
 			}),
 			Tokens: []types.BaseUnits{{
 				Amount:       *quantity.NewFromUint64(1_000_000_000),
 				Denomination: types.NativeDenomination,
-			}}}
+			}},
+		}
 		tx = types.NewTransaction(&types.Fee{Amount: types.NewBaseUnits(*quantity.NewFromUint64(0), types.NativeDenomination), Gas: 2000}, "", txBodyCall)
 		tx.Call.Format = 99
 		meta := &signature.RichContext{

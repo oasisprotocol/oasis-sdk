@@ -75,7 +75,7 @@ func (bu *BaseUnits) PrettyPrint(ctx context.Context, _ string, w io.Writer) {
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (bu *BaseUnits) PrettyType() (interface{}, error) {
+func (bu *BaseUnits) PrettyType() (any, error) {
 	return bu, nil
 }
 

@@ -51,7 +51,7 @@ type Transfer struct {
 type Send struct {
 	To     contracts.InstanceID `json:"to"`
 	Amount quantity.Quantity    `json:"amount"`
-	Data   interface{}          `json:"data"`
+	Data   any                  `json:"data"`
 }
 
 // Balance is the OAS20 contract's balance query request.
