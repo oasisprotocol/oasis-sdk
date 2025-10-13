@@ -287,8 +287,8 @@ github.com/multiformats/go-varint v0.0.7 h1:sWSGR+f/eu5ABZA2ZpYKBILXTTs9JWpdEM/n
 github.com/multiformats/go-varint v0.0.7/go.mod h1:r8PUYw/fD/SjBCiKOoDlGF6QawOELpZAu9eioSos/OU=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq1c1nUAm88MOHcQC9l5mIlSMApZMrHA=
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
-github.com/oasisprotocol/cometbft v0.37.15-oasis1 h1:2SOAr187qh8poRjNX+buawO46mnoIbBW4+gAUnSddIU=
-github.com/oasisprotocol/cometbft v0.37.15-oasis1/go.mod h1:PeXF4BJSZ3DvCqMAKOqw2pcbbehw8XpgZBS7TlYbD2A=
+github.com/oasisprotocol/cometbft v0.37.15-oasis2 h1:wCXrQK+n2T7TPFEslmA8pK+VG4KMYwCKs3vnS/PlTn0=
+github.com/oasisprotocol/cometbft v0.37.15-oasis2/go.mod h1:PeXF4BJSZ3DvCqMAKOqw2pcbbehw8XpgZBS7TlYbD2A=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a h1:dlRvE5fWabOchtH7znfiFCcOvmIYgOeAS5ifBXBlh9Q=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a/go.mod h1:hVoHR2EVESiICEMbg137etN/Lx+lSrHPTD39Z/uE+2s=
 github.com/oasisprotocol/oasis-core/go v0.2506.0 h1:YfWtwX6KG1IO74GnK9+uQMj7mJNTT5pobA2ZMDAs0r4=
