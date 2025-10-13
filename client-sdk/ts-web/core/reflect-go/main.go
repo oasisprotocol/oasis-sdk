@@ -562,7 +562,8 @@ var skipMethods = map[string]bool{
 }
 var skipMethodsConsulted = map[string]bool{}
 
-func visitClientWithService(client *clientCode, t reflect.Type, service string, methodPrefix string) {
+func (c *clientCode) visitClientWithService(i any, service string, methodPrefix string) {
+	t := reflect.TypeOf(i).Elem()
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
@@ -647,16 +648,17 @@ func visitClientWithService(client *clientCode, t reflect.Type, service string, 
 		}
 		methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
 		lowerService := strings.ToLower(service[:1]) + service[1:]
-		client.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
-		client.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
-		client.methods += "\n"
+		c.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
+		c.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
+		c.methods += "\n"
 	}
-	client.methodDescriptors += "\n"
+	c.methodDescriptors += "\n"
 }
 
-func visitClient(client *clientCode, t reflect.Type) {
+func (c *clientCode) visitClient(i any) {
+	t := reflect.TypeOf(i).Elem()
 	prefix := getPrefix(t)
-	visitClientWithService(client, t, prefix, "")
+	c.visitClientWithService(i, prefix, "")
 }
 
 func write() {
@@ -669,10 +671,10 @@ func write() {
 	}
 }
 
-func writeClient(internal clientCode, className string) {
-	fmt.Print(internal.methodDescriptors)
+func (c *clientCode) writeClient(className string) {
+	fmt.Print(c.methodDescriptors)
 	fmt.Printf("export class %s extends GRPCWrapper {\n", className)
-	fmt.Print(internal.methods)
+	fmt.Print(c.methods)
 	fmt.Print("}\n\n")
 }
 
@@ -683,20 +685,20 @@ var registeredMethods sync.Map
 
 func main() {
 	var internal clientCode
-	visitClient(&internal, reflect.TypeOf((*beacon.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*registry.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*staking.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*roothash.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*governance.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*storage.Backend)(nil)).Elem())
-	visitClientWithService(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker", "")
-	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*consensus.Backend)(nil)).Elem())
-	visitClientWithService(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "Consensus", "State")
-	visitClientWithService(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController", "")
-	visitClientWithService(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController", "")
+	internal.visitClient((*beacon.Backend)(nil))
+	internal.visitClient((*scheduler.Backend)(nil))
+	internal.visitClient((*registry.Backend)(nil))
+	internal.visitClient((*staking.Backend)(nil))
+	internal.visitClient((*keymanager.Backend)(nil))
+	internal.visitClient((*roothash.Backend)(nil))
+	internal.visitClient((*governance.Backend)(nil))
+	internal.visitClient((*storage.Backend)(nil))
+	internal.visitClientWithService((*workerStorage.StorageWorker)(nil), "StorageWorker", "")
+	internal.visitClient((*runtimeClient.RuntimeClient)(nil))
+	internal.visitClient((*consensus.Backend)(nil))
+	internal.visitClientWithService((*syncer.ReadSyncer)(nil), "Consensus", "State")
+	internal.visitClientWithService((*control.NodeController)(nil), "NodeController", "")
+	internal.visitClientWithService((*control.DebugController)(nil), "DebugController", "")
 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
 	registeredMethods.Range(func(name, bodyType any) bool {
@@ -706,7 +708,7 @@ func main() {
 	})
 
 	write()
-	writeClient(internal, "NodeInternal")
+	internal.writeClient("NodeInternal")
 	for p := range modulePaths {
 		if !modulePathsConsulted[p] {
 			panic(fmt.Sprintf("unused module path %s", p))
