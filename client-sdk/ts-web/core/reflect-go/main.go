@@ -258,7 +258,7 @@ func getMethodArgName(t reflect.Type, name string, i int) string {
 var customStructNames = map[reflect.Type]string{
 	reflect.TypeOf(consensus.Parameters{}): "ConsensusLightParameters",
 }
-var customStructNamesConsulted = map[reflect.Type]bool{}
+var customStructNamesConsulted = map[reflect.Type]struct{}{}
 
 var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/beacon":                  "Beacon",
@@ -294,29 +294,28 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/worker/compute":          "WorkerCompute",
 	"github.com/oasisprotocol/oasis-core/go/worker/keymanager":       "WorkerKeyManager",
 }
-var prefixConsulted = map[string]bool{}
+var prefixConsulted = map[string]struct{}{}
 
 func getPrefix(t reflect.Type) string {
 	pkgDir := t.PkgPath()
-	var prefix string
+
 	for {
 		if pkgDir == "." {
 			panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
 		}
-		var ok bool
-		prefix, ok = prefixByPackage[pkgDir]
-		if ok {
-			prefixConsulted[pkgDir] = true
-			break
+
+		if prefix, ok := prefixByPackage[pkgDir]; ok {
+			prefixConsulted[pkgDir] = struct{}{}
+			return prefix
 		}
+
 		pkgDir = path.Dir(pkgDir)
 	}
-	return prefix
 }
 
 func getStructName(t reflect.Type) string {
 	if ref, ok := customStructNames[t]; ok {
-		customStructNamesConsulted[t] = true
+		customStructNamesConsulted[t] = struct{}{}
 		return ref
 	}
 	prefix := getPrefix(t)
@@ -552,15 +551,15 @@ const (
 	descriptorKindServerStreaming = "ServerStreaming"
 )
 
-var skipMethods = map[string]bool{
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
+var skipMethods = map[string]struct{}{
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": {},
 	// getters for other APIs
-	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         true,
-	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.Backend.State":            true,
-	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": true,
+	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         {},
+	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           {},
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.Backend.State":            {},
+	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": {},
 }
-var skipMethodsConsulted = map[string]bool{}
+var skipMethodsConsulted = map[string]struct{}{}
 
 func (c *clientCode) visitClientWithService(i any, service string, methodPrefix string) {
 	t := reflect.TypeOf(i).Elem()
@@ -569,8 +568,8 @@ func (c *clientCode) visitClientWithService(i any, service string, methodPrefix 
 		m := t.Method(i)
 		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
 		sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
-		if skipMethods[sig] {
-			skipMethodsConsulted[sig] = true
+		if _, ok := skipMethods[sig]; ok {
+			skipMethodsConsulted[sig] = struct{}{}
 			continue
 		}
 		descriptorKind := descriptorKindUnary
@@ -715,12 +714,12 @@ func main() {
 		}
 	}
 	for t := range customStructNames {
-		if !customStructNamesConsulted[t] {
+		if _, ok := customStructNamesConsulted[t]; !ok {
 			panic(fmt.Sprintf("unused custom type name %v", t))
 		}
 	}
 	for prefix := range prefixByPackage {
-		if !prefixConsulted[prefix] {
+		if _, ok := prefixConsulted[prefix]; !ok {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
 		}
 	}
@@ -728,7 +727,7 @@ func main() {
 		panic("VersionInfo special case not needed")
 	}
 	for sig := range skipMethods {
-		if !skipMethodsConsulted[sig] {
+		if _, ok := skipMethodsConsulted[sig]; !ok {
 			panic(fmt.Sprintf("unused skip method %s", sig))
 		}
 	}
