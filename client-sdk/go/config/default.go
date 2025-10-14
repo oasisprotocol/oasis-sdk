@@ -108,7 +108,7 @@ var DefaultNetworks = Networks{
 						ID:          "0000000000000000000000000000000000000000000000004febe52eb412b421",
 						Denominations: map[string]*DenominationInfo{
 							NativeDenominationKey: {
-								Symbol:   "EUROe",
+								Symbol:   "EURAU",
 								Decimals: 18,
 							},
 							// The consensus layer denomination when deposited into the runtime.
@@ -126,7 +126,7 @@ var DefaultNetworks = Networks{
 						ID:          "00000000000000000000000000000000000000000000000004a6f9071c007069",
 						Denominations: map[string]*DenominationInfo{
 							NativeDenominationKey: {
-								Symbol:   "EUROe",
+								Symbol:   "EURAU",
 								Decimals: 18,
 							},
 							// The consensus layer denomination when deposited into the runtime.
