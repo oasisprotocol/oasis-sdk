@@ -974,8 +974,8 @@
 <a href=#974 id=974 data-nosnippet>974</a>
 <a href=#975 id=975 data-nosnippet>975</a>    <span class="kw">fn </span>after_handle_call&lt;C: Context&gt;(
 <a href=#976 id=976 data-nosnippet>976</a>        _ctx: <span class="kw-2">&amp;</span>C,
-<a href=#977 id=977 data-nosnippet>977</a>        result: module::CallResult,
-<a href=#978 id=978 data-nosnippet>978</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;module::CallResult, modules::core::Error&gt; {
+<a href=#977 id=977 data-nosnippet>977</a>        _result: <span class="kw-2">&amp;</span>module::CallResult,
+<a href=#978 id=978 data-nosnippet>978</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), modules::core::Error&gt; {
 <a href=#979 id=979 data-nosnippet>979</a>        <span class="comment">// Check whether unused part of the fee should be refunded.
 <a href=#980 id=980 data-nosnippet>980</a>        </span><span class="kw">let </span>refund_fee = <span class="kw">if </span><span class="self">Self</span>::take_refund_unused_tx_fee() {
 <a href=#981 id=981 data-nosnippet>981</a>            <span class="kw">let </span>remaining_gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
@@ -1006,7 +1006,7 @@
 <a href=#1006 id=1006 data-nosnippet>1006</a>            }
 <a href=#1007 id=1007 data-nosnippet>1007</a>        });
 <a href=#1008 id=1008 data-nosnippet>1008</a>
-<a href=#1009 id=1009 data-nosnippet>1009</a>        <span class="prelude-val">Ok</span>(result)
+<a href=#1009 id=1009 data-nosnippet>1009</a>        <span class="prelude-val">Ok</span>(())
 <a href=#1010 id=1010 data-nosnippet>1010</a>    }
 <a href=#1011 id=1011 data-nosnippet>1011</a>
 <a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">fn </span>after_dispatch_tx&lt;C: Context&gt;(
