@@ -697,7 +697,7 @@ fn test_fee_disbursement() {
         // Run after call tx handler.
         Accounts::after_handle_call(
             &ctx,
-            module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+            &module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
         )
         .expect("after_handle_call should succeed");
     });

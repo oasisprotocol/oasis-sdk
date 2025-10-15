@@ -974,8 +974,8 @@ impl module::TransactionHandler for Module {
 
     fn after_handle_call<C: Context>(
         _ctx: &C,
-        result: module::CallResult,
-    ) -> Result<module::CallResult, modules::core::Error> {
+        _result: &module::CallResult,
+    ) -> Result<(), modules::core::Error> {
         // Check whether unused part of the fee should be refunded.
         let refund_fee = if Self::take_refund_unused_tx_fee() {
             let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
@@ -1006,7 +1006,7 @@ impl module::TransactionHandler for Module {
             }
         });
 
-        Ok(result)
+        Ok(())
     }
 
     fn after_dispatch_tx<C: Context>(

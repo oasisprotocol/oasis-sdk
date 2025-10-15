@@ -1171,13 +1171,10 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         Ok(())
     }
 
-    fn after_handle_call<C: Context>(
-        ctx: &C,
-        result: module::CallResult,
-    ) -> Result<module::CallResult, Error> {
+    fn after_handle_call<C: Context>(ctx: &C, _result: &module::CallResult) -> Result<(), Error> {
         // Skip handling for internally generated calls.
         if CurrentState::with_env(|env| env.is_internal()) {
-            return Ok(result);
+            return Ok(());
         }
 
         let params = Self::params();
@@ -1227,7 +1224,7 @@ impl<Cfg: Config> module::TransactionHandler for Module<Cfg> {
         // Evaluate the result of the above `use_tx_gas` here to make sure we emit the event.
         maybe_out_of_gas?;
 
-        Ok(result)
+        Ok(())
     }
 }
 

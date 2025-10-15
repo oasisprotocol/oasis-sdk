@@ -413,10 +413,10 @@ pub trait TransactionHandler {
     /// If an error is returned the transaction call fails and updates are rolled back.
     fn after_handle_call<C: Context>(
         _ctx: &C,
-        result: CallResult,
-    ) -> Result<CallResult, modules::core::Error> {
+        _result: &CallResult,
+    ) -> Result<(), modules::core::Error> {
         // Default implementation doesn't do anything.
-        Ok(result)
+        Ok(())
     }
 
     /// Perform any action after dispatching the transaction, in batch context.
@@ -483,12 +483,17 @@ impl TransactionHandler for Tuple {
 
     fn after_handle_call<C: Context>(
         ctx: &C,
-        mut result: CallResult,
-    ) -> Result<CallResult, modules::core::Error> {
+        result: &CallResult,
+    ) -> Result<(), modules::core::Error> {
+        let mut first_err: Option<modules::core::Error> = None;
         for_tuples!( #(
-            result = Tuple::after_handle_call(ctx, result)?;
+            match Tuple::after_handle_call(ctx, &result) {
+                Err(e) if first_err.is_none() => first_err = Some(e),
+                _ => {}
+            }
         )* );
-        Ok(result)
+
+        first_err.map_or(Ok(()), Err)
     }
 
     fn after_dispatch_tx<C: Context>(ctx: &C, tx_auth_info: &AuthInfo, result: &CallResult) {
