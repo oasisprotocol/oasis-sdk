@@ -22,7 +22,7 @@ func (f *Deposit) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (f *Deposit) PrettyType() (interface{}, error) {
+func (f *Deposit) PrettyType() (any, error) {
 	return f, nil
 }
 
@@ -38,7 +38,7 @@ func (f *Withdraw) PrettyPrint(ctx context.Context, prefix string, w io.Writer) 
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (f *Withdraw) PrettyType() (interface{}, error) {
+func (f *Withdraw) PrettyType() (any, error) {
 	return f, nil
 }
 
@@ -54,7 +54,7 @@ func (d *Delegate) PrettyPrint(ctx context.Context, prefix string, w io.Writer) 
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (d *Delegate) PrettyType() (interface{}, error) {
+func (d *Delegate) PrettyType() (any, error) {
 	return d, nil
 }
 
@@ -66,12 +66,12 @@ type Undelegate struct {
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (ud *Undelegate) PrettyPrint(_ context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sFrom: %s\n", prefix, ud.From)
-	fmt.Fprintf(w, "%sShares: %s\n", prefix, ud.Shares)
+	_, _ = fmt.Fprintf(w, "%sFrom: %s\n", prefix, ud.From)
+	_, _ = fmt.Fprintf(w, "%sShares: %s\n", prefix, ud.Shares)
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (ud *Undelegate) PrettyType() (interface{}, error) {
+func (ud *Undelegate) PrettyType() (any, error) {
 	return ud, nil
 }
 

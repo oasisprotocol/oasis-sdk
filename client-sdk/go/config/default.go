@@ -1,3 +1,4 @@
+// Package config handles configurations.
 package config
 
 // DefaultNetworks is the default config containing known networks.

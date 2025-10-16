@@ -101,7 +101,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -123,7 +123,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -146,7 +146,7 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
@@ -201,40 +201,40 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
         run: npm ci --foreground-scripts
 
-      - name: 'dev-server: Start'
+      - name: "dev-server: Start"
         working-directory: client-sdk/ts-web/core
         run: npm run-script playground &
 
-      - name: 'proxy: Install Envoy'
+      - name: "proxy: Install Envoy"
         # https://github.com/tetratelabs/archive-envoy
         run: |
           curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.18.3/envoy-v1.18.3-linux-amd64.tar.xz' | sudo tar -xJC /opt
           sudo ln -s /opt/envoy-v1.18.3-linux-amd64/bin/envoy /usr/local/bin
 
-      - name: 'proxy: Start'
+      - name: "proxy: Start"
         working-directory: client-sdk/ts-web/core/playground
         run: ./sample-run-envoy.sh &
 
-      - name: 'testnet: Install system packages'
+      - name: "testnet: Install system packages"
         run: sudo apt-get -y install bubblewrap
 
-      - name: 'testnet: Download artifacts'
+      - name: "testnet: Download artifacts"
         working-directory: tests
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 'testnet: Start'
+      - name: "testnet: Start"
         working-directory: client-sdk/ts-web/core/playground
         run: ./sample-run-network.sh &
 
-      - name: 'testnet: Wait for node socket'
+      - name: "testnet: Wait for node socket"
         run: |
           while [ ! -e /tmp/oasis-net-runner-sdk-core/net-runner/network/client-0/internal.sock ]; do
             sleep 1
@@ -276,17 +276,17 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
         run: npm ci --foreground-scripts
 
-      - name: 'dev-server sample-page: Start'
+      - name: "dev-server sample-page: Start"
         working-directory: client-sdk/ts-web/ext-utils
         run: npm run-script sample-page &
 
-      - name: 'dev-server fake-sample-ext: Start'
+      - name: "dev-server fake-sample-ext: Start"
         working-directory: client-sdk/ts-web/ext-utils
         run: npm run-script fake-sample-ext &
 
@@ -325,44 +325,44 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
         run: npm ci --foreground-scripts
 
-      - name: 'dev-server: Start'
+      - name: "dev-server: Start"
         working-directory: client-sdk/ts-web/rt
         run: npm run-script playground &
 
-      - name: 'proxy: Install Envoy'
+      - name: "proxy: Install Envoy"
         # https://github.com/tetratelabs/archive-envoy
         run: |
           curl -sL 'https://github.com/tetratelabs/archive-envoy/releases/download/v1.18.3/envoy-v1.18.3-linux-amd64.tar.xz' | sudo tar -xJC /opt
           sudo ln -s /opt/envoy-v1.18.3-linux-amd64/bin/envoy /usr/local/bin
 
-      - name: 'proxy: Start'
+      - name: "proxy: Start"
         working-directory: client-sdk/ts-web/rt/playground
         run: ./sample-run-envoy.sh &
 
-      - name: 'testnet: Install system packages'
+      - name: "testnet: Install system packages"
         run: sudo apt-get -y install bubblewrap
 
-      - name: 'testnet: Download artifacts'
+      - name: "testnet: Download artifacts"
         working-directory: tests
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 'testnet: Build runtime'
+      - name: "testnet: Build runtime"
         working-directory: client-sdk/ts-web/rt/playground
         run: ./build-runtime.sh
 
-      - name: 'testnet: Start'
+      - name: "testnet: Start"
         working-directory: client-sdk/ts-web/rt/playground
         run: ./sample-run-network.sh &
 
-      - name: 'testnet: Wait for node socket'
+      - name: "testnet: Wait for node socket"
         run: |
           while [[ ! -e /tmp/oasis-net-runner-sdk-rt/net-runner/network/client-0/internal.sock || ! -e /tmp/cfg_ready ]]; do
             sleep 1
@@ -411,7 +411,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -447,7 +447,7 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
@@ -469,7 +469,7 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web
@@ -490,7 +490,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -541,7 +541,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Install Oasis dependencies
         run: |

@@ -102,10 +102,11 @@ func NewAppIDRaw(ctx address.Context, data []byte) AppID {
 // NewAppIDFromBech32 creates a new application identifier from the given bech-32 encoded string.
 //
 // Panics in case of errors -- use UnmarshalText if you want to handle errors.
-func NewAppIDFromBech32(data string) (a AppID) {
+func NewAppIDFromBech32(data string) AppID {
+	var a AppID
 	err := a.UnmarshalText([]byte(data))
 	if err != nil {
 		panic(err)
 	}
-	return
+	return a
 }

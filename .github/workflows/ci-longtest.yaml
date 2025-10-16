@@ -8,7 +8,6 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-
   e2e-rt-long:
     # NOTE: This name appears in GitHub's Checks API.
     name: e2e-rt-long
@@ -23,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -42,4 +41,3 @@ jobs:
             --e2e/test-runtime-simple-keyvalue.txgen.coins_per_acct=100000 \
             --e2e/test-runtime-simple-keyvalue.txgen.num_accounts=100 \
             --e2e/test-runtime-simple-keyvalue.txgen.duration=15m
-

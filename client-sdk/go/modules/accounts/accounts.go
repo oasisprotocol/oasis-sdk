@@ -1,3 +1,4 @@
+// Package accounts contains functionality related to the accounts module.
 package accounts
 
 import (

@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"encoding"
@@ -182,12 +182,13 @@ func NewAddressForModule(module string, kind []byte) Address {
 // NewAddressFromBech32 creates a new address from the given bech-32 encoded string.
 //
 // Panics in case of errors -- use UnmarshalText if you want to handle errors.
-func NewAddressFromBech32(data string) (a Address) {
+func NewAddressFromBech32(data string) Address {
+	var a Address
 	err := a.UnmarshalText([]byte(data))
 	if err != nil {
 		panic(err)
 	}
-	return
+	return a
 }
 
 // NewAddressFromMultisig creates a new address from the given multisig configuration.

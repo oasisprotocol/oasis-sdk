@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"context"
@@ -67,15 +67,15 @@ func (bu BaseUnits) String() string {
 func (bu *BaseUnits) PrettyPrint(ctx context.Context, _ string, w io.Writer) {
 	pt, ok := ctx.Value(config.ContextKeyParaTimeCfg).(*config.ParaTime)
 	if !ok {
-		fmt.Fprintf(w, "<error: ParaTime information not available>")
+		_, _ = fmt.Fprintf(w, "<error: ParaTime information not available>")
 		return
 	}
 	di := pt.GetDenominationInfo(string(bu.Denomination))
-	fmt.Fprintf(w, "%s %s", prettyprint.QuantityFrac(bu.Amount, di.Decimals), di.Symbol)
+	_, _ = fmt.Fprintf(w, "%s %s", prettyprint.QuantityFrac(bu.Amount, di.Decimals), di.Symbol)
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (bu *BaseUnits) PrettyType() (interface{}, error) {
+func (bu *BaseUnits) PrettyType() (any, error) {
 	return bu, nil
 }
 
@@ -99,8 +99,8 @@ func PrettyPrintToAmount(ctx context.Context, prefix string, w io.Writer, to *Ad
 			}
 		}
 	}
-	fmt.Fprintf(w, "%sTo: %s\n", prefix, toStr)
-	fmt.Fprintf(w, "%sAmount: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sTo: %s\n", prefix, toStr)
+	_, _ = fmt.Fprintf(w, "%sAmount: ", prefix)
 	amount.PrettyPrint(ctx, prefix, w)
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 }

@@ -75,13 +75,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Lint Go client-sdk
-        uses: golangci/golangci-lint-action@v6.5.0
+        uses: golangci/golangci-lint-action@v8
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.64
+          version: v2.5
           working-directory: client-sdk/go
 
   lint-go-tests-e2e:
@@ -104,13 +104,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Lint E2E tests
-        uses: golangci/golangci-lint-action@v6.5.0
+        uses: golangci/golangci-lint-action@v8
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.64
+          version: v2.5
           working-directory: tests/e2e
 
   lint-go-reflect:
@@ -123,13 +123,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       - name: Lint reflect-go
-        uses: golangci/golangci-lint-action@v6.5.0
+        uses: golangci/golangci-lint-action@v8
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.64
+          version: v2.5
           working-directory: client-sdk/ts-web/core/reflect-go
 
   lint-ts-web:
@@ -144,7 +144,7 @@ jobs:
         with:
           node-version: "18.x"
           cache: npm
-          cache-dependency-path: 'client-sdk/ts-web/package-lock.json'
+          cache-dependency-path: "client-sdk/ts-web/package-lock.json"
 
       - name: Install dependencies and build
         working-directory: client-sdk/ts-web

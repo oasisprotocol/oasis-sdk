@@ -1,3 +1,4 @@
+// Package rofl contains functionality related to the ROLF module.
 package rofl
 
 import (

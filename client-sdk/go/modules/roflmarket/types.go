@@ -128,9 +128,12 @@ type Offer struct {
 type Term uint8
 
 const (
-	TermHour  Term = 1
+	// TermHour represents a reservation term of one hour.
+	TermHour Term = 1
+	// TermMonth represents a reservation term of one month.
 	TermMonth Term = 2
-	TermYear  Term = 3
+	// TermYear represents a reservation term of one year.
+	TermYear Term = 3
 )
 
 // PaymentAddress is the payment address.
@@ -175,11 +178,13 @@ type Resources struct {
 type TeeType uint8
 
 const (
+	// TeeTypeSGX represents Intel SGX hardware.
 	TeeTypeSGX TeeType = 1
+	// TeeTypeTDX represents Intel TDX hardware.
 	TeeTypeTDX TeeType = 2
 )
 
-// GPUResources is the GPU resource descriptor.
+// GPUResource is the GPU resource descriptor.
 type GPUResource struct {
 	// Model is the optional GPU model.
 	Model string `json:"model,omitempty"`
@@ -237,8 +242,11 @@ type Instance struct {
 type InstanceStatus uint8
 
 const (
-	InstanceStatusCreated   InstanceStatus = 0
-	InstanceStatusAccepted  InstanceStatus = 1
+	// InstanceStatusCreated indicates the instance has been created.
+	InstanceStatusCreated InstanceStatus = 0
+	// InstanceStatusAccepted indicates the instance has been accepted.
+	InstanceStatusAccepted InstanceStatus = 1
+	// InstanceStatusCancelled indicates the instance has been cancelled.
 	InstanceStatusCancelled InstanceStatus = 2
 )
 
@@ -415,14 +423,14 @@ type StakeThresholds struct {
 
 // PrettyPrint writes a pretty-printed representation of the stake thresholds to the given writer.
 func (st *StakeThresholds) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sStake thresholds:\n", prefix)
-	fmt.Fprintf(w, "%s  Provider create: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sStake thresholds:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%s  Provider create: ", prefix)
 	st.ProviderCreate.PrettyPrint(ctx, "", w)
-	fmt.Fprint(w, "\n")
+	_, _ = fmt.Fprint(w, "\n")
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (st *StakeThresholds) PrettyType() (interface{}, error) {
+func (st *StakeThresholds) PrettyType() (any, error) {
 	return st, nil
 }
 
@@ -433,54 +441,72 @@ type Parameters struct{}
 const ModuleName = "roflmarket"
 
 const (
-	ProviderCreatedEventCode       = 1
-	ProviderUpdatedEventCode       = 2
-	ProviderRemovedEventCode       = 3
-	InstanceCreatedEventCode       = 4
-	InstanceUpdatedEventCode       = 5
-	InstanceAcceptedEventCode      = 6
-	InstanceCancelledEventCode     = 7
-	InstanceRemovedEventCode       = 8
+	// ProviderCreatedEventCode is the event code for a new provider creation.
+	ProviderCreatedEventCode = 1
+	// ProviderUpdatedEventCode is the event code for a provider update.
+	ProviderUpdatedEventCode = 2
+	// ProviderRemovedEventCode is the event code for a provider removal.
+	ProviderRemovedEventCode = 3
+	// InstanceCreatedEventCode is the event code for a new instance creation.
+	InstanceCreatedEventCode = 4
+	// InstanceUpdatedEventCode is the event code for an instance update.
+	InstanceUpdatedEventCode = 5
+	// InstanceAcceptedEventCode is the event code for an instance acceptance.
+	InstanceAcceptedEventCode = 6
+	// InstanceCancelledEventCode is the event code for an instance cancellation.
+	InstanceCancelledEventCode = 7
+	// InstanceRemovedEventCode is the event code for an instance removal.
+	InstanceRemovedEventCode = 8
+	// InstanceCommandQueuedEventCode is the event code for a queued instance command.
 	InstanceCommandQueuedEventCode = 9
 )
 
+// ProviderCreatedEvent is event emitted when a new provider is created.
 type ProviderCreatedEvent struct {
 	Address types.Address `json:"address"`
 }
 
+// ProviderUpdatedEvent is event emitted when a provider's data is updated.
 type ProviderUpdatedEvent struct {
 	Address types.Address `json:"address"`
 }
 
+// ProviderRemovedEvent is event emitted when a provider is removed.
 type ProviderRemovedEvent struct {
 	Address types.Address `json:"address"`
 }
 
+// InstanceCreatedEvent is event emitted when a new instance is created.
 type InstanceCreatedEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`
 }
 
+// InstanceUpdatedEvent is event emitted when an instance is updated.
 type InstanceUpdatedEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`
 }
 
+// InstanceAcceptedEvent is event emitted when an instance is accepted.
 type InstanceAcceptedEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`
 }
 
+// InstanceCancelledEvent is event emitted when an instance is cancelled.
 type InstanceCancelledEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`
 }
 
+// InstanceRemovedEvent is event emitted when an instance is removed.
 type InstanceRemovedEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`
 }
 
+// InstanceCommandQueuedEvent is event emitted when a command is queued for an instance.
 type InstanceCommandQueuedEvent struct {
 	Provider types.Address `json:"provider"`
 	ID       InstanceID    `json:"id"`

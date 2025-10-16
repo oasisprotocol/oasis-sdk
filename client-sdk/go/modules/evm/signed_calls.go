@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -29,6 +30,7 @@ type SignedCallDataPack struct {
 	Signature []byte     `json:"signature"`
 }
 
+// Leash defines a leash type.
 type Leash struct {
 	Nonce       uint64 `json:"nonce"`
 	BlockNumber uint64 `json:"block_number"`
@@ -99,14 +101,14 @@ func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, ga
 			VerifyingContract: "",
 			Salt:              "",
 		},
-		Message: map[string]interface{}{
+		Message: map[string]any{
 			"from":     hex.EncodeToString(caller),
 			"to":       hex.EncodeToString(callee),
 			"value":    &valueU256,
 			"gasLimit": math.NewHexOrDecimal256(int64(gasLimit)), //nolint: gosec
 			"gasPrice": &gasPriceU256,
 			"data":     data,
-			"leash": map[string]interface{}{
+			"leash": map[string]any{
 				"nonce":       math.NewHexOrDecimal256(int64(leash.Nonce)),       //nolint: gosec
 				"blockNumber": math.NewHexOrDecimal256(int64(leash.BlockNumber)), //nolint: gosec
 				"blockHash":   leash.BlockHash,

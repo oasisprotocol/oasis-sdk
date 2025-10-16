@@ -1,3 +1,4 @@
+// Package query provides access to the compiled subcall contract and its ABI.
 package query
 
 import (

@@ -8,6 +8,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	sdkTesting "github.com/oasisprotocol/oasis-sdk/client-sdk/go/testing"
 )
 

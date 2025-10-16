@@ -1,5 +1,7 @@
+// Package types provides data types.
+//
 // TODO: Move this package to the Go client-sdk.
-package types
+package types //nolint:revive
 
 import (
 	"context"
@@ -101,11 +103,11 @@ func (ut *UnverifiedTransaction) Verify(ctx signature.Context) (*Transaction, er
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sHash: %s\n", prefix, ut.Hash())
+	_, _ = fmt.Fprintf(w, "%sHash: %s\n", prefix, ut.Hash())
 
 	var tx Transaction
 	if err := cbor.Unmarshal(ut.Body, &tx); err != nil {
-		fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: malformed transaction body: %w", err))
+		_, _ = fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: malformed transaction body: %w", err))
 		return
 	}
 
@@ -115,31 +117,32 @@ func (ut *UnverifiedTransaction) PrettyPrint(ctx context.Context, prefix string,
 	for i, ap := range ut.AuthProofs {
 		pks, sigs, err := tx.AuthInfo.SignerInfo[i].AddressSpec.Batch(ap)
 		if err != nil {
-			fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: auth proof %d batch: %w", i, err))
+			_, _ = fmt.Fprintf(w, "%s  <error: %s>\n", prefix, fmt.Errorf("transaction: auth proof %d batch: %w", i, err))
 		}
 		publicKeys = append(publicKeys, pks...)
 		signatures = append(signatures, sigs...)
 	}
 
-	fmt.Fprintf(w, "%sSigner(s):\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sSigner(s):\n", prefix)
 	sigCtx, _ := ctx.Value(signature.ContextKeySigContext).(signature.Context)
 	for i, pk := range publicKeys {
-		fmt.Fprintf(w, "%s  %d. %s\n", prefix, i+1, pk)
-		fmt.Fprintf(w, "%s     (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
+		_, _ = fmt.Fprintf(w, "%s  %d. %s\n", prefix, i+1, pk)
+		_, _ = fmt.Fprintf(w, "%s     (signature: %s)\n", prefix, base64.StdEncoding.EncodeToString(signatures[i]))
 		if !pk.Verify(sigCtx.Derive(), ut.Body, signatures[i]) {
-			fmt.Fprintf(w, "%s     [INVALID SIGNATURE]\n", prefix)
+			_, _ = fmt.Fprintf(w, "%s     [INVALID SIGNATURE]\n", prefix)
 		}
 	}
 
-	fmt.Fprintf(w, "%sContent:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sContent:\n", prefix)
 	tx.PrettyPrint(ctx, prefix+"  ", w)
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (ut *UnverifiedTransaction) PrettyType() (interface{}, error) {
+func (ut *UnverifiedTransaction) PrettyType() (any, error) {
 	return ut, nil
 }
 
+// TransactionSigner os a transaction signer.
 type TransactionSigner struct {
 	tx Transaction
 	ut UnverifiedTransaction
@@ -247,6 +250,7 @@ func (t *Transaction) AppendAuthMultisig(config *MultisigConfig, nonce uint64) {
 	t.AppendSignerInfo(AddressSpec{Multisig: config}, nonce)
 }
 
+// PrepareForSigning prepares transaction for signing.
 func (t *Transaction) PrepareForSigning() *TransactionSigner {
 	return &TransactionSigner{
 		tx: *t,
@@ -260,21 +264,21 @@ func (t *Transaction) PrepareForSigning() *TransactionSigner {
 func (t *Transaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
 	pt, err := t.PrettyType()
 	if err != nil {
-		fmt.Fprintf(w, "%s<error: %s>\n", prefix, err)
+		_, _ = fmt.Fprintf(w, "%s<error: %s>\n", prefix, err)
 	}
 	pt.(prettyprint.PrettyPrinter).PrettyPrint(ctx, prefix, w)
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (t *Transaction) PrettyType() (interface{}, error) {
-	var body interface{}
+func (t *Transaction) PrettyType() (any, error) {
+	var body any
 	bodyType := t.Call.Method.BodyType()
 	if bodyType != nil {
 		// Use the original type.
 		body = reflect.New(reflect.TypeOf(bodyType)).Interface()
 	} else {
 		// Assume a generic map.
-		body = &map[string]interface{}{}
+		body = &map[string]any{}
 	}
 	// Try decoding it. If it fails, just take the raw data.
 	if err := cbor.Unmarshal(t.Call.Body, body); err != nil {
@@ -293,7 +297,7 @@ func (t *Transaction) PrettyType() (interface{}, error) {
 }
 
 // NewTransaction creates a new unsigned transaction.
-func NewTransaction(fee *Fee, method MethodName, body interface{}) *Transaction {
+func NewTransaction(fee *Fee, method MethodName, body any) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
@@ -315,7 +319,7 @@ func NewTransaction(fee *Fee, method MethodName, body interface{}) *Transaction 
 }
 
 // NewEncryptedTransaction creates a new unsigned transaction.
-func NewEncryptedTransaction(fee *Fee, body interface{}) *Transaction {
+func NewEncryptedTransaction(fee *Fee, body any) *Transaction {
 	tx := &Transaction{
 		Versioned: cbor.NewVersioned(LatestTransactionVersion),
 		Call: Call{
@@ -405,25 +409,25 @@ func (f *Fee) GasPrice() *quantity.Quantity {
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (f *Fee) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sAmount: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sAmount: ", prefix)
 	f.Amount.PrettyPrint(ctx, prefix, w)
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
-	fmt.Fprintf(w, "%s(gas price: ", prefix)
+	_, _ = fmt.Fprintf(w, "%sGas limit: %d\n", prefix, f.Gas)
+	_, _ = fmt.Fprintf(w, "%s(gas price: ", prefix)
 	gp := NewBaseUnits(*f.GasPrice(), f.Amount.Denomination)
 	gp.PrettyPrint(ctx, prefix, w)
-	fmt.Fprintln(w, " per gas unit)")
+	_, _ = fmt.Fprintln(w, " per gas unit)")
 
 	if f.Proxy != nil {
-		fmt.Fprintf(w, "%sFee proxy:\n", prefix)
-		fmt.Fprintf(w, "%s  Module: %s\n", prefix, f.Proxy.Module)
-		fmt.Fprintf(w, "%s  ID:     %x\n", prefix, f.Proxy.ID)
+		_, _ = fmt.Fprintf(w, "%sFee proxy:\n", prefix)
+		_, _ = fmt.Fprintf(w, "%s  Module: %s\n", prefix, f.Proxy.Module)
+		_, _ = fmt.Fprintf(w, "%s  ID:     %x\n", prefix, f.Proxy.ID)
 	}
 }
 
 // PrettyType returns a representation of the type that can be used for pretty printing.
-func (f *Fee) PrettyType() (interface{}, error) {
+func (f *Fee) PrettyType() (any, error) {
 	return f, nil
 }
 
@@ -526,13 +530,13 @@ type PrettyTransaction struct {
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
 func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
-	fmt.Fprintf(w, "%sFormat: %s\n", prefix, ptx.Call.Format)
+	_, _ = fmt.Fprintf(w, "%sFormat: %s\n", prefix, ptx.Call.Format)
 
 	if ptx.Call.Method != "" {
-		fmt.Fprintf(w, "%sMethod: %s\n", prefix, ptx.Call.Method)
+		_, _ = fmt.Fprintf(w, "%sMethod: %s\n", prefix, ptx.Call.Method)
 	}
 
-	fmt.Fprintf(w, "%sBody:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sBody:\n", prefix)
 	// If the body type supports pretty printing, use that.
 	if pp, ok := ptx.Call.Body.(prettyprint.PrettyPrinter); ok {
 		pp.PrettyPrint(ctx, prefix+"  ", w)
@@ -540,23 +544,23 @@ func (ptx *PrettyTransaction) PrettyPrint(ctx context.Context, prefix string, w 
 		// Otherwise, just serialize into JSON and display that.
 		data, err := json.MarshalIndent(ptx.Call.Body, prefix+"  ", "  ")
 		if err != nil {
-			fmt.Fprintf(w, "%s<error: %s>\n", prefix+"  ", err)
+			_, _ = fmt.Fprintf(w, "%s<error: %s>\n", prefix+"  ", err)
 		}
-		fmt.Fprintf(w, "%s%s\n", prefix+"  ", data)
+		_, _ = fmt.Fprintf(w, "%s%s\n", prefix+"  ", data)
 	}
 
-	fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sAuthorized signer(s):\n", prefix)
 	for idx, si := range ptx.AuthInfo.SignerInfo {
-		fmt.Fprintf(w, "%s  %d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
-		fmt.Fprintf(w, "%s     Nonce: %d\n", prefix, si.Nonce)
+		_, _ = fmt.Fprintf(w, "%s  %d. %s (%s)\n", prefix, idx+1, si.AddressSpec.Signature.PublicKey(), prettyAddressSpecSig(si.AddressSpec.Signature))
+		_, _ = fmt.Fprintf(w, "%s     Nonce: %d\n", prefix, si.Nonce)
 	}
 
-	fmt.Fprintf(w, "%sFee:\n", prefix)
+	_, _ = fmt.Fprintf(w, "%sFee:\n", prefix)
 	ptx.AuthInfo.Fee.PrettyPrint(ctx, prefix+"  ", w)
 }
 
-func prettyAddressSpecSig(spec interface{}) string {
-	specMap := map[string]interface{}{}
+func prettyAddressSpecSig(spec any) string {
+	specMap := map[string]any{}
 
 	specBytes, _ := json.Marshal(spec)
 	_ = json.Unmarshal(specBytes, &specMap)
@@ -567,15 +571,16 @@ func prettyAddressSpecSig(spec interface{}) string {
 	return ""
 }
 
-func (ptx *PrettyTransaction) PrettyType() (interface{}, error) {
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (ptx *PrettyTransaction) PrettyType() (any, error) {
 	return ptx, nil
 }
 
 // PrettyCall returns a representation of the type that can be used for pretty printing.
 type PrettyCall struct {
-	Format CallFormat  `json:"format,omitempty"`
-	Method MethodName  `json:"method,omitempty"`
-	Body   interface{} `json:"body"`
+	Format CallFormat `json:"format,omitempty"`
+	Method MethodName `json:"method,omitempty"`
+	Body   any        `json:"body"`
 }
 
 // MethodName is a method name.
@@ -591,7 +596,7 @@ func (m MethodName) SanityCheck() error {
 }
 
 // BodyType returns the registered body type associated with this method.
-func (m MethodName) BodyType() interface{} {
+func (m MethodName) BodyType() any {
 	bodyType, _ := registeredMethods.Load(string(m))
 	return bodyType
 }
@@ -600,7 +605,7 @@ func (m MethodName) BodyType() interface{} {
 //
 // Module and method pair must be unique. If they are not, this method
 // will panic.
-func NewMethodName(name string, bodyType interface{}) MethodName {
+func NewMethodName(name string, bodyType any) MethodName {
 	// Check for duplicate method names.
 	if _, isRegistered := registeredMethods.Load(name); isRegistered {
 		panic(fmt.Errorf("transaction: method already registered: %s", name))
@@ -611,10 +616,10 @@ func NewMethodName(name string, bodyType interface{}) MethodName {
 }
 
 // MethodNames returns a map of all registered method names and its class instances.
-func MethodNames() map[string]interface{} {
+func MethodNames() map[string]any {
 	// Make a copy of method names instead of exposing it directly.
-	cp := map[string]interface{}{}
-	registeredMethods.Range(func(k, v interface{}) bool {
+	cp := map[string]any{}
+	registeredMethods.Range(func(k, v any) bool {
 		cp[fmt.Sprint(k)] = v
 		return true
 	})

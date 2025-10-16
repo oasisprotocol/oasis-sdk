@@ -1,3 +1,4 @@
+// Package sr25519 provides utilities for signing with the sr25519 scheme.
 package sr25519
 
 import (
