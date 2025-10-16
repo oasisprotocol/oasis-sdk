@@ -229,7 +229,18 @@ impl CertificateProvisioner {
             );
             tokio::time::sleep(delay).await;
 
-            let backoff = backoff::ExponentialBackoff::default();
+            // Back off to recover from Let's Encrypt authorization-failure limits.
+            // Limit: 5 failed authorizations per identifier per account per hour,
+            // refilling 1 slot every ~12 minutes. Make the final interval >12 min.
+            // Rate-limited failures also count toward this limit.
+            // See: https://letsencrypt.org/docs/rate-limits/#authorization-failures-per-identifier-per-account
+            let backoff = backoff::ExponentialBackoffBuilder::new()
+                .with_initial_interval(Duration::from_secs(30))
+                .with_multiplier(2.0)
+                .with_randomization_factor(0.1)
+                .with_max_interval(Duration::from_secs(13 * 60))
+                .with_max_elapsed_time(Some(Duration::from_secs(45 * 60)))
+                .build();
             let _ = backoff::future::retry(backoff, async || {
                 let result = self.provision_once(sni, &acme).await;
                 if let Err(ref err) = result {
