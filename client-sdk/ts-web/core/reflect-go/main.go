@@ -566,92 +566,96 @@ func (c *clientCode) visitClientWithService(i any, service string, methodPrefix 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
-		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
-		sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
-		if _, ok := skipMethods[sig]; ok {
-			skipMethodsConsulted[sig] = struct{}{}
-			continue
-		}
-		descriptorKind := descriptorKindUnary
-		var inArgIndex int
-		var inRef string
-		var outRef string
-		for j := 0; j < m.Type.NumIn(); j++ {
-			u := m.Type.In(j)
-			// skip context
-			if u == reflect.TypeOf((*context.Context)(nil)).Elem() {
-				continue
-			}
-			// writer means streaming byte array output
-			if u == reflect.TypeOf((*io.Writer)(nil)).Elem() {
-				descriptorKind = descriptorKindServerStreaming
-				outRef = visitType(reflect.TypeOf([]byte{}), true)
-				continue
-			}
-			if inRef != "" {
-				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple in types\n", t, m)
-			}
-			inArgIndex = j
-			inRef = visitType(u, true)
-		}
-		for j := 0; j < m.Type.NumOut(); j++ {
-			u := m.Type.Out(j)
-			// skip subscription
-			if u == reflect.TypeOf((*pubsub.Subscription)(nil)) {
-				continue
-			}
-			if u == reflect.TypeOf((*pubsub.ClosableSubscription)(nil)).Elem() {
-				continue
-			}
-			// skip error
-			if u == reflect.TypeOf((*error)(nil)).Elem() {
-				continue
-			}
-			if outRef != "" {
-				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple out types\n", t, m)
-			}
-			// visit sync chunk instead
-			if u == reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem() {
-				u = reflect.TypeOf(storage.SyncChunk{})
-				descriptorKind = descriptorKindServerStreaming
-			}
-			// visit stream datum instead
-			if u.Kind() == reflect.Chan {
-				u = u.Elem()
-				descriptorKind = descriptorKindServerStreaming
-			}
-			outRef = visitType(u, true)
-		}
-		var inParam, inArg string
-		if inRef == "" {
-			inRef = "void"
-			inArg = "undefined"
-		} else {
-			inArg = getMethodArgName(t, m.Name, inArgIndex)
-			if inArg == "" {
-				// why didn't we put the name in the interface spec ugh
-				switch m.Type.In(inArgIndex) {
-				case reflect.TypeOf(uint64(0)), reflect.TypeOf(int64(0)):
-					// oh my god our codebase
-					inArg = "height"
-				case reflect.TypeOf(beacon.EpochTime(0)):
-					inArg = "epoch"
-				default:
-					inArg = "query"
-				}
-			}
-			inParam = inArg + ": " + inRef
-		}
-		if outRef == "" {
-			outRef = "void"
-		}
-		methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
-		lowerService := strings.ToLower(service[:1]) + service[1:]
-		c.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
-		c.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
-		c.methods += "\n"
+		c.visitMethodWithService(t, m, service, methodPrefix)
 	}
 	c.methodDescriptors += "\n"
+}
+
+func (c *clientCode) visitMethodWithService(t reflect.Type, m reflect.Method, service string, methodPrefix string) {
+	_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
+	sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
+	if _, ok := skipMethods[sig]; ok {
+		skipMethodsConsulted[sig] = struct{}{}
+		return
+	}
+	descriptorKind := descriptorKindUnary
+	var inArgIndex int
+	var inRef string
+	var outRef string
+	for j := 0; j < m.Type.NumIn(); j++ {
+		u := m.Type.In(j)
+		// skip context
+		if u == reflect.TypeOf((*context.Context)(nil)).Elem() {
+			continue
+		}
+		// writer means streaming byte array output
+		if u == reflect.TypeOf((*io.Writer)(nil)).Elem() {
+			descriptorKind = descriptorKindServerStreaming
+			outRef = visitType(reflect.TypeOf([]byte{}), true)
+			continue
+		}
+		if inRef != "" {
+			_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple in types\n", t, m)
+		}
+		inArgIndex = j
+		inRef = visitType(u, true)
+	}
+	for j := 0; j < m.Type.NumOut(); j++ {
+		u := m.Type.Out(j)
+		// skip subscription
+		if u == reflect.TypeOf((*pubsub.Subscription)(nil)) {
+			continue
+		}
+		if u == reflect.TypeOf((*pubsub.ClosableSubscription)(nil)).Elem() {
+			continue
+		}
+		// skip error
+		if u == reflect.TypeOf((*error)(nil)).Elem() {
+			continue
+		}
+		if outRef != "" {
+			_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple out types\n", t, m)
+		}
+		// visit sync chunk instead
+		if u == reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem() {
+			u = reflect.TypeOf(storage.SyncChunk{})
+			descriptorKind = descriptorKindServerStreaming
+		}
+		// visit stream datum instead
+		if u.Kind() == reflect.Chan {
+			u = u.Elem()
+			descriptorKind = descriptorKindServerStreaming
+		}
+		outRef = visitType(u, true)
+	}
+	var inParam, inArg string
+	if inRef == "" {
+		inRef = "void"
+		inArg = "undefined"
+	} else {
+		inArg = getMethodArgName(t, m.Name, inArgIndex)
+		if inArg == "" {
+			// why didn't we put the name in the interface spec ugh
+			switch m.Type.In(inArgIndex) {
+			case reflect.TypeOf(uint64(0)), reflect.TypeOf(int64(0)):
+				// oh my god our codebase
+				inArg = "height"
+			case reflect.TypeOf(beacon.EpochTime(0)):
+				inArg = "epoch"
+			default:
+				inArg = "query"
+			}
+		}
+		inParam = inArg + ": " + inRef
+	}
+	if outRef == "" {
+		outRef = "void"
+	}
+	methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
+	lowerService := strings.ToLower(service[:1]) + service[1:]
+	c.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
+	c.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
+	c.methods += "\n"
 }
 
 func (c *clientCode) visitClient(i any) {
