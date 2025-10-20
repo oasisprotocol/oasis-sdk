@@ -65,6 +65,12 @@ struct Impl<A: App> {
     notify: mpsc::Receiver<()>,
 }
 
+/// Last registration state.
+struct LastRegistration {
+    epoch: EpochTime,
+    metadata: BTreeMap<String, String>,
+}
+
 impl<A> Impl<A>
 where
     A: App,
@@ -78,13 +84,13 @@ where
     async fn run(mut self) {
         slog::info!(self.logger, "starting registration task");
 
-        let mut last_registration_epoch: Option<EpochTime> = None;
+        let mut last_registration: Option<LastRegistration> = None;
 
         while self.notify.recv().await.is_some() {
             let backoff = backoff::ExponentialBackoff::default();
 
             let result = backoff::future::retry(backoff, async || {
-                let result = self.refresh_registration(last_registration_epoch).await;
+                let result = self.refresh_registration(last_registration.as_ref()).await;
                 if let Err(ref err) = result {
                     slog::error!(self.logger, "failed to refresh registration";
                         "err" => ?err,
@@ -96,7 +102,9 @@ where
             .await;
 
             match result {
-                Ok(epoch) => last_registration_epoch = Some(epoch),
+                Ok((epoch, metadata)) => {
+                    last_registration = Some(LastRegistration { epoch, metadata })
+                }
                 Err(_) => continue,
             }
         }
@@ -106,11 +114,11 @@ where
 
     /// Perform application registration refresh.
     ///
-    /// On success, it returns the epoch for which the registration was refreshed.
+    /// On success, it returns the epoch and metadata for which the registration was refreshed.
     async fn refresh_registration(
         &self,
-        last_registration_epoch: Option<EpochTime>,
-    ) -> Result<EpochTime> {
+        last_registration: Option<&LastRegistration>,
+    ) -> Result<(EpochTime, BTreeMap<String, String>)> {
         // Determine current epoch.
         let state = self.state.consensus_verifier.latest_state().await?;
         let epoch = tokio::task::spawn_blocking(move || {
@@ -119,9 +127,25 @@ where
         })
         .await??;
 
-        // Skip refresh in case epoch has not changed.
-        if last_registration_epoch == Some(epoch) {
-            return Ok(epoch);
+        // Fetch metadata to check if anything changed.
+        let mut metadata = match self.state.app.clone().get_metadata(self.env.clone()).await {
+            Ok(metadata) => metadata,
+            Err(err) => {
+                slog::error!(self.logger, "failed to get instance metadata"; "err" => ?err);
+                // Do not prevent registration, just clear metadata.
+                Default::default()
+            }
+        };
+        // Include provider-specific metadata if available.
+        if let Err(err) = self.collect_provider_metadata(&mut metadata).await {
+            slog::error!(self.logger, "failed to collect provider metadata"; "err" => ?err);
+        }
+
+        // Skip refresh if both epoch and metadata are unchanged.
+        if let Some(last) = last_registration {
+            if last.epoch == epoch && last.metadata == metadata {
+                return Ok((epoch, metadata));
+            }
         }
 
         // Query our current registration and see if we need to update it.
@@ -139,35 +163,22 @@ where
             )
             .await
         {
-            // Check if we already registered for this epoch by comparing expiration.
-            if existing.expiration >= epoch + 2 {
+            // Check if on-chain registration is still valid for this epoch and has matching metadata.
+            // If so, skip re-registration to avoid unnecessary transactions.
+            if existing.expiration >= epoch + 2 && existing.metadata == metadata {
                 slog::info!(self.logger, "registration already refreshed"; "epoch" => epoch);
 
                 self.env
                     .send_command(processor::Command::RegistrationRefreshed)
                     .await?;
-                return Ok(epoch);
+                return Ok((epoch, metadata));
             }
         }
 
         slog::info!(self.logger, "refreshing registration";
-            "last_registration_epoch" => last_registration_epoch,
+            "last_registration_epoch" => last_registration.map(|r| r.epoch),
             "epoch" => epoch,
         );
-
-        let mut metadata = match self.state.app.clone().get_metadata(self.env.clone()).await {
-            Ok(metadata) => metadata,
-            Err(err) => {
-                slog::error!(self.logger, "failed to get instance metadata"; "err" => ?err);
-                // Do not prevent registration, just clear metadata.
-                Default::default()
-            }
-        };
-
-        // Include provider-specific metadata if available.
-        if let Err(err) = self.collect_provider_metadata(&mut metadata).await {
-            slog::error!(self.logger, "failed to collect provider metadata"; "err" => ?err);
-        }
 
         // Refresh registration.
         let ect = self
@@ -180,7 +191,7 @@ where
             ect,
             expiration: epoch + 2,
             extra_keys: vec![self.env.signer().public_key()],
-            metadata,
+            metadata: metadata.clone(),
         };
 
         let tx = self.state.app.new_transaction("rofl.Register", register);
@@ -201,7 +212,7 @@ where
 
         slog::info!(self.logger, "refreshed registration"; "result" => ?result);
 
-        if last_registration_epoch.is_none() {
+        if last_registration.is_none() {
             // If this is the first registration, notify processor that initial registration has
             // been completed so it can do other stuff.
             self.env
@@ -214,7 +225,7 @@ where
             .send_command(processor::Command::RegistrationRefreshed)
             .await?;
 
-        Ok(epoch)
+        Ok((epoch, metadata))
     }
 
     async fn collect_provider_metadata(

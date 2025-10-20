@@ -17,6 +17,8 @@ pub struct Config<'a> {
     pub address: &'a str,
     /// Key management service to use.
     pub kms: Arc<dyn services::kms::KmsService>,
+    /// App provided instance metadata service.
+    pub metadata: Arc<dyn services::metadata::MetadataService>,
 }
 
 /// Start the REST API server.
@@ -38,6 +40,11 @@ where
         .manage(cfg.kms)
         .mount("/rofl/v1/app", routes![routes::app::id,])
         .mount("/rofl/v1/keys", routes![routes::keys::generate,]);
+
+    let server = server.manage(cfg.metadata).mount(
+        "/rofl/v1/metadata",
+        routes![routes::metadata::set, routes::metadata::get],
+    );
 
     #[cfg(feature = "tx")]
     let server = server

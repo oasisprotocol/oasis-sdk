@@ -84,6 +84,11 @@ where
         cmdq.send(cmd).await?;
         Ok(())
     }
+
+    pub async fn refresh_registration(&self) -> Result<()> {
+        self.send_command(processor::Command::NotifyRefreshRegistration)
+            .await
+    }
 }
 
 impl<A> Clone for Environment<A>
