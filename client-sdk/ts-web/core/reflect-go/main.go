@@ -630,11 +630,11 @@ func (c *clientCode) visitClientWithService(i any, service string, methodPrefix 
 			inArg = getMethodArgName(t, m.Name, inArgIndex)
 			if inArg == "" {
 				// why didn't we put the name in the interface spec ugh
-				switch {
-				case m.Type.In(inArgIndex) == reflect.TypeOf(uint64(0)) || m.Type.In(inArgIndex) == reflect.TypeOf(int64(0)):
+				switch m.Type.In(inArgIndex) {
+				case reflect.TypeOf(uint64(0)), reflect.TypeOf(int64(0)):
 					// oh my god our codebase
 					inArg = "height"
-				case m.Type.In(inArgIndex) == reflect.TypeOf(beacon.EpochTime(0)):
+				case reflect.TypeOf(beacon.EpochTime(0)):
 					inArg = "epoch"
 				default:
 					inArg = "query"
