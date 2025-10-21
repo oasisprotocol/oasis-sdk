@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
-	"go/parser"
 	"go/token"
 	"io"
 	"os"
@@ -21,6 +20,8 @@ import (
 	"sync"
 	"time"
 	_ "unsafe"
+
+	"golang.org/x/tools/go/packages" // nolint:depguard
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -99,16 +100,21 @@ func parseDocs(importPath string) {
 		}
 		module = path.Dir(module)
 	}
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, pkgPath, nil, parser.ParseComments)
+	cfg := &packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedTypes,
+		Dir:  pkgPath,
+	}
+	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		panic(err)
 	}
-	var files []*ast.File
+	var (
+		fset  *token.FileSet
+		files []*ast.File
+	)
 	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			files = append(files, file)
-		}
+		fset = pkg.Fset
+		files = append(files, pkg.Syntax...)
 	}
 	dpkg, err := doc.NewFromFiles(fset, files, importPath)
 	if err != nil {

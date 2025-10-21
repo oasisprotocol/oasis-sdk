@@ -4,7 +4,10 @@ go 1.25.0
 
 replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis2
 
-require github.com/oasisprotocol/oasis-core/go v0.2506.0
+require (
+	github.com/oasisprotocol/oasis-core/go v0.2506.0
+	golang.org/x/tools v0.36.0
+)
 
 require (
 	github.com/a8m/envsubst v1.4.2 // indirect
@@ -80,6 +83,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
+	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
