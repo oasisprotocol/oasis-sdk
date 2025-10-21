@@ -207,4 +207,15 @@
 <a href=#207 id=207 data-nosnippet>207</a></span><span class="kw">pub struct </span>StakeThresholds {
 <a href=#208 id=208 data-nosnippet>208</a>    <span class="doccomment">/// Required stake for creating new ROFL application.
 <a href=#209 id=209 data-nosnippet>209</a>    </span><span class="kw">pub </span>app_create: token::BaseUnits,
-<a href=#210 id=210 data-nosnippet>210</a>}</code></pre></div></section></main></body></html>
+<a href=#210 id=210 data-nosnippet>210</a>}
+<a href=#211 id=211 data-nosnippet>211</a>
+<a href=#212 id=212 data-nosnippet>212</a><span class="doccomment">/// Metadata limits for ROFL instance registration.
+<a href=#213 id=213 data-nosnippet>213</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#214 id=214 data-nosnippet>214</a></span><span class="kw">pub struct </span>MetadataLimits {
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="doccomment">/// Maximum number of metadata key-value pairs.
+<a href=#216 id=216 data-nosnippet>216</a>    </span><span class="kw">pub </span>max_pairs: u64,
+<a href=#217 id=217 data-nosnippet>217</a>    <span class="doccomment">/// Maximum metadata key size in bytes.
+<a href=#218 id=218 data-nosnippet>218</a>    </span><span class="kw">pub </span>max_key_size: u64,
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="doccomment">/// Maximum metadata value size in bytes.
+<a href=#220 id=220 data-nosnippet>220</a>    </span><span class="kw">pub </span>max_value_size: u64,
+<a href=#221 id=221 data-nosnippet>221</a>}</code></pre></div></section></main></body></html>
