@@ -68,6 +68,23 @@ Fetches or generates a cryptographic key from ROFL.
 - **Returns:** The private key as a hex string
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
+##### `async get_metadata() -> dict[str, str]`
+
+Get all user-set metadata key-value pairs.
+
+- **Returns:** Dictionary of metadata key-value pairs
+- **Raises:** `httpx.HTTPStatusError` if the request fails
+
+##### `async set_metadata(metadata: dict[str, str]) -> None`
+
+Set metadata key-value pairs.
+
+This replaces all existing app-provided metadata. Will trigger a registration refresh if the metadata has changed.
+
+- **Parameters:**
+  - `metadata`: Dictionary of metadata key-value pairs to set
+- **Raises:** `httpx.HTTPStatusError` if the request fails
+
 ## Examples
 
 For a complete working example, see [`examples/basic_usage.py`](examples/basic_usage.py).
