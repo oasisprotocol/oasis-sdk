@@ -33,6 +33,8 @@ pub(super) enum Command {
     InitialRegistrationCompleted,
     /// Registration refreshed.
     RegistrationRefreshed,
+    /// Refresh registration.
+    NotifyRefreshRegistration,
 }
 
 /// Processor state.
@@ -150,6 +152,10 @@ where
                 self.cmd_initial_registration_completed().await
             }
             Command::RegistrationRefreshed => self.tasks.watchdog.keep_alive().await,
+            Command::NotifyRefreshRegistration => {
+                self.tasks.registration.refresh();
+                Ok(())
+            }
         }
     }
 

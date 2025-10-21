@@ -40,8 +40,20 @@ async def main():
         entropy = await client.generate_key("my-entropy", kind=KeyKind.RAW_256)
         print(f"Generated 256-bit entropy: {entropy}")
 
+        # Set metadata (published on-chain in ROFL replica registration)
+        # In practice, derive and publish the public key from the private key
+        print("\nPublishing metadata...")
+        await client.set_metadata({
+            "key_fingerprint": key[:16],
+        })
+        print("Metadata set successfully")
+
+        # Retrieve current metadata
+        metadata = await client.get_metadata()
+        print(f"Current metadata: {metadata}")
+
     except Exception as e:
-        print("Note: Key generation requires a running ROFL service")
+        print("Note: Operations require a running ROFL service")
         print(f"Error: {e}")
 
 

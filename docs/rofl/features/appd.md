@@ -147,7 +147,7 @@ For example:
     "data": "a1626f6b40"
   }
   ```
-  
+
   deserialized as `{"ok": ''}`.
 
 - Unsusccessful call result:
@@ -157,8 +157,48 @@ For example:
     "data": "a1646661696ca364636f646508666d6f64756c656365766d676d6573736167657272657665727465643a20614a416f4c773d3d"
   }
   ```
-  
+
   deserialized as
   `{"fail": {"code": 8, "module": "evm", "message": "reverted: aJAoLw=="}}`.
 
 [call result]: https://api.docs.oasis.io/rust/oasis_runtime_sdk/types/transaction/enum.CallResult.html
+
+## Replica Metadata
+
+Replica metadata allows apps to publish arbitrary key-value pairs that are
+included in the on-chain ROFL replica registration. This metadata is
+automatically namespaced with `net.oasis.app.` when published on-chain.
+
+### Get Metadata
+
+Retrieve all user-set metadata key-value pairs.
+
+**Endpoint:** `/rofl/v1/metadata` (`GET`)
+
+**Example response:**
+
+```json
+{
+  "key_fingerprint": "a54027bff15a8726",
+  "version": "1.0.0"
+}
+```
+
+### Set Metadata
+
+Set metadata key-value pairs. This replaces all existing app-provided metadata
+and will trigger a registration refresh if the metadata has changed.
+
+**Endpoint:** `/rofl/v1/metadata` (`POST`)
+
+**Example request:**
+
+```json
+{
+  "key_fingerprint": "a54027bff15a8726",
+  "version": "1.0.0"
+}
+```
+
+**Note:** Metadata is validated against runtime-configured limits for the
+number of pairs, key size, and value size.

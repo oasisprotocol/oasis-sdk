@@ -696,6 +696,19 @@ impl<Cfg: Config> Module<Cfg> {
         })
     }
 
+    /// Returns the metadata limits.
+    #[handler(query = "rofl.MetadataLimits")]
+    fn query_metadata_limits<C: Context>(
+        _ctx: &C,
+        _args: (),
+    ) -> Result<types::MetadataLimits, Error> {
+        Ok(types::MetadataLimits {
+            max_pairs: Cfg::MAX_METADATA_PAIRS as u64,
+            max_key_size: Cfg::MAX_METADATA_KEY_SIZE as u64,
+            max_value_size: Cfg::MAX_METADATA_VALUE_SIZE as u64,
+        })
+    }
+
     fn resolve_payer_from_tx<C: Context>(
         ctx: &C,
         tx: &Transaction,

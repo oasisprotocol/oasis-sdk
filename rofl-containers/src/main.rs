@@ -7,6 +7,8 @@
 use std::{collections::BTreeMap, env};
 
 use base64::prelude::*;
+use tokio::sync::OnceCell;
+
 use oasis_runtime_sdk::{
     cbor,
     core::common::{logger::get_logger, process},
@@ -26,7 +28,9 @@ const ROFL_APPD_ADDRESS: &str = "unix:/run/rofl-appd.sock";
 /// Name of the environment variable for disabling the proxy.
 const PROXY_DISABLED_ENV_NAME: &str = "ROFL_PROXY_DISABLED";
 
-struct ContainersApp;
+struct ContainersApp {
+    metadata: OnceCell<Arc<dyn services::metadata::MetadataService>>,
+}
 
 #[async_trait]
 impl App for ContainersApp {
@@ -60,6 +64,20 @@ impl App for ContainersApp {
         if let Some(identity) = rofl_proxy::http::tls::Identity::global() {
             meta.extend(identity.metadata());
         }
+
+        // Get user-provided metadata from the service.
+        if let Some(metadata_service) = self.metadata.get() {
+            metadata_service.get().await.map(|m| {
+                // Namespace user-provided metadata.
+                meta.extend(m.into_iter().map(|(k, v)| {
+                    (
+                        format!("{}.{}", services::metadata::METADATA_NAMESPACE, k),
+                        v,
+                    )
+                }));
+            })?;
+        }
+
         Ok(meta)
     }
 
@@ -88,11 +106,30 @@ impl App for ContainersApp {
             process::abort();
         }
 
+        // Initialize the metadata service.
+        let metadata_service =
+            match services::metadata::OasisMetadataService::new(env.clone()).await {
+                Ok(service) => Arc::new(service) as Arc<dyn services::metadata::MetadataService>,
+                Err(err) => {
+                    slog::error!(logger, "failed to create metadata service"; "err" => ?err);
+                    process::abort();
+                }
+            };
+        if self.metadata.set(metadata_service).is_err() {
+            slog::error!(logger, "metadata service was already set");
+            process::abort();
+        }
+
         // Start the REST API server.
         slog::info!(logger, "starting the API server");
         let cfg = rofl_appd::Config {
             address: ROFL_APPD_ADDRESS,
             kms: kms.clone(),
+            metadata: self
+                .metadata
+                .get()
+                .cloned()
+                .expect("Metadata service not set"),
         };
         let appd_logger = logger.clone();
         let appd_env = env.clone();
@@ -146,5 +183,9 @@ fn main() {
         env::set_var("PATH", "/usr/sbin:/usr/bin:/sbin:/bin");
     }
 
-    ContainersApp.start();
+    let containers = ContainersApp {
+        metadata: OnceCell::new(),
+    };
+
+    containers.start();
 }

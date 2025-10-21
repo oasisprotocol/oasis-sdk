@@ -47,19 +47,26 @@ class RoflClient:
         """
         self.url: str = url
 
-    async def _appd_post(self, path: str, payload: Any) -> Any:
-        """Post request to ROFL application daemon.
+    async def _appd_request(
+        self, method: str, path: str, payload: Any = None
+    ) -> Any:
+        """Request to ROFL application daemon.
 
         Args:
+            method: HTTP method (GET or POST)
             path: API endpoint path
-            payload: JSON payload to send
+            payload: JSON payload to send (for POST requests)
 
         Returns:
             JSON response from the daemon
 
         Raises:
+            ValueError: If an unsupported HTTP method is provided
             httpx.HTTPStatusError: If the request fails
         """
+        if method not in ("GET", "POST"):
+            raise ValueError(f"Unsupported HTTP method: {method}")
+
         transport: httpx.AsyncHTTPTransport | None = None
 
         if self.url and not self.url.startswith("http"):
@@ -76,10 +83,14 @@ class RoflClient:
                 else "http://localhost"
             )
             full_url: str = base_url + path
-            logger.debug(f"Posting to {full_url}: {json.dumps(payload)}")
-            response: httpx.Response = await client.post(
-                full_url, json=payload, timeout=60.0
-            )
+
+            if method == "GET":
+                logger.debug(f"Getting from {full_url}")
+                response: httpx.Response = await client.get(full_url, timeout=60.0)
+            else:  # POST
+                logger.debug(f"Posting to {full_url}: {json.dumps(payload)}")
+                response = await client.post(full_url, json=payload, timeout=60.0)
+
             response.raise_for_status()
             return response.json()
 
@@ -104,5 +115,33 @@ class RoflClient:
         }
 
         path: str = "/rofl/v1/keys/generate"
-        response: dict[str, Any] = await self._appd_post(path, payload)
+        response: dict[str, Any] = await self._appd_request("POST", path, payload)
         return response["key"]
+
+    async def get_metadata(self) -> dict[str, str]:
+        """Get all user-set metadata key-value pairs.
+
+        Returns:
+            Dictionary of metadata key-value pairs
+
+        Raises:
+            httpx.HTTPStatusError: If the request fails
+        """
+        path: str = "/rofl/v1/metadata"
+        response: dict[str, str] = await self._appd_request("GET", path)
+        return response
+
+    async def set_metadata(self, metadata: dict[str, str]) -> None:
+        """Set metadata key-value pairs.
+
+        This replaces all existing app-provided metadata. Will trigger a registration
+        refresh if the metadata has changed.
+
+        Args:
+            metadata: Dictionary of metadata key-value pairs to set
+
+        Raises:
+            httpx.HTTPStatusError: If the request fails
+        """
+        path: str = "/rofl/v1/metadata"
+        await self._appd_request("POST", path, metadata)

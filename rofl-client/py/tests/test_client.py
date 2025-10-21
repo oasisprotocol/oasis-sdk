@@ -214,6 +214,78 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(KeyKind.ED25519.value, "ed25519")
         self.assertEqual(KeyKind.SECP256K1.value, "secp256k1")
 
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_get_metadata(self, mock_client_class):
+        """Test get_metadata method."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"key1": "value1", "key2": "value2"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test get metadata
+        client = RoflClient()
+        metadata = await client.get_metadata()
+
+        # Verify the result
+        self.assertEqual(metadata, {"key1": "value1", "key2": "value2"})
+
+        # Verify the API call
+        mock_client.get.assert_called_once_with(
+            "http://localhost/rofl/v1/metadata", timeout=60.0
+        )
+
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_set_metadata(self, mock_client_class):
+        """Test set_metadata method."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.json.return_value = {}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test set metadata
+        client = RoflClient()
+        metadata_to_set = {"new_key": "new_value", "another_key": "another_value"}
+        await client.set_metadata(metadata_to_set)
+
+        # Verify the API call
+        mock_client.post.assert_called_once_with(
+            "http://localhost/rofl/v1/metadata",
+            json=metadata_to_set,
+            timeout=60.0,
+        )
+
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_get_metadata_with_http_url(self, mock_client_class):
+        """Test get_metadata method with HTTP URL."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"custom": "metadata"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test with HTTP URL
+        client = RoflClient(url="https://rofl.example.com")
+        metadata = await client.get_metadata()
+
+        # Verify the result
+        self.assertEqual(metadata, {"custom": "metadata"})
+
+        # Verify the API call uses the custom URL
+        mock_client.get.assert_called_once_with(
+            "https://rofl.example.com/rofl/v1/metadata", timeout=60.0
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
