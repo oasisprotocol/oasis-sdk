@@ -208,3 +208,14 @@ pub struct StakeThresholds {
     /// Required stake for creating new ROFL application.
     pub app_create: token::BaseUnits,
 }
+
+/// Metadata limits for ROFL instance registration.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct MetadataLimits {
+    /// Maximum number of metadata key-value pairs.
+    pub max_pairs: u64,
+    /// Maximum metadata key size in bytes.
+    pub max_key_size: u64,
+    /// Maximum metadata value size in bytes.
+    pub max_value_size: u64,
+}
