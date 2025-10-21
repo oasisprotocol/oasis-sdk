@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	mathRand "math/rand"
-	"sort"
 	"time"
 
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
@@ -1189,6 +1188,8 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 
 		// Ensure all transactions are ordered correctly.
 		var (
+			signers       []types.Address
+			nonces        []uint64
 			gasPrices     []uint64
 			gasLimits     []uint64
 			results       []bool
@@ -1200,6 +1201,14 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 				return fmt.Errorf("bad transaction in round %d: %w", round, err)
 			}
 
+			info := tx.AuthInfo.SignerInfo[0]
+			signer, err := info.AddressSpec.Address()
+			if err != nil {
+				return fmt.Errorf("bad address spec in round %d: %w", round, err)
+			}
+			signers = append(signers, signer)
+			nonces = append(nonces, info.Nonce)
+
 			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
 			gasPrices = append(gasPrices, gasPrice)
 			gasLimits = append(gasLimits, tx.AuthInfo.Fee.Gas)
@@ -1208,19 +1217,32 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 		}
 
 		env.Logger.Info("got batch gas information",
+			"signers", signers,
+			"nonces", nonces,
 			"round", round,
 			"prices", gasPrices,
 			"limits", gasLimits,
 			"total_limit", totalGasLimit,
 			"results", results,
 		)
+
 		// NOTE: The sum of gasLimits can be greater than the batch limit as the transaction could
 		//       have used less than the limit during actual execution.
 
-		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
-			return gasPrices[i] > gasPrices[j]
-		}) {
-			return fmt.Errorf("transactions in round %d not sorted by gas price", round)
+		// NOTE: We cannot reliably verify gas price ordering, as new transactions
+		//       may have been added to the pool while some were already included
+		//       in the batch.
+
+		for i := range len(signers) {
+			for j := i + 1; j < len(signers); j++ {
+				if !signers[i].Equal(signers[j]) {
+					continue
+				}
+				if nonces[i]+1 != nonces[j] {
+					return fmt.Errorf("transactions in round %d not sorted by nonce", round)
+				}
+				break
+			}
 		}
 	}
 
