@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"go/doc"
 	"go/token"
+	"go/types"
 	"io"
 	"os"
 	"path"
@@ -15,7 +16,6 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -81,6 +81,8 @@ var modulePaths = map[string]string{
 var (
 	modulePathsConsulted = map[string]bool{}
 	packageTypes         = map[string]map[string]*doc.Type{}
+	packageInfos         = map[string]*types.Info{}
+	packageTypeSpecs     = map[string]map[types.Type]*ast.TypeSpec{}
 )
 
 func parseDocs(importPath string) {
@@ -101,7 +103,7 @@ func parseDocs(importPath string) {
 		module = path.Dir(module)
 	}
 	cfg := &packages.Config{
-		Mode: packages.NeedSyntax | packages.NeedTypes,
+		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
 		Dir:  pkgPath,
 	}
 	pkgs, err := packages.Load(cfg, "./...")
@@ -110,10 +112,12 @@ func parseDocs(importPath string) {
 	}
 	var (
 		fset  *token.FileSet
+		info  *types.Info
 		files []*ast.File
 	)
 	for _, pkg := range pkgs {
 		fset = pkg.Fset
+		info = pkg.TypesInfo
 		files = append(files, pkg.Syntax...)
 	}
 	dpkg, err := doc.NewFromFiles(fset, files, importPath)
@@ -124,7 +128,27 @@ func parseDocs(importPath string) {
 	for _, dt := range dpkg.Types {
 		typesByName[dt.Name] = dt
 	}
+	typeSpecs := make(map[types.Type]*ast.TypeSpec)
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					panic(fmt.Sprintf("expected type spec for %v", spec))
+				}
+				if typ := info.Defs[ts.Name]; typ != nil {
+					typeSpecs[typ.Type()] = ts
+				}
+			}
+		}
+	}
 	packageTypes[importPath] = typesByName
+	packageInfos[importPath] = info
+	packageTypeSpecs[importPath] = typeSpecs
 }
 
 func getTypeDoc(t reflect.Type) string {
@@ -169,30 +193,39 @@ func getFieldDoc(t reflect.Type, name string) string {
 
 var typeMethods = map[string]map[string]*ast.Field{}
 
-func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast.Field) {
+func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast.Field, info *types.Info, typeSpecs map[types.Type]*ast.TypeSpec) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface element %v\n", elem)
 	switch t := elem.Type.(type) {
 	case *ast.Ident:
-		getMethodLookupVisitInterface(methodsByName, t.Obj.Decl.(*ast.TypeSpec))
-	case *ast.SelectorExpr:
-		if t.Sel.Obj != nil {
-			getMethodLookupVisitInterface(methodsByName, t.Sel.Obj.Decl.(*ast.TypeSpec))
-		} else {
-			pkgPathSource := t.X.(*ast.Ident).Obj.Decl.(*ast.ImportSpec).Path.Value
-			pkgPath, err := strconv.Unquote(pkgPathSource)
-			if err != nil {
-				panic(fmt.Sprintf("import path %s unquote", pkgPathSource))
-			}
-			parseDocs(pkgPath)
-			dt := packageTypes[pkgPath][t.Sel.Name]
-			getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+		typ := info.TypeOf(t)
+		named, ok := typ.(*types.Named)
+		if !ok {
+			panic(fmt.Sprintf("expected named type for %v", t))
 		}
+		ts, ok := typeSpecs[named]
+		if !ok {
+			panic(fmt.Sprintf("type spec not found for %v", t))
+		}
+		getMethodLookupVisitInterface(methodsByName, ts, info, typeSpecs)
+	case *ast.SelectorExpr:
+		typ := info.TypeOf(t)
+		named, ok := typ.(*types.Named)
+		if !ok {
+			panic(fmt.Sprintf("expected named type for %v", t))
+		}
+		importedPkg := named.Obj().Pkg()
+		pkgPath := importedPkg.Path()
+		parseDocs(pkgPath)
+		dt := packageTypes[pkgPath][t.Sel.Name]
+		info = packageInfos[pkgPath]
+		typeSpecs = packageTypeSpecs[pkgPath]
+		getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec), info, typeSpecs)
 	default:
 		panic(fmt.Sprintf("method %v unexpected type", elem))
 	}
 }
 
-func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.TypeSpec) {
+func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.TypeSpec, info *types.Info, typeSpec map[types.Type]*ast.TypeSpec) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface %v\n", ts)
 	it := ts.Type.(*ast.InterfaceType)
 	for _, elem := range it.Methods.List {
@@ -205,7 +238,7 @@ func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.
 			}
 			methodsByName[elem.Names[0].Name] = elem
 		} else {
-			getMethodLookupVisitEmbedded(methodsByName, elem)
+			getMethodLookupVisitEmbedded(methodsByName, elem, info, typeSpec)
 		}
 	}
 }
@@ -218,7 +251,9 @@ func getMethodLookup(t reflect.Type) map[string]*ast.Field {
 	methodsByName := make(map[string]*ast.Field)
 	parseDocs(t.PkgPath())
 	dt := packageTypes[t.PkgPath()][t.Name()]
-	getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+	info := packageInfos[t.PkgPath()]
+	typeSpec := packageTypeSpecs[t.PkgPath()]
+	getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec), info, typeSpec)
 	typeMethods[sig] = methodsByName
 	return methodsByName
 }
