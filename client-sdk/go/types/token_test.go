@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 )
 

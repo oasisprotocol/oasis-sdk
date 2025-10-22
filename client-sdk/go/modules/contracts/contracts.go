@@ -1,3 +1,4 @@
+// Package contracts contains functionality related to the contracts module.
 package contracts
 
 import (
@@ -50,7 +51,7 @@ type V1 interface {
 	// Instantiate generates a contracts.Instantiate transaction.
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
-	Instantiate(codeID CodeID, upgradesPolicy Policy, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder
+	Instantiate(codeID CodeID, upgradesPolicy Policy, data any, tokens []types.BaseUnits) *client.TransactionBuilder
 
 	// CallRaw generates a contracts.Call transaction.
 	//
@@ -62,7 +63,7 @@ type V1 interface {
 	// Call generates a contracts.Call transaction.
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
-	Call(id InstanceID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder
+	Call(id InstanceID, data any, tokens []types.BaseUnits) *client.TransactionBuilder
 
 	// UpgradeRaw generates a contracts.Upgrade transaction.
 	//
@@ -74,7 +75,7 @@ type V1 interface {
 	// Upgrade generates a contracts.Upgrade transaction.
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
-	Upgrade(id InstanceID, codeID CodeID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder
+	Upgrade(id InstanceID, codeID CodeID, data any, tokens []types.BaseUnits) *client.TransactionBuilder
 
 	// ChangeUpgradePolicy generates a contracts.ChangeUpgradePolicy transaction.
 	ChangeUpgradePolicy(id InstanceID, upgradesPolicy Policy) *client.TransactionBuilder
@@ -107,7 +108,7 @@ type V1 interface {
 	// Custom queries the given contract for a custom query.
 	//
 	// This method will encode the specified data using CBOR as defined by the Oasis ABI.
-	Custom(ctx context.Context, round uint64, id InstanceID, data, rsp interface{}) error
+	Custom(ctx context.Context, round uint64, id InstanceID, data, rsp any) error
 
 	// Parameters queries the EVM module parameters.
 	Parameters(ctx context.Context, round uint64) (*Parameters, error)
@@ -140,7 +141,7 @@ func (a *v1) InstantiateRaw(codeID CodeID, upgradesPolicy Policy, data []byte, t
 }
 
 // Implements V1.
-func (a *v1) Instantiate(codeID CodeID, upgradesPolicy Policy, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Instantiate(codeID CodeID, upgradesPolicy Policy, data any, tokens []types.BaseUnits) *client.TransactionBuilder {
 	return a.InstantiateRaw(codeID, upgradesPolicy, cbor.Marshal(data), tokens)
 }
 
@@ -154,7 +155,7 @@ func (a *v1) CallRaw(id InstanceID, data []byte, tokens []types.BaseUnits) *clie
 }
 
 // Implements V1.
-func (a *v1) Call(id InstanceID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Call(id InstanceID, data any, tokens []types.BaseUnits) *client.TransactionBuilder {
 	return a.CallRaw(id, cbor.Marshal(data), tokens)
 }
 
@@ -169,7 +170,7 @@ func (a *v1) UpgradeRaw(id InstanceID, codeID CodeID, data []byte, tokens []type
 }
 
 // Implements V1.
-func (a *v1) Upgrade(id InstanceID, codeID CodeID, data interface{}, tokens []types.BaseUnits) *client.TransactionBuilder {
+func (a *v1) Upgrade(id InstanceID, codeID CodeID, data any, tokens []types.BaseUnits) *client.TransactionBuilder {
 	return a.UpgradeRaw(id, codeID, cbor.Marshal(data), tokens)
 }
 
@@ -252,7 +253,7 @@ func (a *v1) CustomRaw(ctx context.Context, round uint64, id InstanceID, data []
 }
 
 // Implements V1.
-func (a *v1) Custom(ctx context.Context, round uint64, id InstanceID, data, rsp interface{}) error {
+func (a *v1) Custom(ctx context.Context, round uint64, id InstanceID, data, rsp any) error {
 	raw, err := a.CustomRaw(ctx, round, id, cbor.Marshal(data))
 	if err != nil {
 		return err
@@ -357,6 +358,6 @@ func CompressCode(code []byte) []byte {
 	if err != nil {
 		panic(err)
 	}
-	encoder.Close()
+	_ = encoder.Close()
 	return compressedCode.Bytes()
 }

@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	memorySigner "github.com/oasisprotocol/oasis-core/go/common/crypto/signature/signers/memory"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
@@ -104,7 +105,7 @@ func TestPrettyPrintTransaction(t *testing.T) {
 	require.NoError(err)
 
 	// Try different transaction bodies.
-	cborBody := cbor.Marshal(map[string]interface{}{"to": "oasis123", "amount": "100 BANANAS"})
+	cborBody := cbor.Marshal(map[string]any{"to": "oasis123", "amount": "100 BANANAS"})
 	for _, testBody := range []struct {
 		Format   CallFormat
 		Body     []byte

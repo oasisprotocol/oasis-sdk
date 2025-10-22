@@ -3,12 +3,12 @@
 # For more information, see:
 # https://golangci-lint.run/usage/configuration/.
 
+version: "2"
 run:
   timeout: 5m
-
 linters:
   # Disable all linters except the ones explicitly listed below.
-  disable-all: true
+  default: none
   enable:
     - asciicheck
     - bodyclose
@@ -21,14 +21,11 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - gofumpt
     - goheader
-    - goimports
     - revive
     - gomodguard
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - misspell
@@ -38,40 +35,43 @@ linters:
     - prealloc
     - rowserrcheck
     - staticcheck
-    - stylecheck
     - sqlclosecheck
-    - typecheck
     - unconvert
     - unparam
     - unused
     - whitespace
-
-linters-settings:
-  exhaustive:
-    # Switch statements are to be considered exhaustive if a 'default' case is
-    # present, even if all enum members aren't listed in the switch.
-    default-signifies-exhaustive: true
-  goimports:
-    # Put local imports after 3rd-party packages.
-    local-prefixes: github.com/oasisprotocol/
-  gosec:
-    excludes:
-      # https://github.com/securego/gosec#available-rules
-      - G402
-      - G404
-  depguard:
-    rules:
-      main:
-        files:
-          - $all
-        allow:
-          - $gostd
-          - golang.org/x/crypto/sha3
-          - github.com/oasisprotocol
-          - github.com/btcsuite/btcd/btcec
-          - google.golang.org/grpc
-          - github.com/ethereum/go-ethereum
-          - github.com/shopspring/decimal
-          - github.com/golang/snappy
-          - github.com/stretchr/testify
-          - gopkg.in/yaml.v3
+  settings:
+    exhaustive:
+      # Switch statements are to be considered exhaustive if a 'default' case is
+      # present, even if all enum members aren't listed in the switch.
+      default-signifies-exhaustive: true
+    gosec:
+      excludes:
+        # https://github.com/securego/gosec#available-rules
+        - G402
+        - G404
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          allow:
+            - $gostd
+            - golang.org/x/crypto/sha3
+            - github.com/oasisprotocol
+            - github.com/btcsuite/btcd/btcec
+            - google.golang.org/grpc
+            - github.com/ethereum/go-ethereum
+            - github.com/shopspring/decimal
+            - github.com/golang/snappy
+            - github.com/stretchr/testify
+            - gopkg.in/yaml.v3
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      # Put local imports after 3rd-party packages.
+      local-prefixes:
+        - github.com/oasisprotocol/oasis-core

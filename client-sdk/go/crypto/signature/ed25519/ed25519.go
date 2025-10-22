@@ -1,3 +1,4 @@
+// Package ed25519 provides utilities for signing with the ed25519 scheme.
 package ed25519
 
 import (
@@ -64,11 +65,12 @@ func (pk PublicKey) Verify(context, message, sig []byte) bool {
 
 // NewPublicKey creates a new public key from the given Base64 representation or
 // panics.
-func NewPublicKey(text string) (pk PublicKey) {
+func NewPublicKey(text string) PublicKey {
+	var pk PublicKey
 	if err := pk.UnmarshalText([]byte(text)); err != nil {
 		panic(err)
 	}
-	return
+	return pk
 }
 
 func init() {

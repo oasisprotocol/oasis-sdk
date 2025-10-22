@@ -125,6 +125,7 @@ func NewRuntimeScenario(runtimeName string, tests []RunTestFunction, opts ...Opt
 	return sc
 }
 
+// Clone implements scenario.Scenario.
 func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	return &RuntimeScenario{
 		Scenario:        *sc.Scenario.Clone().(*e2e.Scenario),
@@ -134,10 +135,12 @@ func (sc *RuntimeScenario) Clone() scenario.Scenario {
 	}
 }
 
+// PreInit implements scenario.Scenario.
 func (sc *RuntimeScenario) PreInit() error {
 	return nil
 }
 
+// Fixture implements scenario.Scenario.
 func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 	f, err := sc.Scenario.Fixture()
 	if err != nil {
@@ -296,7 +299,7 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 		Sentries: []oasis.SentryFixture{},
 		Seeds:    []oasis.SeedFixture{{}},
 		Clients: []oasis.ClientFixture{
-			{Runtimes: []int{1}, RuntimeConfig: map[int]map[string]interface{}{
+			{Runtimes: []int{1}, RuntimeConfig: map[int]map[string]any{
 				1: {
 					"estimate_gas_by_simulating_contracts": true,
 					"allowed_queries":                      []map[string]bool{{"all_expensive": true}},
@@ -440,6 +443,7 @@ func (sc *RuntimeScenario) WaitMasterSecret(ctx context.Context, generation uint
 	}
 }
 
+// Run implements scenario.Scenario.
 func (sc *RuntimeScenario) Run(ctx context.Context, _ *env.Env) error {
 	// Start the test network.
 	if err := sc.Net.Start(); err != nil {

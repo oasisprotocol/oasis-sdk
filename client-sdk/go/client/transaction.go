@@ -16,11 +16,11 @@ type TransactionBuilder struct {
 	tx *types.Transaction
 	ts *types.TransactionSigner
 
-	callMeta interface{}
+	callMeta any
 }
 
 // NewTransactionBuilder creates a new transaction builder.
-func NewTransactionBuilder(rc RuntimeClient, method types.MethodName, body interface{}) *TransactionBuilder {
+func NewTransactionBuilder(rc RuntimeClient, method types.MethodName, body any) *TransactionBuilder {
 	return &TransactionBuilder{
 		rc: rc,
 		tx: types.NewTransaction(nil, method, body),
@@ -129,7 +129,7 @@ func (tb *TransactionBuilder) AppendSign(ctx context.Context, signer signature.S
 }
 
 // DecodeResult decodes a result of executing a transaction signed by this builder.
-func (tb *TransactionBuilder) DecodeResult(result *types.CallResult, rsp interface{}) error {
+func (tb *TransactionBuilder) DecodeResult(result *types.CallResult, rsp any) error {
 	result, err := tb.decodeResult(result, tb.callMeta)
 	if err != nil {
 		return err
@@ -153,7 +153,7 @@ func (tb *TransactionBuilder) DecodeResult(result *types.CallResult, rsp interfa
 
 // SubmitTx submits a transaction to the runtime transaction scheduler and waits for transaction
 // execution results.
-func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) error {
+func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp any) error {
 	if tb.ts == nil {
 		return fmt.Errorf("unable to submit unsigned transaction")
 	}
@@ -170,7 +170,7 @@ func (tb *TransactionBuilder) SubmitTx(ctx context.Context, rsp interface{}) err
 //
 // Response includes transaction metadata - e.g. round at which the transaction was included
 // in a block.
-func (tb *TransactionBuilder) SubmitTxMeta(ctx context.Context, rsp interface{}) (*TransactionMeta, error) {
+func (tb *TransactionBuilder) SubmitTxMeta(ctx context.Context, rsp any) (*TransactionMeta, error) {
 	if tb.ts == nil {
 		return nil, fmt.Errorf("unable to submit unsigned transaction")
 	}

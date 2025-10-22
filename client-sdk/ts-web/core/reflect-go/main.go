@@ -1,3 +1,5 @@
+// Package main generates TypeScript client bindings from Oasis Core Go types
+// and APIs.
 package main
 
 import (
@@ -5,8 +7,8 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
-	"go/parser"
 	"go/token"
+	"go/types"
 	"io"
 	"os"
 	"path"
@@ -14,11 +16,12 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 	_ "unsafe"
+
+	"golang.org/x/tools/go/packages" // nolint:depguard
 
 	beacon "github.com/oasisprotocol/oasis-core/go/beacon/api"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
@@ -58,7 +61,7 @@ var (
 	memo      = map[reflect.Type]*usedType{}
 )
 
-func collectPath(fn interface{}, stripComponents string) string {
+func collectPath(fn any, stripComponents string) string {
 	// the idea of sneaking in through runtime.FuncForPC from https://stackoverflow.com/a/54588577/1864688
 	reflectFn := reflect.ValueOf(fn)
 	entryPoint := reflectFn.Pointer()
@@ -78,6 +81,8 @@ var modulePaths = map[string]string{
 var (
 	modulePathsConsulted = map[string]bool{}
 	packageTypes         = map[string]map[string]*doc.Type{}
+	packageInfos         = map[string]*types.Info{}
+	packageTypeSpecs     = map[string]map[types.Type]*ast.TypeSpec{}
 )
 
 func parseDocs(importPath string) {
@@ -97,16 +102,23 @@ func parseDocs(importPath string) {
 		}
 		module = path.Dir(module)
 	}
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, pkgPath, nil, parser.ParseComments)
+	cfg := &packages.Config{
+		Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo,
+		Dir:  pkgPath,
+	}
+	pkgs, err := packages.Load(cfg, "./...")
 	if err != nil {
 		panic(err)
 	}
-	var files []*ast.File
+	var (
+		fset  *token.FileSet
+		info  *types.Info
+		files []*ast.File
+	)
 	for _, pkg := range pkgs {
-		for _, file := range pkg.Files {
-			files = append(files, file)
-		}
+		fset = pkg.Fset
+		info = pkg.TypesInfo
+		files = append(files, pkg.Syntax...)
 	}
 	dpkg, err := doc.NewFromFiles(fset, files, importPath)
 	if err != nil {
@@ -116,7 +128,27 @@ func parseDocs(importPath string) {
 	for _, dt := range dpkg.Types {
 		typesByName[dt.Name] = dt
 	}
+	typeSpecs := make(map[types.Type]*ast.TypeSpec)
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				ts, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					panic(fmt.Sprintf("expected type spec for %v", spec))
+				}
+				if typ := info.Defs[ts.Name]; typ != nil {
+					typeSpecs[typ.Type()] = ts
+				}
+			}
+		}
+	}
 	packageTypes[importPath] = typesByName
+	packageInfos[importPath] = info
+	packageTypeSpecs[importPath] = typeSpecs
 }
 
 func getTypeDoc(t reflect.Type) string {
@@ -161,30 +193,39 @@ func getFieldDoc(t reflect.Type, name string) string {
 
 var typeMethods = map[string]map[string]*ast.Field{}
 
-func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast.Field) {
+func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast.Field, info *types.Info, typeSpecs map[types.Type]*ast.TypeSpec) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface element %v\n", elem)
 	switch t := elem.Type.(type) {
 	case *ast.Ident:
-		getMethodLookupVisitInterface(methodsByName, t.Obj.Decl.(*ast.TypeSpec))
-	case *ast.SelectorExpr:
-		if t.Sel.Obj != nil {
-			getMethodLookupVisitInterface(methodsByName, t.Sel.Obj.Decl.(*ast.TypeSpec))
-		} else {
-			pkgPathSource := t.X.(*ast.Ident).Obj.Decl.(*ast.ImportSpec).Path.Value
-			pkgPath, err := strconv.Unquote(pkgPathSource)
-			if err != nil {
-				panic(fmt.Sprintf("import path %s unquote", pkgPathSource))
-			}
-			parseDocs(pkgPath)
-			dt := packageTypes[pkgPath][t.Sel.Name]
-			getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+		typ := info.TypeOf(t)
+		named, ok := typ.(*types.Named)
+		if !ok {
+			panic(fmt.Sprintf("expected named type for %v", t))
 		}
+		ts, ok := typeSpecs[named]
+		if !ok {
+			panic(fmt.Sprintf("type spec not found for %v", t))
+		}
+		getMethodLookupVisitInterface(methodsByName, ts, info, typeSpecs)
+	case *ast.SelectorExpr:
+		typ := info.TypeOf(t)
+		named, ok := typ.(*types.Named)
+		if !ok {
+			panic(fmt.Sprintf("expected named type for %v", t))
+		}
+		importedPkg := named.Obj().Pkg()
+		pkgPath := importedPkg.Path()
+		parseDocs(pkgPath)
+		dt := packageTypes[pkgPath][t.Sel.Name]
+		info = packageInfos[pkgPath]
+		typeSpecs = packageTypeSpecs[pkgPath]
+		getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec), info, typeSpecs)
 	default:
 		panic(fmt.Sprintf("method %v unexpected type", elem))
 	}
 }
 
-func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.TypeSpec) {
+func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.TypeSpec, info *types.Info, typeSpec map[types.Type]*ast.TypeSpec) {
 	_, _ = fmt.Fprintf(os.Stderr, "visiting doc interface %v\n", ts)
 	it := ts.Type.(*ast.InterfaceType)
 	for _, elem := range it.Methods.List {
@@ -197,7 +238,7 @@ func getMethodLookupVisitInterface(methodsByName map[string]*ast.Field, ts *ast.
 			}
 			methodsByName[elem.Names[0].Name] = elem
 		} else {
-			getMethodLookupVisitEmbedded(methodsByName, elem)
+			getMethodLookupVisitEmbedded(methodsByName, elem, info, typeSpec)
 		}
 	}
 }
@@ -210,7 +251,9 @@ func getMethodLookup(t reflect.Type) map[string]*ast.Field {
 	methodsByName := make(map[string]*ast.Field)
 	parseDocs(t.PkgPath())
 	dt := packageTypes[t.PkgPath()][t.Name()]
-	getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec))
+	info := packageInfos[t.PkgPath()]
+	typeSpec := packageTypeSpecs[t.PkgPath()]
+	getMethodLookupVisitInterface(methodsByName, dt.Decl.Specs[0].(*ast.TypeSpec), info, typeSpec)
 	typeMethods[sig] = methodsByName
 	return methodsByName
 }
@@ -256,7 +299,7 @@ func getMethodArgName(t reflect.Type, name string, i int) string {
 var customStructNames = map[reflect.Type]string{
 	reflect.TypeOf(consensus.Parameters{}): "ConsensusLightParameters",
 }
-var customStructNamesConsulted = map[reflect.Type]bool{}
+var customStructNamesConsulted = map[reflect.Type]struct{}{}
 
 var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/beacon":                  "Beacon",
@@ -292,29 +335,28 @@ var prefixByPackage = map[string]string{
 	"github.com/oasisprotocol/oasis-core/go/worker/compute":          "WorkerCompute",
 	"github.com/oasisprotocol/oasis-core/go/worker/keymanager":       "WorkerKeyManager",
 }
-var prefixConsulted = map[string]bool{}
+var prefixConsulted = map[string]struct{}{}
 
 func getPrefix(t reflect.Type) string {
 	pkgDir := t.PkgPath()
-	var prefix string
+
 	for {
 		if pkgDir == "." {
 			panic(fmt.Sprintf("unset package prefix %s", t.PkgPath()))
 		}
-		var ok bool
-		prefix, ok = prefixByPackage[pkgDir]
-		if ok {
-			prefixConsulted[pkgDir] = true
-			break
+
+		if prefix, ok := prefixByPackage[pkgDir]; ok {
+			prefixConsulted[pkgDir] = struct{}{}
+			return prefix
 		}
+
 		pkgDir = path.Dir(pkgDir)
 	}
-	return prefix
 }
 
 func getStructName(t reflect.Type) string {
 	if ref, ok := customStructNames[t]; ok {
-		customStructNamesConsulted[t] = true
+		customStructNamesConsulted[t] = struct{}{}
 		return ref
 	}
 	prefix := getPrefix(t)
@@ -550,111 +592,117 @@ const (
 	descriptorKindServerStreaming = "ServerStreaming"
 )
 
-var skipMethods = map[string]bool{
-	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": true,
+var skipMethods = map[string]struct{}{
+	"github.com/oasisprotocol/oasis-core/go/storage/api.Backend.Initialized": {},
 	// getters for other APIs
-	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         true,
-	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           true,
-	"github.com/oasisprotocol/oasis-core/go/consensus/api.Backend.State":            true,
-	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": true,
+	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Secrets":         {},
+	"github.com/oasisprotocol/oasis-core/go/keymanager/api.Backend.Churp":           {},
+	"github.com/oasisprotocol/oasis-core/go/consensus/api.Backend.State":            {},
+	"github.com/oasisprotocol/oasis-core/go/runtime/client/api.RuntimeClient.State": {},
 }
-var skipMethodsConsulted = map[string]bool{}
+var skipMethodsConsulted = map[string]struct{}{}
 
-func visitClientWithService(client *clientCode, t reflect.Type, service string, methodPrefix string) {
+func (c *clientCode) visitClientWithService(i any, service string, methodPrefix string) {
+	t := reflect.TypeOf(i).Elem()
 	_, _ = fmt.Fprintf(os.Stderr, "visiting client %v\n", t)
 	for i := 0; i < t.NumMethod(); i++ {
 		m := t.Method(i)
-		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
-		sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
-		if skipMethods[sig] {
-			skipMethodsConsulted[sig] = true
-			continue
-		}
-		descriptorKind := descriptorKindUnary
-		var inArgIndex int
-		var inRef string
-		var outRef string
-		for j := 0; j < m.Type.NumIn(); j++ {
-			u := m.Type.In(j)
-			// skip context
-			if u == reflect.TypeOf((*context.Context)(nil)).Elem() {
-				continue
-			}
-			// writer means streaming byte array output
-			if u == reflect.TypeOf((*io.Writer)(nil)).Elem() {
-				descriptorKind = descriptorKindServerStreaming
-				outRef = visitType(reflect.TypeOf([]byte{}), true)
-				continue
-			}
-			if inRef != "" {
-				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple in types\n", t, m)
-			}
-			inArgIndex = j
-			inRef = visitType(u, true)
-		}
-		for j := 0; j < m.Type.NumOut(); j++ {
-			u := m.Type.Out(j)
-			// skip subscription
-			if u == reflect.TypeOf((*pubsub.Subscription)(nil)) {
-				continue
-			}
-			if u == reflect.TypeOf((*pubsub.ClosableSubscription)(nil)).Elem() {
-				continue
-			}
-			// skip error
-			if u == reflect.TypeOf((*error)(nil)).Elem() {
-				continue
-			}
-			if outRef != "" {
-				_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple out types\n", t, m)
-			}
-			// visit sync chunk instead
-			if u == reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem() {
-				u = reflect.TypeOf(storage.SyncChunk{})
-				descriptorKind = descriptorKindServerStreaming
-			}
-			// visit stream datum instead
-			if u.Kind() == reflect.Chan {
-				u = u.Elem()
-				descriptorKind = descriptorKindServerStreaming
-			}
-			outRef = visitType(u, true)
-		}
-		var inParam, inArg string
-		if inRef == "" {
-			inRef = "void"
-			inArg = "undefined"
-		} else {
-			inArg = getMethodArgName(t, m.Name, inArgIndex)
-			if inArg == "" {
-				// why didn't we put the name in the interface spec ugh
-				switch {
-				case m.Type.In(inArgIndex) == reflect.TypeOf(uint64(0)) || m.Type.In(inArgIndex) == reflect.TypeOf(int64(0)):
-					// oh my god our codebase
-					inArg = "height"
-				case m.Type.In(inArgIndex) == reflect.TypeOf(beacon.EpochTime(0)):
-					inArg = "epoch"
-				default:
-					inArg = "query"
-				}
-			}
-			inParam = inArg + ": " + inRef
-		}
-		if outRef == "" {
-			outRef = "void"
-		}
-		methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
-		lowerService := strings.ToLower(service[:1]) + service[1:]
-		client.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
-		client.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
-		client.methods += "\n"
+		c.visitMethodWithService(t, m, service, methodPrefix)
 	}
-	client.methodDescriptors += "\n"
+	c.methodDescriptors += "\n"
 }
 
-func visitClient(client *clientCode, t reflect.Type) {
+func (c *clientCode) visitMethodWithService(t reflect.Type, m reflect.Method, service string, methodPrefix string) {
+	_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", m)
+	sig := fmt.Sprintf("%s.%s.%s", t.PkgPath(), t.Name(), m.Name)
+	if _, ok := skipMethods[sig]; ok {
+		skipMethodsConsulted[sig] = struct{}{}
+		return
+	}
+	descriptorKind := descriptorKindUnary
+	var inArgIndex int
+	var inRef string
+	var outRef string
+	for j := 0; j < m.Type.NumIn(); j++ {
+		u := m.Type.In(j)
+		// skip context
+		if u == reflect.TypeOf((*context.Context)(nil)).Elem() {
+			continue
+		}
+		// writer means streaming byte array output
+		if u == reflect.TypeOf((*io.Writer)(nil)).Elem() {
+			descriptorKind = descriptorKindServerStreaming
+			outRef = visitType(reflect.TypeOf([]byte{}), true)
+			continue
+		}
+		if inRef != "" {
+			_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple in types\n", t, m)
+		}
+		inArgIndex = j
+		inRef = visitType(u, true)
+	}
+	for j := 0; j < m.Type.NumOut(); j++ {
+		u := m.Type.Out(j)
+		// skip subscription
+		if u == reflect.TypeOf((*pubsub.Subscription)(nil)) {
+			continue
+		}
+		if u == reflect.TypeOf((*pubsub.ClosableSubscription)(nil)).Elem() {
+			continue
+		}
+		// skip error
+		if u == reflect.TypeOf((*error)(nil)).Elem() {
+			continue
+		}
+		if outRef != "" {
+			_, _ = fmt.Fprintf(os.Stderr, "type %v method %v unexpected multiple out types\n", t, m)
+		}
+		// visit sync chunk instead
+		if u == reflect.TypeOf((*storage.WriteLogIterator)(nil)).Elem() {
+			u = reflect.TypeOf(storage.SyncChunk{})
+			descriptorKind = descriptorKindServerStreaming
+		}
+		// visit stream datum instead
+		if u.Kind() == reflect.Chan {
+			u = u.Elem()
+			descriptorKind = descriptorKindServerStreaming
+		}
+		outRef = visitType(u, true)
+	}
+	var inParam, inArg string
+	if inRef == "" {
+		inRef = "void"
+		inArg = "undefined"
+	} else {
+		inArg = getMethodArgName(t, m.Name, inArgIndex)
+		if inArg == "" {
+			// why didn't we put the name in the interface spec ugh
+			switch m.Type.In(inArgIndex) {
+			case reflect.TypeOf(uint64(0)), reflect.TypeOf(int64(0)):
+				// oh my god our codebase
+				inArg = "height"
+			case reflect.TypeOf(beacon.EpochTime(0)):
+				inArg = "epoch"
+			default:
+				inArg = "query"
+			}
+		}
+		inParam = inArg + ": " + inRef
+	}
+	if outRef == "" {
+		outRef = "void"
+	}
+	methodDoc := renderDocComment(getMethodDoc(t, m.Name), "    ")
+	lowerService := strings.ToLower(service[:1]) + service[1:]
+	c.methodDescriptors += fmt.Sprintf("const methodDescriptor%s%s%s = createMethodDescriptor%s<%s, %s>('%s', '%s%s');\n", service, methodPrefix, m.Name, descriptorKind, inRef, outRef, service, methodPrefix, m.Name)
+	c.methods += fmt.Sprintf("%s    %s%s%s(%s) { return this.call%s(methodDescriptor%s%s%s, %s); }\n", methodDoc, lowerService, methodPrefix, m.Name, inParam, descriptorKind, service, methodPrefix, m.Name, inArg)
+	c.methods += "\n"
+}
+
+func (c *clientCode) visitClient(i any) {
+	t := reflect.TypeOf(i).Elem()
 	prefix := getPrefix(t)
-	visitClientWithService(client, t, prefix, "")
+	c.visitClientWithService(i, prefix, "")
 }
 
 func write() {
@@ -667,10 +715,10 @@ func write() {
 	}
 }
 
-func writeClient(internal clientCode, className string) {
-	fmt.Print(internal.methodDescriptors)
+func (c *clientCode) writeClient(className string) {
+	fmt.Print(c.methodDescriptors)
 	fmt.Printf("export class %s extends GRPCWrapper {\n", className)
-	fmt.Print(internal.methods)
+	fmt.Print(c.methods)
 	fmt.Print("}\n\n")
 }
 
@@ -681,42 +729,42 @@ var registeredMethods sync.Map
 
 func main() {
 	var internal clientCode
-	visitClient(&internal, reflect.TypeOf((*beacon.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*scheduler.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*registry.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*staking.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*keymanager.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*roothash.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*governance.Backend)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*storage.Backend)(nil)).Elem())
-	visitClientWithService(&internal, reflect.TypeOf((*workerStorage.StorageWorker)(nil)).Elem(), "StorageWorker", "")
-	visitClient(&internal, reflect.TypeOf((*runtimeClient.RuntimeClient)(nil)).Elem())
-	visitClient(&internal, reflect.TypeOf((*consensus.Backend)(nil)).Elem())
-	visitClientWithService(&internal, reflect.TypeOf((*syncer.ReadSyncer)(nil)).Elem(), "Consensus", "State")
-	visitClientWithService(&internal, reflect.TypeOf((*control.NodeController)(nil)).Elem(), "NodeController", "")
-	visitClientWithService(&internal, reflect.TypeOf((*control.DebugController)(nil)).Elem(), "DebugController", "")
+	internal.visitClient((*beacon.Backend)(nil))
+	internal.visitClient((*scheduler.Backend)(nil))
+	internal.visitClient((*registry.Backend)(nil))
+	internal.visitClient((*staking.Backend)(nil))
+	internal.visitClient((*keymanager.Backend)(nil))
+	internal.visitClient((*roothash.Backend)(nil))
+	internal.visitClient((*governance.Backend)(nil))
+	internal.visitClient((*storage.Backend)(nil))
+	internal.visitClientWithService((*workerStorage.StorageWorker)(nil), "StorageWorker", "")
+	internal.visitClient((*runtimeClient.RuntimeClient)(nil))
+	internal.visitClient((*consensus.Backend)(nil))
+	internal.visitClientWithService((*syncer.ReadSyncer)(nil), "Consensus", "State")
+	internal.visitClientWithService((*control.NodeController)(nil), "NodeController", "")
+	internal.visitClientWithService((*control.DebugController)(nil), "DebugController", "")
 
 	_, _ = fmt.Fprintf(os.Stderr, "visiting transaction body types\n")
-	registeredMethods.Range(func(name, bodyType interface{}) bool {
+	registeredMethods.Range(func(name, bodyType any) bool {
 		_, _ = fmt.Fprintf(os.Stderr, "visiting method %v\n", name)
 		visitType(reflect.TypeOf(bodyType), false)
 		return true
 	})
 
 	write()
-	writeClient(internal, "NodeInternal")
+	internal.writeClient("NodeInternal")
 	for p := range modulePaths {
 		if !modulePathsConsulted[p] {
 			panic(fmt.Sprintf("unused module path %s", p))
 		}
 	}
 	for t := range customStructNames {
-		if !customStructNamesConsulted[t] {
+		if _, ok := customStructNamesConsulted[t]; !ok {
 			panic(fmt.Sprintf("unused custom type name %v", t))
 		}
 	}
 	for prefix := range prefixByPackage {
-		if !prefixConsulted[prefix] {
+		if _, ok := prefixConsulted[prefix]; !ok {
 			panic(fmt.Sprintf("unused prefix %s", prefix))
 		}
 	}
@@ -724,7 +772,7 @@ func main() {
 		panic("VersionInfo special case not needed")
 	}
 	for sig := range skipMethods {
-		if !skipMethodsConsulted[sig] {
+		if _, ok := skipMethodsConsulted[sig]; !ok {
 			panic(fmt.Sprintf("unused skip method %s", sig))
 		}
 	}

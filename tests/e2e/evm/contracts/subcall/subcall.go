@@ -1,3 +1,4 @@
+// Package subcall provides access to the compiled subcall contract and its ABI.
 package subcall
 
 import (

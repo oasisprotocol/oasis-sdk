@@ -1,3 +1,4 @@
+// Package connection provides functionality for network connections.
 package connection
 
 import (

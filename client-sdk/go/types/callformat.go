@@ -1,4 +1,4 @@
-package types
+package types //nolint:revive
 
 import (
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"

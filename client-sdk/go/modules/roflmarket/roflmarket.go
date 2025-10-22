@@ -1,3 +1,4 @@
+// Package roflmarket contains functionality related to the ROLF Market module.
 package roflmarket
 
 import (

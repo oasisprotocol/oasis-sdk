@@ -29,7 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [runtime-sdk/minimal-runtime, runtime-sdk/rofl-oracle-sgx, runtime-sdk/rofl-oracle-tdx-raw]
+        example:
+          - runtime-sdk/minimal-runtime
+          - runtime-sdk/rofl-oracle-sgx
+          - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,7 +60,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [runtime-sdk/rofl-oracle-sgx, runtime-sdk/rofl-oracle-tdx-raw]
+        example:
+          - runtime-sdk/rofl-oracle-sgx
+          - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -78,7 +83,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [contract-sdk/hello-world, contract-sdk/c10l-hello-world]
+        example:
+          - contract-sdk/hello-world
+          - contract-sdk/c10l-hello-world
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -110,7 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [client-sdk/go/minimal-runtime-client]
+        example:
+          - client-sdk/go/minimal-runtime-client
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -118,7 +126,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24.x"
+          go-version: "1.25.x"
 
       # Generate go.sum needed for linting.
       - name: Generate go.sum
@@ -127,10 +135,10 @@ jobs:
 
       # NOTE: "file exists" tar errors can be safely ignored, because go is already installed.
       - name: Lint ${{ matrix.example }}
-        uses: golangci/golangci-lint-action@v6.5.0
+        uses: golangci/golangci-lint-action@v8
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v1.64
+          version: v2.5
           working-directory: examples/${{ matrix.example }}
 
       - name: Build ${{ matrix.example }}

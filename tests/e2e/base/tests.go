@@ -7,17 +7,18 @@ import (
 	"crypto/rand"
 	"fmt"
 	mathRand "math/rand"
-	"sort"
 	"time"
 
 	"github.com/oasisprotocol/curve25519-voi/primitives/x25519"
 	"github.com/oasisprotocol/deoxysii"
+
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/drbg"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/mathrand"
 	mraeDeoxysii "github.com/oasisprotocol/oasis-core/go/common/crypto/mrae/deoxysii"
 	coreSignature "github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/client"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
@@ -741,10 +742,10 @@ func KVBalanceTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100_003_000)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100003000, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Alice's account balance (expected 100003000, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	env.Logger.Info("checking Bob's account balance")
@@ -754,10 +755,10 @@ func KVBalanceTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := bb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(2000)) != 0 {
-			return fmt.Errorf("Bob's account balance is wrong (expected 2000, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Bob's account balance (expected 2000, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Bob's account")
 	}
 
 	env.Logger.Info("checking Charlie's account balance")
@@ -767,10 +768,10 @@ func KVBalanceTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := cb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(1000)) != 0 {
-			return fmt.Errorf("Charlie's account balance is wrong (expected 1000, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Charlie's account balance (expected 1000, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Charlie's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Charlie's account")
 	}
 
 	env.Logger.Info("checking Dave's account balance")
@@ -780,10 +781,10 @@ func KVBalanceTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := db.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 100, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Dave's account balance (expected 100, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Dave's account")
 	}
 
 	return nil
@@ -872,10 +873,10 @@ func KVTransferTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100_002_899)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002899, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Alice's account balance (expected 100002899, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	env.Logger.Info("checking Bob's account balance")
@@ -885,10 +886,10 @@ func KVTransferTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := bb.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(2100)) != 0 {
-			return fmt.Errorf("Bob's account balance is wrong (expected 2100, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Bob's account balance (expected 2100, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Bob's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Bob's account")
 	}
 
 	env.Logger.Info("query addresses")
@@ -973,10 +974,10 @@ func KVDaveTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := db.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(90)) != 0 {
-			return fmt.Errorf("Dave's account balance is wrong (expected 90, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Dave's account balance (expected 90, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Dave's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Dave's account")
 	}
 
 	env.Logger.Info("checking Alice's account balance")
@@ -986,15 +987,16 @@ func KVDaveTest(ctx context.Context, env *scenario.Env) error {
 	}
 	if q, ok := ab.Balances[types.NativeDenomination]; ok {
 		if q.Cmp(quantity.NewFromUint64(100_002_909)) != 0 {
-			return fmt.Errorf("Alice's account balance is wrong (expected 100002909, got %s)", q.String()) //nolint: stylecheck
+			return fmt.Errorf("wrong Alice's account balance (expected 100002909, got %s)", q.String())
 		}
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	return nil
 }
 
+// KVMultisigTest tests multisig.
 func KVMultisigTest(ctx context.Context, env *scenario.Env) error {
 	signerA := testing.Alice.Signer
 	signerB := testing.Bob.Signer
@@ -1056,6 +1058,7 @@ func KVMultisigTest(ctx context.Context, env *scenario.Env) error {
 	return nil
 }
 
+// KVRewardsTest tests reward schedule.
 func KVRewardsTest(ctx context.Context, env *scenario.Env) error {
 	rw := rewards.NewV1(env.Client)
 
@@ -1100,7 +1103,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 		// We can do this only because the account's balance fits into an uint64.
 		balance = q.ToBigInt().Uint64()
 	} else {
-		return fmt.Errorf("Alice's account is missing native denomination balance") //nolint: stylecheck
+		return fmt.Errorf("no native denomination balance in Alice's account")
 	}
 
 	testDuration, err := env.Scenario.Flags.GetDuration(cfgTxGenDuration)
@@ -1122,7 +1125,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 
 	minBalanceRequired := coinsPerAccount * uint64(numAccounts) //nolint: gosec
 	if balance < minBalanceRequired {
-		return fmt.Errorf("Alice is too broke to fund accounts (balance is %d, need %d)", balance, minBalanceRequired) //nolint: stylecheck
+		return fmt.Errorf("not enough funds in Alice's account to fund accounts (balance is %d, need %d)", balance, minBalanceRequired)
 	}
 
 	// Create RNG.
@@ -1185,6 +1188,8 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 
 		// Ensure all transactions are ordered correctly.
 		var (
+			signers       []types.Address
+			nonces        []uint64
 			gasPrices     []uint64
 			gasLimits     []uint64
 			results       []bool
@@ -1196,6 +1201,14 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 				return fmt.Errorf("bad transaction in round %d: %w", round, err)
 			}
 
+			info := tx.AuthInfo.SignerInfo[0]
+			signer, err := info.AddressSpec.Address()
+			if err != nil {
+				return fmt.Errorf("bad address spec in round %d: %w", round, err)
+			}
+			signers = append(signers, signer)
+			nonces = append(nonces, info.Nonce)
+
 			gasPrice := tx.AuthInfo.Fee.GasPrice().ToBigInt().Uint64()
 			gasPrices = append(gasPrices, gasPrice)
 			gasLimits = append(gasLimits, tx.AuthInfo.Fee.Gas)
@@ -1204,19 +1217,32 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 		}
 
 		env.Logger.Info("got batch gas information",
+			"signers", signers,
+			"nonces", nonces,
 			"round", round,
 			"prices", gasPrices,
 			"limits", gasLimits,
 			"total_limit", totalGasLimit,
 			"results", results,
 		)
+
 		// NOTE: The sum of gasLimits can be greater than the batch limit as the transaction could
 		//       have used less than the limit during actual execution.
 
-		if !sort.SliceIsSorted(gasPrices, func(i, j int) bool {
-			return gasPrices[i] > gasPrices[j]
-		}) {
-			return fmt.Errorf("transactions in round %d not sorted by gas price", round)
+		// NOTE: We cannot reliably verify gas price ordering, as new transactions
+		//       may have been added to the pool while some were already included
+		//       in the batch.
+
+		for i := range len(signers) {
+			for j := i + 1; j < len(signers); j++ {
+				if !signers[i].Equal(signers[j]) {
+					continue
+				}
+				if nonces[i]+1 != nonces[j] {
+					return fmt.Errorf("transactions in round %d not sorted by nonce", round)
+				}
+				break
+			}
 		}
 	}
 
@@ -1257,6 +1283,7 @@ func ParametersTest(ctx context.Context, env *scenario.Env) error {
 	return nil
 }
 
+// IntrospectionTest verifies the presence of the account module in the test runtime.
 func IntrospectionTest(ctx context.Context, env *scenario.Env) error {
 	env.Logger.Info("fetching runtime info")
 	info, err := core.NewV1(env.Client).RuntimeInfo(ctx)

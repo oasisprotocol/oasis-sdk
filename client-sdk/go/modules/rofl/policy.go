@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx"
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/quote"
+
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/types"
 )
 
@@ -89,7 +90,7 @@ func (fp *FeePolicy) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // MarshalYAML implements yaml.Marshaler.
-func (fp FeePolicy) MarshalYAML() (interface{}, error) {
+func (fp FeePolicy) MarshalYAML() (any, error) {
 	switch fp {
 	case FeePolicyInstancePays:
 		return nameFeePolicyInstancePays, nil

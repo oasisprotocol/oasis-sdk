@@ -21,7 +21,7 @@ type callDataPublicKeyQueryResponse struct {
 //
 // Returns the encoded call and any format-specific metadata needed for decoding the result that
 // need to be passed to decodeResult.
-func (tb *TransactionBuilder) encodeCall(ctx context.Context, call *types.Call, cf types.CallFormat) (*types.Call, interface{}, error) {
+func (tb *TransactionBuilder) encodeCall(ctx context.Context, call *types.Call, cf types.CallFormat) (*types.Call, any, error) {
 	var cfg callformat.EncodeConfig
 	switch cf {
 	case types.CallFormatEncryptedX25519DeoxysII:
@@ -41,6 +41,6 @@ func (tb *TransactionBuilder) encodeCall(ctx context.Context, call *types.Call, 
 }
 
 // decodeResult performs result decoding based on the specified call format metadata.
-func (tb *TransactionBuilder) decodeResult(result *types.CallResult, meta interface{}) (*types.CallResult, error) {
+func (tb *TransactionBuilder) decodeResult(result *types.CallResult, meta any) (*types.CallResult, error) {
 	return callformat.DecodeResult(result, meta)
 }

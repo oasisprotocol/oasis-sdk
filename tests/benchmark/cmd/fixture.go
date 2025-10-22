@@ -64,7 +64,7 @@ func fixture() *oasis.NetworkFixture {
 		},
 		Clients: []oasis.ClientFixture{
 			{
-				RuntimeConfig: map[int]map[string]interface{}{
+				RuntimeConfig: map[int]map[string]any{
 					0: {
 						"estimate_gas_by_simulating_contracts": true,
 						"allowed_queries":                      []map[string]bool{{"all_expensive": true}},

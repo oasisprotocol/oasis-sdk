@@ -19,8 +19,8 @@ var chainContext hash.Hash
 
 // RuntimeTestVector is an Oasis runtime transaction test vector.
 type RuntimeTestVector struct {
-	Kind string      `json:"kind"`
-	Tx   interface{} `json:"tx"`
+	Kind string `json:"kind"`
+	Tx   any    `json:"tx"`
 	// Meta stores transaction-specific information needed to compute
 	// sig_context and to verify the recipient's address.
 	// e.g. For EVM transactions the user needs to see the ethereum-formatted recipient on
@@ -47,7 +47,7 @@ func init() {
 }
 
 // MakeRuntimeTestVector generates a new test vector from a transaction using a specific signer.
-func MakeRuntimeTestVector(tx *types.Transaction, txBody interface{}, sigCtx *signature.RichContext, valid bool, w testing.TestKey, nonce uint64) RuntimeTestVector {
+func MakeRuntimeTestVector(tx *types.Transaction, txBody any, sigCtx *signature.RichContext, valid bool, w testing.TestKey, nonce uint64) RuntimeTestVector {
 	tx.AppendAuthSignature(w.SigSpec, nonce)
 
 	// Sign the transaction.

@@ -8,7 +8,6 @@ use oasis_runtime_sdk::{
         common::logger::get_logger,
         consensus::{roothash, verifier::Verifier},
         dispatcher::PreInitState,
-        host::{self, Host as _},
         identity::Identity,
         protocol::Protocol,
     },
@@ -115,16 +114,6 @@ where
         slog::info!(self.logger, "starting processor";
             "app_id" => A::id(),
         );
-
-        // Register for notifications.
-        let _ = self
-            .state
-            .host
-            .register_notify(host::RegisterNotifyOpts {
-                runtime_block: true,
-                runtime_event: vec![],
-            })
-            .await;
 
         // Start the tasks.
         self.tasks.registration.start();
