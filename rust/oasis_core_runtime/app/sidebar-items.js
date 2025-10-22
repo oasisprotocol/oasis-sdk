@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["new"],"struct":["NoopApp"],"trait":["App"]};
+window.SIDEBAR_ITEMS = {"constant":["METHOD_ROFL_GET_CONFIG"],"fn":["new"],"struct":["Config","NoopApp","Notifications"],"trait":["App"]};

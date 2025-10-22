@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Error"],"mod":["attestation","bundle_manager","log_manager","volume_manager"],"struct":["RegisterNotifyOpts","SubmitTxOpts","TxResult"],"trait":["Host"]};
+window.SIDEBAR_ITEMS = {"enum":["Error"],"mod":["attestation","bundle_manager","log_manager","volume_manager"],"struct":["SubmitTxOpts","TxResult"],"trait":["Host"]};
