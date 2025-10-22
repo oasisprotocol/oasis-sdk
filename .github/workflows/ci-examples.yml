@@ -30,11 +30,9 @@ jobs:
     strategy:
       matrix:
         example:
-          [
-            runtime-sdk/minimal-runtime,
-            runtime-sdk/rofl-oracle-sgx,
-            runtime-sdk/rofl-oracle-tdx-raw,
-          ]
+          - runtime-sdk/minimal-runtime
+          - runtime-sdk/rofl-oracle-sgx
+          - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -62,7 +60,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [runtime-sdk/rofl-oracle-sgx, runtime-sdk/rofl-oracle-tdx-raw]
+        example:
+          - runtime-sdk/rofl-oracle-sgx
+          - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -83,7 +83,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [contract-sdk/hello-world, contract-sdk/c10l-hello-world]
+        example:
+          - contract-sdk/hello-world
+          - contract-sdk/c10l-hello-world
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -115,7 +117,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        example: [client-sdk/go/minimal-runtime-client]
+        example:
+          - client-sdk/go/minimal-runtime-client
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
