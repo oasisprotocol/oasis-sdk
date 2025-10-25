@@ -73,7 +73,7 @@ impl App for SchedulerApp {
         if let Some(api_domain) = &cfg.api_domain {
             meta.insert(
                 METADATA_KEY_ENDPOINT_URL.to_string(),
-                format!("https://{}", api_domain),
+                format!("https://{api_domain}"),
             );
         }
         if let Some(proxy) = &cfg.proxy {

@@ -291,8 +291,7 @@ fn test_validate_and_transform() {
             let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
             assert!(
                 matches!(result, Err(Error::ModuleUsesFloatingPoint)),
-                "Code with floating point instructions should fail validation (index {})",
-                i
+                "Code with floating point instructions should fail validation (index {i})"
             );
         }
     }

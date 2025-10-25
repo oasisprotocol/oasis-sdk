@@ -397,7 +397,7 @@ mod test {
     #[test]
     fn test_x25519_derive() {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -458,7 +458,7 @@ mod test {
     #[bench]
     fn bench_x25519_derive(b: &mut Bencher) {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -481,7 +481,7 @@ mod test {
     #[bench]
     fn bench_curve25519_compute_public(b: &mut Bencher) {
         let mut rng = OsRng {};
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(rng);
 
         let mut blob = [0u8; 32];
         blob[..32].copy_from_slice(&static_secret.to_bytes());
@@ -807,7 +807,7 @@ mod test {
             .unwrap()
             .output;
             let status: bool = solabi::decode(&output).expect("decode should succeed");
-            assert_eq!(status, true);
+            assert!(status);
         }
     }
 
@@ -906,7 +906,7 @@ mod test {
             .unwrap()
             .output;
             let status: bool = solabi::decode(&output).expect("decode should succeed");
-            assert_eq!(status, true);
+            assert!(status);
         }
     }
 
@@ -1133,7 +1133,7 @@ mod test {
             .output;
         // Verification should have failed.
         let status: bool = solabi::decode(&output).expect("decode should succeed");
-        assert_eq!(status, false);
+        assert!(!status);
 
         // Invalid signature.
         let long_zeroes: Vec<u8> = vec![0; 64];
@@ -1143,7 +1143,7 @@ mod test {
             .output;
         // Verification should have failed.
         let status: bool = solabi::decode(&output).expect("decode should succeed");
-        assert_eq!(status, false);
+        assert!(!status);
 
         // All ok.
         output = push_all_and_test(None, None, None, None, None)
@@ -1151,7 +1151,7 @@ mod test {
             .expect("call should succeed")
             .output;
         let status: bool = solabi::decode(&output).expect("decode should succeed");
-        assert_eq!(status, true);
+        assert!(status);
     }
 
     fn bench_verification(

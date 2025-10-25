@@ -175,8 +175,7 @@ impl<R: Runtime> Dispatcher<R> {
             [AuthProof::Module(scheme)] => {
                 R::Modules::decode_tx(ctx, scheme, &utx.0)?.ok_or_else(|| {
                     modules::core::Error::MalformedTransaction(anyhow!(
-                        "module-controlled transaction decoding scheme {} not supported",
-                        scheme
+                        "module-controlled transaction decoding scheme {scheme} not supported"
                     ))
                 })
             }

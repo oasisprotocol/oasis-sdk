@@ -635,7 +635,7 @@ impl State {
             return; // Parent RNG already hidden.
         }
 
-        self.hidden_rng = mem::replace(&mut self.rng, Some(RootRng::invalid()));
+        self.hidden_rng = self.rng.replace(RootRng::invalid());
     }
 
     /// Environment information.

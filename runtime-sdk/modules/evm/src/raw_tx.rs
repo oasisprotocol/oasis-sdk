@@ -131,9 +131,7 @@ pub fn decode(
     };
     if chain_id != expected_chain_id {
         return Err(anyhow!(
-            "chain ID {:?}, expected {:?}",
-            chain_id,
-            expected_chain_id
+            "chain ID {chain_id:?}, expected {expected_chain_id:?}"
         ));
     }
     let (method, body) = match eth_action {
@@ -156,13 +154,13 @@ pub fn decode(
     let key = recover_low(&sig, sig_recid, &sig_hash)?;
     let nonce: u64 = eth_nonce
         .try_into()
-        .map_err(|e| anyhow!("converting nonce: {}", e))?;
+        .map_err(|e| anyhow!("converting nonce: {e}"))?;
     let gas_price: u128 = eth_gas_price
         .try_into()
-        .map_err(|e| anyhow!("converting gas price: {}", e))?;
+        .map_err(|e| anyhow!("converting gas price: {e}"))?;
     let gas_limit: u64 = eth_gas_limit
         .try_into()
-        .map_err(|e| anyhow!("converting gas limit: {}", e))?;
+        .map_err(|e| anyhow!("converting gas limit: {e}"))?;
     let resolved_fee_amount = gas_price
         .checked_mul(gas_limit as u128)
         .ok_or_else(|| anyhow!("computing total fee amount"))?;
@@ -296,7 +294,7 @@ mod test {
             &token::Denomination::NATIVE,
         )
         .unwrap_err();
-        eprintln!("Decoding error (expected): {:?}", e);
+        eprintln!("Decoding error (expected): {e:?}");
     }
 
     fn decode_expect_from_mismatch(
@@ -318,7 +316,7 @@ mod test {
             }
             Err(e) => {
                 // Returning Err is fine too.
-                eprintln!("Decoding error (expected): {:?}", e);
+                eprintln!("Decoding error (expected): {e:?}");
             }
         }
     }

@@ -31,7 +31,7 @@ pub fn bench_sha256_sha512_256(c: &mut Criterion) {
         group.throughput(Throughput::Bytes(size));
 
         group.bench_with_input(
-            BenchmarkId::new("sha256", format!("{:?} bytes", size)),
+            BenchmarkId::new("sha256", format!("{size:?} bytes")),
             &input,
             |b, &input| {
                 b.iter(|| {
@@ -50,7 +50,7 @@ pub fn bench_sha256_sha512_256(c: &mut Criterion) {
         );
 
         group.bench_with_input(
-            BenchmarkId::new("sha512_256", format!("{:?} bytes", size)),
+            BenchmarkId::new("sha512_256", format!("{size:?} bytes")),
             &input,
             |b, &input| {
                 b.iter(|| {

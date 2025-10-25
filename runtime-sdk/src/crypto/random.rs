@@ -77,7 +77,7 @@ impl RootRng {
         let kp = MiniSecretKey::from_bytes(km_kp.sk.0.as_ref())
             .map_err(|err| {
                 Error::Abort(dispatcher::Error::KeyManagerFailure(
-                    KeyManagerError::Other(anyhow::anyhow!("{}", err)),
+                    KeyManagerError::Other(anyhow::anyhow!("{err}")),
                 ))
             })?
             .expand_to_keypair(ExpansionMode::Uniform);

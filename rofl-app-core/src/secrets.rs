@@ -256,7 +256,7 @@ mod test {
                     nonce: Some(nonce),
                 },
             );
-            assert_eq!(expected_data, &hex::encode(&data), "test vector {}", idx);
+            assert_eq!(expected_data, &hex::encode(&data), "test vector {idx}");
 
             let envelope: SecretEnvelope = cbor::from_slice(&data).unwrap();
             envelope.open_opts(&sk1, OpenOptions { context }).unwrap();

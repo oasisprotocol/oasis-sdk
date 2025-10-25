@@ -136,8 +136,7 @@ impl PaymentMethod for Payment {
                         message,
                     } => {
                         return Err(Error::PaymentFailed(format!(
-                            "module: {} code: {} message: {}",
-                            module, code, message
+                            "module: {module} code: {code} message: {message}"
                         )))
                     }
                     CallResult::Aborted(err) => return Err(Error::Abort(err)),
@@ -220,8 +219,7 @@ impl PaymentMethod for Payment {
                         message,
                     } => {
                         return Err(Error::PaymentFailed(format!(
-                            "module: {} code: {} message: {}",
-                            module, code, message
+                            "module: {module} code: {code} message: {message}"
                         )))
                     }
                     CallResult::Aborted(err) => return Err(Error::Abort(err)),
@@ -316,8 +314,7 @@ impl PaymentMethod for Payment {
                         message,
                     } => {
                         return Err(Error::PaymentFailed(format!(
-                            "module: {} code: {} message: {}",
-                            module, code, message
+                            "module: {module} code: {code} message: {message}"
                         )))
                     }
                     CallResult::Aborted(err) => return Err(Error::Abort(err)),

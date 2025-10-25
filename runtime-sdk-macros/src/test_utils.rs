@@ -5,7 +5,7 @@ pub fn rustfmt(code: &str) -> String {
     };
 
     let mut cp = Command::new("rustfmt")
-        .args(&["--emit", "stdout", "--quiet"])
+        .args(["--emit", "stdout", "--quiet"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
@@ -14,7 +14,7 @@ pub fn rustfmt(code: &str) -> String {
     cp.stdin
         .as_mut()
         .unwrap()
-        .write_all(format!("const _: () = {{ {}; }};", code).as_bytes())
+        .write_all(format!("const _: () = {{ {code}; }};").as_bytes())
         .expect("unable to communicate with rustfmt");
 
     let output = cp.wait_with_output().unwrap();
@@ -36,7 +36,7 @@ macro_rules! assert_empty_diff {
     ($actual:expr, $expected:expr) => {{
         use quote::ToTokens;
 
-        let actual_code = crate::test_utils::rustfmt(&$actual.to_token_stream().to_string());
+        let actual_code = $crate::test_utils::rustfmt(&$actual.to_token_stream().to_string());
         let expected_code = crate::test_utils::rustfmt(&$expected.to_token_stream().to_string());
 
         let diff = difference::Changeset::new(&expected_code, &actual_code, "\n");

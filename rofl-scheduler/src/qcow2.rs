@@ -63,7 +63,7 @@ mod test {
         ];
 
         for tc in tcs {
-            let data = hex::decode(&tc.0).unwrap();
+            let data = hex::decode(tc.0).unwrap();
             let result = parse_virtual_size(&data);
             match tc.1 {
                 None => {

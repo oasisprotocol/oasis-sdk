@@ -80,7 +80,7 @@ pub async fn start() -> Result<()> {
         .duration_since(SystemTime::UNIX_EPOCH)?
         .as_secs();
     Command::new("podman-compose")
-        .args(["logs", "--follow", "--since", &format!("{}", now)])
+        .args(["logs", "--follow", "--since", &format!("{now}")])
         .current_dir("/etc/oasis/containers")
         .spawn()?;
 

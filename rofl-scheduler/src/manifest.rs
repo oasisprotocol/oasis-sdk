@@ -381,7 +381,7 @@ mod serde_namespace_hex {
     where
         S: serde::Serializer,
     {
-        ser.serialize_str(&format!("{:x}", value))
+        ser.serialize_str(&format!("{value:x}"))
     }
 
     pub fn deserialize<'de, D>(de: D) -> Result<Namespace, D::Error>
@@ -406,7 +406,7 @@ mod serde_digests_hex {
 
         let raw: BTreeMap<String, String> = value
             .iter()
-            .map(|(name, hash)| (name.clone(), format!("{:x}", hash)))
+            .map(|(name, hash)| (name.clone(), format!("{hash:x}")))
             .collect();
         raw.serialize(ser)
     }

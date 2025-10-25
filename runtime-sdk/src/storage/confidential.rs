@@ -342,8 +342,8 @@ mod test {
         }
         for i in 0..num {
             items.push((
-                format!("key{}", i).into_bytes(),
-                format!("value{}", i).into_bytes(),
+                format!("key{i}").into_bytes(),
+                format!("value{i}").into_bytes(),
             ));
         }
         items
