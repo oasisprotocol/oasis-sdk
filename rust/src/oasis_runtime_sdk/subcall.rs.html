@@ -8,7 +8,7 @@
 <a href=#8 id=8 data-nosnippet>8</a>    modules::core::{Error, API <span class="kw">as _</span>},
 <a href=#9 id=9 data-nosnippet>9</a>    runtime::Runtime,
 <a href=#10 id=10 data-nosnippet>10</a>    state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
-<a href=#11 id=11 data-nosnippet>11</a>    types::{token, transaction, transaction::CallerAddress},
+<a href=#11 id=11 data-nosnippet>11</a>    types::{token::BaseUnits, transaction, transaction::CallerAddress},
 <a href=#12 id=12 data-nosnippet>12</a>};
 <a href=#13 id=13 data-nosnippet>13</a>
 <a href=#14 id=14 data-nosnippet>14</a><span class="macro">thread_local!</span> {
@@ -149,7 +149,7 @@
 <a href=#149 id=149 data-nosnippet>149</a>                nonce: <span class="number">0</span>,
 <a href=#150 id=150 data-nosnippet>150</a>            }],
 <a href=#151 id=151 data-nosnippet>151</a>            fee: transaction::Fee {
-<a href=#152 id=152 data-nosnippet>152</a>                amount: token::BaseUnits::new(<span class="number">0</span>, token::Denomination::NATIVE),
+<a href=#152 id=152 data-nosnippet>152</a>                amount: BaseUnits::native(<span class="number">0</span>),
 <a href=#153 id=153 data-nosnippet>153</a>                <span class="comment">// Limit gas usage inside the child context to the allocated maximum.
 <a href=#154 id=154 data-nosnippet>154</a>                </span>gas: info.max_gas,
 <a href=#155 id=155 data-nosnippet>155</a>                <span class="comment">// Propagate consensus message limit.
