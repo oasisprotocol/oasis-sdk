@@ -280,7 +280,7 @@ where
         0 => Ok(Some(LuksPriority::Ignore)),
         1 => Ok(Some(LuksPriority::Normal)),
         2 => Ok(Some(LuksPriority::High)),
-        _ => Err(de::Error::custom(format!("invalid priority {}", p))),
+        _ => Err(de::Error::custom(format!("invalid priority {p}"))),
     }
 }
 

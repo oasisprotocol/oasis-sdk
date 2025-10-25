@@ -583,9 +583,7 @@ fn test_query_estimate_gas() {
                 .expect("query_estimate_gas should succeed even with limited max_estimated_gas");
             assert!(
                 est <= max_estimated_gas,
-                "estimated gas should be at most max_estimated_gas={}, was {}",
-                max_estimated_gas,
-                est
+                "estimated gas should be at most max_estimated_gas={max_estimated_gas}, was {est}"
             );
 
             // Test with limited max_estimated_gas and propagate failures enabled.
@@ -601,10 +599,7 @@ fn test_query_estimate_gas() {
             assert_eq!(result.code(), 12);
             assert_eq!(
                 result.to_string(),
-                format!(
-                    "out of gas (limit: {} wanted: {})",
-                    max_estimated_gas, tx_reference_gas
-                )
+                format!("out of gas (limit: {max_estimated_gas} wanted: {tx_reference_gas})")
             );
         }
 
@@ -1235,8 +1230,7 @@ fn test_min_gas_price_update() {
         let new_price = min_gas_price_update(gas_used, target_gas, max_change_denominator, price);
         assert_eq!(
             new_price, expected_price,
-            "dynamic price should match expected price (test case: {:?})",
-            i
+            "dynamic price should match expected price (test case: {i:?})"
         );
     }
 }

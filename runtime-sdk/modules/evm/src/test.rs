@@ -3,7 +3,6 @@ use std::{collections::BTreeMap, str::FromStr as _};
 
 use base64::prelude::*;
 use sha3::Digest as _;
-use solabi;
 use uint::hex::FromHex;
 
 use oasis_runtime_sdk::{
@@ -682,11 +681,7 @@ fn do_test_evm_runtime<C: Config>() {
     // Test the Call transaction with more complicated parameters
     // (transfer 0x1000 coins to 0xc001d00d).
     let transfer_method: Vec<u8> = Vec::from_hex(
-        "a9059cbb".to_owned()
-            + &"0".repeat(64 - 4)
-            + &"1000".to_owned()
-            + &"0".repeat(64 - 8)
-            + &"c001d00d".to_owned(),
+        "a9059cbb".to_owned() + &"0".repeat(64 - 4) + "1000" + &"0".repeat(64 - 8) + "c001d00d",
     )
     .unwrap();
     let call_transfer_tx = transaction::Transaction {
@@ -736,7 +731,7 @@ fn do_test_evm_runtime<C: Config>() {
     );
     assert_eq!(
         transfer_ret,
-        Vec::<u8>::from_hex("0".repeat(64 - 1) + &"1".to_owned()).unwrap()
+        Vec::<u8>::from_hex("0".repeat(64 - 1) + "1").unwrap()
     ); // OK.
 
     // Submitting an invalid call transaction should fail.
@@ -966,7 +961,7 @@ fn test_fee_refunds() {
         solabi::selector!("transfer(address,uint256)"),
         &(
             solabi::Address(contract_address.into()),
-            solabi::U256::new(u128::MAX.into()), // Too much so it reverts.
+            solabi::U256::new(u128::MAX), // Too much so it reverts.
         ),
         CallOptions {
             fee: Fee {
@@ -1430,7 +1425,7 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result = solabi::decode::<bool>(&result).expect("output should be correct");
-    assert_eq!(result, true, "transfer from dave to erin should happen");
+    assert!(result, "transfer from dave to erin should happen");
 
     let result = signer
         .query_evm_call(
@@ -1445,10 +1440,7 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result = solabi::decode::<bool>(&result).expect("output should be correct");
-    assert_eq!(
-        result, true,
-        "transfer from erin to dave by dave should happen"
-    );
+    assert!(result, "transfer from erin to dave by dave should happen");
 
     let result = signer
         .query_evm_call(
@@ -1459,7 +1451,7 @@ fn test_erc20_dispatch() {
         )
         .expect("query should succeed");
     let result = solabi::decode::<bool>(&result).expect("output should be correct");
-    assert_eq!(result, true, "dave's approval for erin should succeed");
+    assert!(result, "dave's approval for erin should succeed");
 
     let result = signer
         .query_evm_call(
@@ -1662,7 +1654,7 @@ fn test_erc20_minting_burning() {
                         solabi::U256::new(3_u128),
                     ),
                 );
-                assert_eq!(result.result.is_success(), false, "minting should fail");
+                assert!(!result.result.is_success(), "minting should fail");
                 if let module::CallResult::Failed {
                     module: _,
                     code: _,
@@ -1724,7 +1716,7 @@ fn test_erc20_allowances() {
         solabi::selector!("approve(address,uint256)"),
         &(solabi::Address(erin.into()), solabi::U256::new(5_u128)),
     );
-    assert_eq!(result.result.is_success(), true, "approve should succeed");
+    assert!(result.result.is_success(), "approve should succeed");
     let logs = decode_evm_logs(&result.tags);
     assert_eq!(logs.len(), 1, "1 evm log should be emitted");
     assert_eq!(
@@ -1763,11 +1755,7 @@ fn test_erc20_allowances() {
             solabi::U256::new(7_u128),
         ),
     );
-    assert_eq!(
-        result.result.is_success(),
-        false,
-        "transferFrom should fail"
-    );
+    assert!(!result.result.is_success(), "transferFrom should fail");
     if let module::CallResult::Failed {
         module: _,
         code: _,
@@ -1790,11 +1778,7 @@ fn test_erc20_allowances() {
             solabi::U256::new(3_u128),
         ),
     );
-    assert_eq!(
-        result.result.is_success(),
-        true,
-        "transferFrom should succeed"
-    );
+    assert!(result.result.is_success(), "transferFrom should succeed");
     let logs = decode_evm_logs(&result.tags);
     assert_eq!(logs.len(), 1, "1 evm log should be emitted");
     assert_eq!(

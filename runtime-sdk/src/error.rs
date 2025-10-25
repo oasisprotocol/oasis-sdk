@@ -120,7 +120,7 @@ mod test {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 1);
             }
-            _ => panic!("expected failed result, got: {:?}", result),
+            _ => panic!("expected failed result, got: {result:?}"),
         }
 
         let err = ParentError::Nested(ChildError::Error2);
@@ -135,7 +135,7 @@ mod test {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 2);
             }
-            _ => panic!("expected failed result, got: {:?}", result),
+            _ => panic!("expected failed result, got: {result:?}"),
         }
     }
 
@@ -153,7 +153,7 @@ mod test {
                 assert_eq!(module, "test2");
                 assert_eq!(code, 1);
             }
-            _ => panic!("expected failed result, got: {:?}", result),
+            _ => panic!("expected failed result, got: {result:?}"),
         }
 
         let err = ParentError::NotForwarded(ChildError::Error2);
@@ -168,7 +168,7 @@ mod test {
                 assert_eq!(module, "test2");
                 assert_eq!(code, 1);
             }
-            _ => panic!("expected failed result, got: {:?}", result),
+            _ => panic!("expected failed result, got: {result:?}"),
         }
     }
 
@@ -186,7 +186,7 @@ mod test {
                 assert_eq!(module, "test1");
                 assert_eq!(code, 1);
             }
-            _ => panic!("expected failed result, got: {:?}", result),
+            _ => panic!("expected failed result, got: {result:?}"),
         }
     }
 }

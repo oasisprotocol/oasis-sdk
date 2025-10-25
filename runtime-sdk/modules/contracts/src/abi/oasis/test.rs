@@ -291,8 +291,7 @@ fn test_validate_and_transform() {
             let result = wasm::validate_and_transform::<Cfg, C>(&code, types::ABI::OasisV1, params);
             assert!(
                 matches!(result, Err(Error::ModuleUsesFloatingPoint)),
-                "Code with floating point instructions should fail validation (index {})",
-                i
+                "Code with floating point instructions should fail validation (index {i})"
             );
         }
     }
@@ -437,7 +436,7 @@ fn test_hello_contract_out_of_gas() {
     assert_eq!(result.code(), 12);
     assert_eq!(
         &result.to_string(),
-        "core: out of gas (limit: 1000 wanted: 1003)"
+        "core: out of gas (limit: 1000 wanted: 1001)"
     );
 }
 

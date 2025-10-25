@@ -1003,7 +1003,7 @@ fn test_instance_change_admin() {
     let dispatch_result =
         signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
     assert!(!dispatch_result.result.is_success(), "call should fail");
-    println!("{:?}", dispatch_result);
+    println!("{dispatch_result:?}");
     let (module, code) = dispatch_result.result.unwrap_failed();
     assert_eq!(module, "roflmarket");
     assert_eq!(code, 4); // Forbidden.
@@ -1350,7 +1350,7 @@ fn test_endorsement_policy_evaluator() {
     for (idx, tc) in tcs.iter().enumerate() {
         let result = Evaluator::verify(&ctx, &tc.0, &ect, &metadata);
         if tc.1 {
-            result.context(format!("test case {}", idx)).unwrap();
+            result.context(format!("test case {idx}")).unwrap();
         } else {
             result.unwrap_err();
         }

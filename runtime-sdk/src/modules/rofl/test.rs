@@ -163,7 +163,7 @@ fn test_management_ops() {
             admin: Some(keys::alice::address()),
             stake: BaseUnits::new(1_000, Denomination::NATIVE),
             metadata: BTreeMap::from([("foo".into(), "bar".into())]),
-            sek: app_cfg.sek.clone(),
+            sek: app_cfg.sek,
             ..Default::default()
         }
     );
@@ -205,7 +205,7 @@ fn test_management_ops() {
             policy: update.policy,
             admin: Some(keys::bob::address()),
             stake: BaseUnits::new(1_000, Denomination::NATIVE),
-            sek: app_cfg.sek.clone(),
+            sek: app_cfg.sek,
             ..Default::default()
         }
     );
@@ -321,7 +321,7 @@ fn test_derive_app_key_id() {
         let key_id =
             Module::<Config>::derive_app_key_id(&tc.0.into(), tc.1, tc.2, tc.3, tc.4.clone())
                 .unwrap();
-        assert_eq!(key_id, tc.5.into(), "{:?}", tc);
+        assert_eq!(key_id, tc.5.into(), "{tc:?}");
     }
 }
 
@@ -583,13 +583,10 @@ fn test_endorsement_policy_evaluator() {
         let result = BasicEndorsementPolicyEvaluator::verify(&ctx, &tc.0, &ect, &metadata);
         if tc.1 {
             result
-                .context(format!(
-                    "test case {}: policy evaluation should succeed",
-                    idx
-                ))
+                .context(format!("test case {idx}: policy evaluation should succeed"))
                 .unwrap();
         } else {
-            result.expect_err(&format!("test case {}: policy evaluation should fail", idx));
+            result.expect_err(&format!("test case {idx}: policy evaluation should fail"));
         }
 
         let policy = policy::AppAuthPolicy {
@@ -599,13 +596,10 @@ fn test_endorsement_policy_evaluator() {
         let result = policy.validate::<Config>();
         if tc.2 {
             result
-                .context(format!(
-                    "test case {}: policy validation should succeed",
-                    idx
-                ))
+                .context(format!("test case {idx}: policy validation should succeed"))
                 .unwrap();
         } else {
-            result.expect_err(&format!("test case {}: policy validation should fail", idx));
+            result.expect_err(&format!("test case {idx}: policy validation should fail"));
         }
     }
 }

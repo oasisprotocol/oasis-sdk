@@ -169,7 +169,7 @@ mod test {
             &ctx,
             "accounts.Transfer",
             accounts::types::Transfer {
-                to: TestConfig::map_address(contract_address.into()),
+                to: TestConfig::map_address(contract_address),
                 amount: BaseUnits::new(2_000, Denomination::NATIVE),
             },
         );

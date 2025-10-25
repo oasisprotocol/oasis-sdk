@@ -239,7 +239,7 @@ impl LocalConfig {
         };
 
         if !allowed_hashes.contains(hash) {
-            return Err(anyhow!("{} artifact not allowed", kind));
+            return Err(anyhow!("{kind} artifact not allowed"));
         }
         Ok(())
     }

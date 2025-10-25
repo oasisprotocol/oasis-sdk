@@ -69,7 +69,7 @@ where
         if let Some(digest) = self.underlying {
             digest.finalize_into(out);
         } else {
-            out.as_mut_slice().copy_from_slice(&self.preexisting);
+            out.copy_from_slice(&self.preexisting);
         }
     }
 }
@@ -82,7 +82,7 @@ where
         if let Some(digest) = &mut self.underlying {
             digest.finalize_into_reset(out);
         } else {
-            out.as_mut_slice().copy_from_slice(&self.preexisting);
+            out.copy_from_slice(&self.preexisting);
         }
     }
 }

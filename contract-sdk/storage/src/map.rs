@@ -275,7 +275,7 @@ mod test {
 
     #[test]
     fn test_encode_length_prefixed_path() {
-        let four_five_six = vec![4, 5, 6];
+        let four_five_six = [4, 5, 6];
         let tcs = vec![
             (vec![], vec![], vec![], vec![]),
             (vec![1, 2, 3], vec![], vec![], vec![1, 2, 3]),

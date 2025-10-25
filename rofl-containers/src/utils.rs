@@ -25,12 +25,12 @@ mod test {
     #[test]
     fn test_remove_file_on_drop() {
         fs::write("/tmp/file", b"test").unwrap();
-        assert_eq!(true, fs::exists("/tmp/file").unwrap());
+        assert!(fs::exists("/tmp/file").unwrap());
 
         let guard = RemoveFileOnDrop::new("/tmp/file");
-        assert_eq!(true, fs::exists("/tmp/file").unwrap());
+        assert!(fs::exists("/tmp/file").unwrap());
         drop(guard);
 
-        assert_eq!(false, fs::exists("/tmp/file").unwrap());
+        assert!(!fs::exists("/tmp/file").unwrap());
     }
 }

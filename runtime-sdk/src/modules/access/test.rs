@@ -133,7 +133,7 @@ fn dispatch_test<C: Context>(
         assert!(
             matches!(
                 dispatch_result.result,
-                module::CallResult::Failed { module: _, code: _, message: m } if m == format!("{}", err),
+                module::CallResult::Failed { module: _, code: _, message: m } if m == format!("{err}"),
             ),
             "method call should be blocked",
         );
@@ -189,20 +189,20 @@ fn test_method_authorization() {
 
     // An empty authorizer shouldn't let anybody through.
     let empty = MethodAuthorization::allow_from([]);
-    assert_eq!(empty.is_authorized(&alice), false);
-    assert_eq!(empty.is_authorized(&bob), false);
-    assert_eq!(empty.is_authorized(&charlie), false);
+    assert!(!empty.is_authorized(&alice));
+    assert!(!empty.is_authorized(&bob));
+    assert!(!empty.is_authorized(&charlie));
 
     // An authorizer with some addresses should only let those through.
     let for_alice = MethodAuthorization::allow_from([alice]);
-    assert_eq!(for_alice.is_authorized(&alice), true);
-    assert_eq!(for_alice.is_authorized(&bob), false);
-    assert_eq!(for_alice.is_authorized(&charlie), false);
+    assert!(for_alice.is_authorized(&alice));
+    assert!(!for_alice.is_authorized(&bob));
+    assert!(!for_alice.is_authorized(&charlie));
 
     let for_bob = MethodAuthorization::allow_from([bob]);
-    assert_eq!(for_bob.is_authorized(&alice), false);
-    assert_eq!(for_bob.is_authorized(&bob), true);
-    assert_eq!(for_bob.is_authorized(&charlie), false);
+    assert!(!for_bob.is_authorized(&alice));
+    assert!(for_bob.is_authorized(&bob));
+    assert!(!for_bob.is_authorized(&charlie));
 }
 
 #[test]
@@ -224,49 +224,34 @@ fn test_authorization() {
     ]);
 
     // Alice should be able to access some filtered methods and all unfiltered ones.
-    assert_eq!(authorization.is_authorized("test.Nobody", &alice), false);
-    assert_eq!(authorization.is_authorized("test.Alice", &alice), true);
-    assert_eq!(authorization.is_authorized("test.Bob", &alice), false);
-    assert_eq!(authorization.is_authorized("test.Both", &alice), true);
-    assert_eq!(
-        authorization.is_authorized("test.AliceAndCharlie", &alice),
-        true
-    );
-    assert_eq!(authorization.is_authorized("test.Everybody", &alice), true);
+    assert!(!authorization.is_authorized("test.Nobody", &alice));
+    assert!(authorization.is_authorized("test.Alice", &alice));
+    assert!(!authorization.is_authorized("test.Bob", &alice));
+    assert!(authorization.is_authorized("test.Both", &alice));
+    assert!(authorization.is_authorized("test.AliceAndCharlie", &alice));
+    assert!(authorization.is_authorized("test.Everybody", &alice));
 
     // Bob should be able to access some filtered methods and all unfiltered ones.
-    assert_eq!(authorization.is_authorized("test.Nobody", &bob), false);
-    assert_eq!(authorization.is_authorized("test.Alice", &bob), false);
-    assert_eq!(authorization.is_authorized("test.Bob", &bob), true);
-    assert_eq!(authorization.is_authorized("test.Both", &bob), true);
-    assert_eq!(
-        authorization.is_authorized("test.AliceAndCharlie", &bob),
-        false
-    );
-    assert_eq!(authorization.is_authorized("test.Everybody", &bob), true);
+    assert!(!authorization.is_authorized("test.Nobody", &bob));
+    assert!(!authorization.is_authorized("test.Alice", &bob));
+    assert!(authorization.is_authorized("test.Bob", &bob));
+    assert!(authorization.is_authorized("test.Both", &bob));
+    assert!(!authorization.is_authorized("test.AliceAndCharlie", &bob));
+    assert!(authorization.is_authorized("test.Everybody", &bob));
 
     // Charlie should be able to access some filtered methods and all unfiltered ones.
-    assert_eq!(authorization.is_authorized("test.Nobody", &charlie), false);
-    assert_eq!(authorization.is_authorized("test.Alice", &charlie), false);
-    assert_eq!(authorization.is_authorized("test.Bob", &charlie), false);
-    assert_eq!(authorization.is_authorized("test.Both", &charlie), false);
-    assert_eq!(
-        authorization.is_authorized("test.AliceAndCharlie", &charlie),
-        true
-    );
-    assert_eq!(
-        authorization.is_authorized("test.Everybody", &charlie),
-        true
-    );
+    assert!(!authorization.is_authorized("test.Nobody", &charlie));
+    assert!(!authorization.is_authorized("test.Alice", &charlie));
+    assert!(!authorization.is_authorized("test.Bob", &charlie));
+    assert!(!authorization.is_authorized("test.Both", &charlie));
+    assert!(authorization.is_authorized("test.AliceAndCharlie", &charlie));
+    assert!(authorization.is_authorized("test.Everybody", &charlie));
 
     // Dave is left out of everything, so should only be able to access unfiltered methods.
-    assert_eq!(authorization.is_authorized("test.Nobody", &dave), false);
-    assert_eq!(authorization.is_authorized("test.Alice", &dave), false);
-    assert_eq!(authorization.is_authorized("test.Bob", &dave), false);
-    assert_eq!(authorization.is_authorized("test.Both", &dave), false);
-    assert_eq!(
-        authorization.is_authorized("test.AliceAndCharlie", &dave),
-        false
-    );
-    assert_eq!(authorization.is_authorized("test.Everybody", &dave), true);
+    assert!(!authorization.is_authorized("test.Nobody", &dave));
+    assert!(!authorization.is_authorized("test.Alice", &dave));
+    assert!(!authorization.is_authorized("test.Bob", &dave));
+    assert!(!authorization.is_authorized("test.Both", &dave));
+    assert!(!authorization.is_authorized("test.AliceAndCharlie", &dave));
+    assert!(authorization.is_authorized("test.Everybody", &dave));
 }

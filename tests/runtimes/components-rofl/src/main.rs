@@ -32,7 +32,7 @@ impl App for TestApp {
         // invocation returns and if invocation takes multiple blocks to run, those blocks will be
         // skipped.
         if let Err(err) = self.run_oracle(env).await {
-            println!("Failed to submit observation: {:?}", err);
+            println!("Failed to submit observation: {err:?}");
         }
     }
 }

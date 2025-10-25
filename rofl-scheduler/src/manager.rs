@@ -1186,7 +1186,7 @@ impl Manager {
             ));
         }
         for (idx, component) in orc_manifest.components.iter_mut().enumerate() {
-            component.name = format!("{:03x}", idx);
+            component.name = format!("{idx:03x}");
 
             if let Some(_elf) = &component.elf {
                 if component.sgx.is_none() {
@@ -1367,8 +1367,8 @@ impl Manager {
                     .digests
                     .get(&name)
                     .ok_or(anyhow!("missing ORC layer digest"))?;
-                if expected_digest != &Hash::from(layer_digest.as_slice()) {
-                    return Err(anyhow!("bad ORC layer digest for '{}'", name));
+                if expected_digest != &Hash::from(&layer_digest[..]) {
+                    return Err(anyhow!("bad ORC layer digest for '{name}'"));
                 }
 
                 // Validate storage size.
@@ -1537,7 +1537,7 @@ impl Manager {
 pub fn labels_for_instance(id: InstanceId) -> BTreeMap<String, String> {
     BTreeMap::from([(
         bundle_manager::LABEL_INSTANCE_ID.to_string(),
-        format!("{:x}", id),
+        format!("{id:x}"),
     )])
 }
 
@@ -1561,5 +1561,5 @@ fn deployment_hash(deployment: &Deployment) -> String {
 fn deployment_hash_for_scheduler(scheduler_id: &[u8; 32], deployment: &Deployment) -> String {
     let hash = Hash::digest_bytes_list(&[scheduler_id, &cbor::to_vec(deployment.clone())]);
 
-    format!("{:x}", hash)
+    format!("{hash:x}")
 }

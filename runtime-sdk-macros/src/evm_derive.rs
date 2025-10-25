@@ -69,7 +69,7 @@ fn get_method(f: &ImplItemFn) -> Option<(Signature, EvmMethod, TokenStream)> {
     let attr = match EvmMethod::from_attributes(&f.attrs) {
         Ok(a) => a,
         Err(e) => {
-            e.span().unwrap().error(format!("{}", e)).emit();
+            e.span().unwrap().error(format!("{e}")).emit();
             return None;
         }
     };
@@ -147,7 +147,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
                 attr.signature
                     .span()
                     .unwrap()
-                    .error(format!("Unknown argument type '{}'", ty))
+                    .error(format!("Unknown argument type '{ty}'"))
                     .emit();
             }
         }
@@ -438,7 +438,7 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                         .signature
                         .span()
                         .unwrap()
-                        .error(format!("Unknown type '{}'", ty))
+                        .error(format!("Unknown type '{ty}'"))
                         .emit();
                     return TokenStream::new();
                 }
