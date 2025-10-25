@@ -751,30 +751,33 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                                     }
                                     Err(_) => {
                                         // Skip and reject the transaction.
+                                        tx_reject_hashes.push(tx_hash);
+                                        return Ok(true);
                                     }
-                                    Ok(_) => {
-                                        // Run additional checks on the transaction.
-                                        let check_result = Self::dispatch_tx_opts(
-                                            ctx,
-                                            tx.clone(),
-                                            &DispatchOptions {
-                                                tx_size,
-                                                tx_index,
-                                                tx_hash,
-                                                skip_authentication: true, // Already done.
-                                                ..Default::default()
-                                            },
-                                        )?;
-                                        if check_result.result.is_success() {
-                                            // Checks successful, execute transaction as usual.
-                                            return Ok(false);
-                                        }
-                                    }
+                                    Ok(_) => {}
                                 }
 
-                                // Skip and reject the transaction.
-                                tx_reject_hashes.push(tx_hash);
-                                Ok(true)
+                                // Run additional checks on the transaction.
+                                let check_result = Self::dispatch_tx_opts(
+                                    ctx,
+                                    tx.clone(),
+                                    &DispatchOptions {
+                                        tx_size,
+                                        tx_index,
+                                        tx_hash,
+                                        skip_authentication: true, // Already done.
+                                        ..Default::default()
+                                    },
+                                )?;
+
+                                if !check_result.result.is_success() {
+                                    // Skip and reject the transaction.
+                                    tx_reject_hashes.push(tx_hash);
+                                    return Ok(true);
+                                }
+
+                                // Checks successful, execute transaction as usual.
+                                Ok(false)
                             },
                         )?;
                         if skip {
