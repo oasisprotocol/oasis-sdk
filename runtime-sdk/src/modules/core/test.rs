@@ -433,7 +433,7 @@ fn test_reject_txs() {
                 ),
             ],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                amount: token::BaseUnits::default(),
                 gas: u64::MAX,
                 ..Default::default()
             },
@@ -468,7 +468,7 @@ fn test_query_estimate_gas() {
                 ),
             ],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                amount: token::BaseUnits::default(),
                 gas: u64::MAX,
                 ..Default::default()
             },
@@ -1001,7 +1001,7 @@ fn test_min_gas_price() {
                 ),
             ],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                amount: token::BaseUnits::default(),
                 gas: 100,
                 ..Default::default()
             },
@@ -1014,7 +1014,7 @@ fn test_min_gas_price() {
         Core::before_handle_call(&ctx, &call).expect_err("gas price should be too low");
     });
 
-    tx.auth_info.fee.amount = token::BaseUnits::new(100000, token::Denomination::NATIVE);
+    tx.auth_info.fee.amount = token::BaseUnits::native(100_000);
 
     CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
         Core::before_handle_call(&ctx, &call).expect("gas price should be ok");
@@ -1045,7 +1045,7 @@ fn test_min_gas_price() {
                     .expect_err("gas price should be too low");
             });
 
-            tx.auth_info.fee.amount = token::BaseUnits::new(1_000_000, token::Denomination::NATIVE);
+            tx.auth_info.fee.amount = token::BaseUnits::native(1_000_000);
 
             CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
                 super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
@@ -1068,7 +1068,7 @@ fn test_min_gas_price() {
 
             // Test exempt methods.
             tx.call.method = "exempt.Method".into();
-            tx.auth_info.fee.amount = token::BaseUnits::new(100_000, token::Denomination::NATIVE);
+            tx.auth_info.fee.amount = token::BaseUnits::native(100_000);
             let call = tx.call.clone();
 
             CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
@@ -1076,7 +1076,7 @@ fn test_min_gas_price() {
                     .expect("method should be gas price exempt");
             });
 
-            tx.auth_info.fee.amount = token::BaseUnits::new(0, token::Denomination::NATIVE);
+            tx.auth_info.fee.amount = token::BaseUnits::default();
 
             CurrentState::with_transaction_opts(Options::new().with_tx(tx.clone().into()), || {
                 super::Module::<MinGasPriceOverride>::before_handle_call(&ctx, &call)
@@ -1287,7 +1287,7 @@ fn test_dynamic_min_gas_price() {
                 ),
             ],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(1_000_000_000, token::Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000_000),
                 gas: 10_000,
                 ..Default::default()
             },
@@ -1545,7 +1545,7 @@ fn test_message_gas() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                amount: token::BaseUnits::default(),
                 gas: u64::MAX,
                 ..Default::default()
             },

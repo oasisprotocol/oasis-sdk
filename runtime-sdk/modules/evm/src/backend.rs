@@ -522,7 +522,10 @@ impl<'config, C: Context, Cfg: Config> StackState<'config>
     fn transfer(&mut self, transfer: Transfer) -> Result<(), ExitError> {
         let from = Cfg::map_address(transfer.source);
         let to = Cfg::map_address(transfer.target);
-        let amount = transfer.value.as_u128();
+        let amount = transfer
+            .value
+            .try_into()
+            .map_err(|_| ExitError::OutOfFund)?;
         let amount = token::BaseUnits::new(amount, Cfg::TOKEN_DENOMINATION);
 
         <C::Runtime as Runtime>::Accounts::transfer(from, to, &amount)

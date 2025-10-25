@@ -42,7 +42,7 @@ impl rofl::Config for Config {
 impl super::Config for Config {
     type Rofl = rofl::Module<Config>;
 
-    const STAKE_PROVIDER_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+    const STAKE_PROVIDER_CREATE: BaseUnits = BaseUnits::native(1_000);
 }
 
 /// Test runtime.

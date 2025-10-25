@@ -120,7 +120,7 @@ fn dispatch_test<C: Context>(
         (),
         mock::CallOptions {
             fee: transaction::Fee {
-                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                amount: BaseUnits::native(1_500),
                 gas: 1_500,
                 ..Default::default()
             },

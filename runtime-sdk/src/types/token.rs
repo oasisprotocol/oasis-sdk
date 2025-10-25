@@ -95,6 +95,11 @@ impl BaseUnits {
         BaseUnits(amount, denomination)
     }
 
+    /// Creates a new token amount with native denomination.
+    pub const fn native(amount: u128) -> Self {
+        BaseUnits(amount, Denomination::NATIVE)
+    }
+
     /// Token amount in base units.
     pub fn amount(&self) -> u128 {
         self.0

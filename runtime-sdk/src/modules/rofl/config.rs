@@ -36,8 +36,7 @@ pub trait Config: 'static {
     ///
     /// The stake is held in escrow and is returned to the administrator when the application is
     /// removed.
-    const STAKE_APP_CREATE: token::BaseUnits =
-        token::BaseUnits::new(0, token::Denomination::NATIVE);
+    const STAKE_APP_CREATE: token::BaseUnits = token::BaseUnits::native(0);
 
     /// Maximum key identifier length for rofl.DeriveKey call.
     const DERIVE_KEY_MAX_KEY_ID_LENGTH: usize = 128;

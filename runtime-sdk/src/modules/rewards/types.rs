@@ -207,15 +207,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
             ],
         };
@@ -230,15 +230,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
             ],
         };
@@ -253,15 +253,15 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
             ],
         };
@@ -276,26 +276,26 @@ mod test {
             steps: vec![
                 RewardStep {
                     until: 5,
-                    amount: token::BaseUnits::new(3000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(3_000),
                 },
                 RewardStep {
                     until: 10,
-                    amount: token::BaseUnits::new(2000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(2_000),
                 },
                 RewardStep {
                     until: 15,
-                    amount: token::BaseUnits::new(1000, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::native(1_000),
                 },
             ],
         };
 
-        assert_eq!(schedule.for_epoch(1).amount(), 3000);
-        assert_eq!(schedule.for_epoch(3).amount(), 3000);
-        assert_eq!(schedule.for_epoch(5).amount(), 2000);
-        assert_eq!(schedule.for_epoch(6).amount(), 2000);
-        assert_eq!(schedule.for_epoch(9).amount(), 2000);
-        assert_eq!(schedule.for_epoch(10).amount(), 1000);
-        assert_eq!(schedule.for_epoch(14).amount(), 1000);
+        assert_eq!(schedule.for_epoch(1).amount(), 3_000);
+        assert_eq!(schedule.for_epoch(3).amount(), 3_000);
+        assert_eq!(schedule.for_epoch(5).amount(), 2_000);
+        assert_eq!(schedule.for_epoch(6).amount(), 2_000);
+        assert_eq!(schedule.for_epoch(9).amount(), 2_000);
+        assert_eq!(schedule.for_epoch(10).amount(), 1_000);
+        assert_eq!(schedule.for_epoch(14).amount(), 1_000);
         assert_eq!(schedule.for_epoch(15).amount(), 0);
         assert_eq!(schedule.for_epoch(20).amount(), 0);
         assert_eq!(schedule.for_epoch(100).amount(), 0);

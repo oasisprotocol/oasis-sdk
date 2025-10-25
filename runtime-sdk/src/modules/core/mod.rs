@@ -630,8 +630,7 @@ impl<Cfg: Config> Module<Cfg> {
                 local_max_estimated_gas
             }
         };
-        args.tx.auth_info.fee.amount =
-            token::BaseUnits::new(u64::MAX.into(), token::Denomination::NATIVE);
+        args.tx.auth_info.fee.amount = token::BaseUnits::native(u64::MAX.into());
         args.tx.auth_info.fee.consensus_messages = ctx.max_messages();
         // Estimate transaction size. Since the transaction given to us is not signed, we need to
         // estimate how large each of the auth proofs would be.

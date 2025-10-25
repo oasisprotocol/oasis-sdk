@@ -636,7 +636,7 @@ where
                 .gas_price(round, &token::Denomination::NATIVE)
                 .await?;
             let fee = mgp.saturating_mul(tx.fee_gas().into());
-            tx.set_fee_amount(token::BaseUnits::new(fee, token::Denomination::NATIVE));
+            tx.set_fee_amount(token::BaseUnits::native(fee));
         }
 
         // Sign the transaction.

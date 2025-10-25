@@ -461,8 +461,8 @@ impl<Cfg: Config> API for Module<Cfg> {
                     amount: token::BaseUnits::new(
                         gas_price
                             .checked_mul(U256::from(gas_limit))
-                            .ok_or(Error::FeeOverflow)?
-                            .as_u128(),
+                            .and_then(|a| a.try_into().ok())
+                            .ok_or(Error::FeeOverflow)?,
                         Cfg::TOKEN_DENOMINATION,
                     ),
                     gas: gas_limit,
