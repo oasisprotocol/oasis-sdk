@@ -97,7 +97,7 @@ fn test_api_deposit_invalid_denomination() {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
                 to: Some(keys::bob::address()),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -292,7 +292,7 @@ fn test_api_withdraw_invalid_denomination() {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
                 to: Some(keys::bob::address()),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -1488,7 +1488,7 @@ fn test_prefetch() {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
                 to: Some(keys::bob::address()),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -1517,7 +1517,7 @@ fn test_prefetch() {
                 // It's probably more common to withdraw into your own account, but we're using a
                 // separate `to` account to make sure everything is hooked up to the right places.
                 to: Some(keys::bob::address()),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },

@@ -8,7 +8,7 @@ use crate::{
     modules::core::{Error, API as _},
     runtime::Runtime,
     state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
-    types::{token, transaction, transaction::CallerAddress},
+    types::{token::BaseUnits, transaction, transaction::CallerAddress},
 };
 
 thread_local! {
@@ -149,7 +149,7 @@ pub fn call<C: Context, V: Validator + 'static>(
                 nonce: 0,
             }],
             fee: transaction::Fee {
-                amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                amount: BaseUnits::native(0),
                 // Limit gas usage inside the child context to the allocated maximum.
                 gas: info.max_gas,
                 // Propagate consensus message limit.

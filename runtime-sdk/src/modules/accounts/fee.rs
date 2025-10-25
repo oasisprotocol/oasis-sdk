@@ -152,7 +152,7 @@ mod test {
         assert!(mgr.tx_fee().is_none());
 
         // First transaction with refund.
-        let fee = token::BaseUnits::new(1_000_000, Denomination::NATIVE);
+        let fee = token::BaseUnits::native(1_000_000);
         mgr.record_fee(keys::alice::address(), &fee);
 
         let tx_fee = mgr.tx_fee().expect("tx_fee should be set");
@@ -169,23 +169,14 @@ mod test {
 
         let fee_updates = mgr.commit_tx();
         assert_eq!(fee_updates.payer, keys::alice::address());
-        assert_eq!(
-            fee_updates.refund,
-            token::BaseUnits::new(400_000, Denomination::NATIVE)
-        );
+        assert_eq!(fee_updates.refund, token::BaseUnits::native(400_000));
         assert!(mgr.tx_fee().is_none());
 
         // Some more transactions.
-        mgr.record_fee(
-            keys::bob::address(),
-            &token::BaseUnits::new(50_000, Denomination::NATIVE),
-        );
+        mgr.record_fee(keys::bob::address(), &token::BaseUnits::native(50_000));
         let fee_updates = mgr.commit_tx();
         assert_eq!(fee_updates.payer, keys::bob::address());
-        assert_eq!(
-            fee_updates.refund,
-            token::BaseUnits::new(0, Denomination::NATIVE)
-        );
+        assert_eq!(fee_updates.refund, token::BaseUnits::default());
 
         mgr.record_fee(
             keys::dave::address(),
@@ -220,10 +211,7 @@ mod test {
 
         let fee_updates = mgr.commit_tx();
         assert_eq!(fee_updates.payer, Default::default());
-        assert_eq!(
-            fee_updates.refund,
-            token::BaseUnits::new(0, Default::default())
-        );
+        assert_eq!(fee_updates.refund, token::BaseUnits::default());
 
         let block_fees = mgr.commit_block();
         assert!(block_fees.is_empty(), "there should be no recorded fees");
@@ -234,7 +222,7 @@ mod test {
     fn test_fail_payer_change() {
         let mut mgr = FeeManager::new();
 
-        let fee = token::BaseUnits::new(1_000_000, Denomination::NATIVE);
+        let fee = token::BaseUnits::native(1_000_000);
         mgr.record_fee(keys::alice::address(), &fee);
         mgr.record_fee(keys::bob::address(), &fee); // Should panic.
     }
@@ -244,7 +232,7 @@ mod test {
     fn test_fail_denomination_change() {
         let mut mgr = FeeManager::new();
 
-        let fee = token::BaseUnits::new(1_000_000, Denomination::NATIVE);
+        let fee = token::BaseUnits::native(1_000_000);
         mgr.record_fee(keys::alice::address(), &fee);
 
         let fee = token::BaseUnits::new(1_000_000, "TEST".parse().unwrap());

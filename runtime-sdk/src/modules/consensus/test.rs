@@ -27,7 +27,7 @@ fn test_api_transfer_invalid_denomination() {
     let ctx = mock.create_ctx();
 
     let hook_name = "test_event_handler";
-    let amount = BaseUnits::new(1_000, Denomination::NATIVE);
+    let amount = BaseUnits::native(1_000);
 
     assert!(Consensus::transfer(
         &ctx,

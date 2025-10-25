@@ -1125,7 +1125,7 @@ mod test {
                     0,
                 )],
                 fee: transaction::Fee {
-                    amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::default(),
                     gas: 1000,
                     ..Default::default()
                 },
@@ -1180,7 +1180,7 @@ mod test {
                     0,
                 )],
                 fee: transaction::Fee {
-                    amount: token::BaseUnits::new(0, token::Denomination::NATIVE),
+                    amount: token::BaseUnits::default(),
                     gas: 1000,
                     ..Default::default()
                 },

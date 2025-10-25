@@ -64,6 +64,5 @@ pub trait Config: 'static {
     /// Amount of stake required for maintaining a provider.
     ///
     /// The stake is held in escrow and is returned to the provider when the entry is removed.
-    const STAKE_PROVIDER_CREATE: token::BaseUnits =
-        token::BaseUnits::new(0, token::Denomination::NATIVE);
+    const STAKE_PROVIDER_CREATE: token::BaseUnits = token::BaseUnits::native(0);
 }

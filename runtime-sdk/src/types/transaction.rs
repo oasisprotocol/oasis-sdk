@@ -597,7 +597,7 @@ impl CallResult {
 
 #[cfg(test)]
 mod test {
-    use crate::types::token::{BaseUnits, Denomination};
+    use crate::types::token::BaseUnits;
 
     use super::*;
 
@@ -617,14 +617,14 @@ mod test {
         );
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            amount: BaseUnits::native(1_000),
             gas: 0,
             ..Default::default()
         };
         assert_eq!(0, fee.gas_price(), "empty fee 0 - gas price should be zero",);
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            amount: BaseUnits::native(1_000),
             gas: 10_000,
             ..Default::default()
         };
@@ -635,7 +635,7 @@ mod test {
         );
 
         let fee = Fee {
-            amount: BaseUnits::new(1_000, Denomination::NATIVE),
+            amount: BaseUnits::native(1_000),
             gas: 500,
             ..Default::default()
         };

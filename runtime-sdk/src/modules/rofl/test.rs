@@ -36,7 +36,7 @@ struct Config;
 impl core::Config for Config {}
 
 impl super::Config for Config {
-    const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+    const STAKE_APP_CREATE: BaseUnits = BaseUnits::native(1_000);
 
     type EndorsementPolicyEvaluator = BasicEndorsementPolicyEvaluator;
 }
@@ -133,7 +133,7 @@ fn test_management_ops() {
     let event = &events[0];
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.to, *ADDRESS_APP_STAKE_POOL);
-    assert_eq!(event.amount, BaseUnits::new(1_000, Denomination::NATIVE));
+    assert_eq!(event.amount, BaseUnits::native(1_000));
 
     // Simulate round advancing as application ID is generated from it.
     mock.runtime_header.round += 1;
@@ -161,7 +161,7 @@ fn test_management_ops() {
             id: app_id,
             policy: create.policy,
             admin: Some(keys::alice::address()),
-            stake: BaseUnits::new(1_000, Denomination::NATIVE),
+            stake: BaseUnits::native(1_000),
             metadata: BTreeMap::from([("foo".into(), "bar".into())]),
             sek: app_cfg.sek,
             ..Default::default()
@@ -204,7 +204,7 @@ fn test_management_ops() {
             id: app_id,
             policy: update.policy,
             admin: Some(keys::bob::address()),
-            stake: BaseUnits::new(1_000, Denomination::NATIVE),
+            stake: BaseUnits::native(1_000),
             sek: app_cfg.sek,
             ..Default::default()
         }

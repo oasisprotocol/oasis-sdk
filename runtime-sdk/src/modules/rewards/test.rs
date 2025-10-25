@@ -60,11 +60,11 @@ fn test_init_incorrect_rewards_schedule() {
                     steps: vec![
                         types::RewardStep {
                             until: 10,
-                            amount: BaseUnits::new(1000, Denomination::NATIVE),
+                            amount: BaseUnits::native(1_000),
                         },
                         types::RewardStep {
                             until: 1, // Not sorted.
-                            amount: BaseUnits::new(1000, Denomination::NATIVE),
+                            amount: BaseUnits::native(1_000),
                         },
                     ],
                 },
@@ -89,7 +89,7 @@ fn test_init_incorrect_participation_threshold() {
                 schedule: types::RewardSchedule {
                     steps: vec![types::RewardStep {
                         until: 10,
-                        amount: BaseUnits::new(1000, Denomination::NATIVE),
+                        amount: BaseUnits::native(1_000),
                     }],
                 },
                 participation_threshold_numerator: 10, // Invalid numerator.
@@ -124,7 +124,7 @@ fn test_reward_disbursement() {
                 schedule: types::RewardSchedule {
                     steps: vec![types::RewardStep {
                         until: 1000,
-                        amount: BaseUnits::new(1000, Denomination::NATIVE),
+                        amount: BaseUnits::native(1_000),
                     }],
                 },
                 participation_threshold_numerator: 3,

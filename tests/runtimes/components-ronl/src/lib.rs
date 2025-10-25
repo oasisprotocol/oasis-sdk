@@ -27,7 +27,7 @@ impl modules::core::Config for Config {}
 
 impl modules::rofl::Config for Config {
     /// Stake for creating a ROFL application.
-    const STAKE_APP_CREATE: BaseUnits = BaseUnits::new(1_000, Denomination::NATIVE);
+    const STAKE_APP_CREATE: BaseUnits = BaseUnits::native(1_000);
 
     /// Endorsement policy evaluator.
     type EndorsementPolicyEvaluator = modules::rofl::policy::BasicEndorsementPolicyEvaluator;

@@ -888,7 +888,7 @@ fn test_fee_refunds() {
     // Give Dave some tokens.
     Accounts::mint(
         keys::dave::address(),
-        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+        &token::BaseUnits::native(1_000_000_000),
     )
     .unwrap();
 
@@ -913,7 +913,7 @@ fn test_fee_refunds() {
         &(),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -940,10 +940,7 @@ fn test_fee_refunds() {
     let event = &events[0];
     assert_eq!(event.from, keys::dave::address());
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-    assert_eq!(
-        event.amount,
-        token::BaseUnits::new(242_700, Denomination::NATIVE)
-    );
+    assert_eq!(event.amount, token::BaseUnits::native(242_700));
 
     #[derive(Debug, Default, cbor::Decode)]
     struct GasUsedEvent {
@@ -965,7 +962,7 @@ fn test_fee_refunds() {
         ),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1001,7 +998,7 @@ fn test_fee_refunds() {
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
     assert_eq!(
         event.amount,
-        token::BaseUnits::new(245_850, Denomination::NATIVE) // Note the refund.
+        token::BaseUnits::native(245_850) // Note the refund.
     );
 
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
@@ -1034,7 +1031,7 @@ fn test_transfer_event() {
     // Give the faucet some tokens.
     Accounts::mint(
         contract_address_native,
-        &token::BaseUnits(1_000_000_000_000, Denomination::NATIVE),
+        &token::BaseUnits::native(1_000_000_000_000),
     )
     .unwrap();
 
@@ -1046,7 +1043,7 @@ fn test_transfer_event() {
         &(solabi::U256::new(1_000_000_000_u128),),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1073,17 +1070,11 @@ fn test_transfer_event() {
     let event = &events[0];
     assert_eq!(event.from, contract_address_native);
     assert_eq!(event.to, keys::dave::address());
-    assert_eq!(
-        event.amount,
-        token::BaseUnits::new(1_000_000_000, Denomination::NATIVE)
-    );
+    assert_eq!(event.amount, token::BaseUnits::native(1_000_000_000));
     let event = &events[1];
     assert_eq!(event.from, keys::dave::address());
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-    assert_eq!(
-        event.amount,
-        token::BaseUnits::new(283_430, Denomination::NATIVE)
-    );
+    assert_eq!(event.amount, token::BaseUnits::native(283_430));
 
     #[derive(Debug, Default, cbor::Decode)]
     struct GasUsedEvent {
@@ -1106,7 +1097,7 @@ fn test_whitelisted_magic_slots() {
     // Give Dave some tokens.
     Accounts::mint(
         keys::dave::address(),
-        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+        &token::BaseUnits::native(1_000_000_000),
     )
     .unwrap();
 
@@ -1145,7 +1136,7 @@ fn test_whitelisted_magic_slots() {
         ),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1166,7 +1157,7 @@ fn test_whitelisted_magic_slots() {
         ),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1223,7 +1214,7 @@ fn test_return_value_limits() {
     // Give Dave some tokens.
     Accounts::mint(
         keys::dave::address(),
-        &token::BaseUnits(1_000_000_000, Denomination::NATIVE),
+        &token::BaseUnits::native(1_000_000_000),
     )
     .unwrap();
 
@@ -1251,7 +1242,7 @@ fn test_return_value_limits() {
         &(),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1272,7 +1263,7 @@ fn test_return_value_limits() {
         &(),
         CallOptions {
             fee: Fee {
-                amount: token::BaseUnits::new(1_000_000, Denomination::NATIVE),
+                amount: token::BaseUnits::native(1_000_000),
                 gas: 100_000,
                 ..Default::default()
             },

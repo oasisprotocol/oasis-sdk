@@ -118,7 +118,7 @@ impl sdk::Runtime for Runtime {
                     schedule: modules::rewards::types::RewardSchedule {
                         steps: vec![modules::rewards::types::RewardStep {
                             until: 1000,
-                            amount: BaseUnits::new(100, Denomination::NATIVE),
+                            amount: BaseUnits::native(100),
                         }],
                     },
                     participation_threshold_numerator: 1, // These are updated below.

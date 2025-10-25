@@ -118,7 +118,7 @@ mod test {
         },
         types::{
             address::Address,
-            token::{self, BaseUnits, Denomination},
+            token::{self, BaseUnits},
             transaction::Fee,
         },
     };
@@ -155,7 +155,7 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                    amount: BaseUnits::native(1_000),
                 })),
             ),
         );
@@ -170,7 +170,7 @@ mod test {
             "accounts.Transfer",
             accounts::types::Transfer {
                 to: TestConfig::map_address(contract_address),
-                amount: BaseUnits::new(2_000, Denomination::NATIVE),
+                amount: BaseUnits::native(2_000),
             },
         );
         assert!(
@@ -187,12 +187,12 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                    amount: BaseUnits::native(1_000),
                 })),
             ),
             CallOptions {
                 fee: Fee {
-                    amount: BaseUnits::new(100, Denomination::NATIVE),
+                    amount: BaseUnits::native(100),
                     gas: 1_000_000,
                     ..Default::default()
                 },
@@ -219,10 +219,10 @@ mod test {
         let event = &events[0];
         assert_eq!(event.from, Address::from_eth(contract_address.as_ref()));
         assert_eq!(event.to, keys::alice::address());
-        assert_eq!(event.amount, BaseUnits::new(1_000, Denomination::NATIVE));
+        assert_eq!(event.amount, BaseUnits::native(1_000));
         let event = &events[1];
         assert_eq!(event.from, keys::dave::address());
-        assert_eq!(event.amount, BaseUnits::new(100, Denomination::NATIVE));
+        assert_eq!(event.amount, BaseUnits::native(100));
 
         // Make sure only one gas used event was emitted (e.g. subcall should not emit its own gas
         // used events).
@@ -254,7 +254,7 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE),
+                    amount: BaseUnits::default(),
                 })),
             ),
         );
@@ -297,7 +297,7 @@ mod test {
                             solabi::Bytes("accounts.Transfer".as_bytes()),
                             solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                                 to: keys::alice::address(),
-                                amount: BaseUnits::new(0, Denomination::NATIVE),
+                                amount: BaseUnits::default(),
                             })),
                         ),
                     ),
@@ -344,7 +344,7 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE),
+                    amount: BaseUnits::default(),
                 })),
             ),
             CallOptions {
@@ -370,7 +370,7 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE),
+                    amount: BaseUnits::default(),
                 })),
             ),
             CallOptions {
@@ -418,7 +418,7 @@ mod test {
                 solabi::Bytes("accounts.Transfer".as_bytes()),
                 solabi::Bytes(cbor::to_vec(accounts::types::Transfer {
                     to: keys::alice::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE),
+                    amount: BaseUnits::default(),
                 })),
             ),
             CallOptions {

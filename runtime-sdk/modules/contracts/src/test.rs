@@ -152,8 +152,7 @@ fn test_hello_contract_call() {
         parameters: Default::default(),
     });
 
-    let instance_id =
-        deploy_hello_contract(&ctx, vec![BaseUnits::new(1_000, Denomination::NATIVE)]);
+    let instance_id = deploy_hello_contract(&ctx, vec![BaseUnits::native(1_000)]);
 
     // Check caller account balances.
     let bals = Accounts::get_balances(keys::alice::address()).expect("get_balances should succeed");
@@ -196,7 +195,7 @@ fn test_hello_contract_call() {
                         "who" => cbor::cbor_text!("tester")
                     }
                 }),
-                tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)],
+                tokens: vec![BaseUnits::native(2_000)],
             }),
             ..Default::default()
         },
@@ -795,7 +794,7 @@ fn test_hello_contract_subcalls() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: BaseUnits::new(2_000_000, Denomination::NATIVE),
+                amount: BaseUnits::native(2_000_000),
                 gas: 2_000_000,
                 ..Default::default()
             },
@@ -895,7 +894,7 @@ fn test_hello_contract_query() {
             body: cbor::to_value(types::Call {
                 id: instance_id,
                 data: cbor::to_vec(cbor::cbor_text!("query_accounts")), // Needs to conform to contract API.
-                tokens: vec![BaseUnits::new(2_000, Denomination::NATIVE)], // For the query below.
+                tokens: vec![BaseUnits::native(2_000)],                 // For the query below.
             }),
             ..Default::default()
         },

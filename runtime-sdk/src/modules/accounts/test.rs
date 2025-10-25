@@ -322,7 +322,7 @@ fn test_api_tx_transfer_disabled() {
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -375,7 +375,7 @@ fn test_prefetch() {
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -440,14 +440,14 @@ fn test_api_transfer() {
         Accounts::transfer(
             keys::alice::address(),
             keys::bob::address(),
-            &BaseUnits::new(1_000, Denomination::NATIVE),
+            &BaseUnits::native(1_000),
         )
         .expect("transfer should succeed");
 
         let result = Accounts::transfer(
             keys::alice::address(),
             keys::bob::address(),
-            &BaseUnits::new(1_000_000, Denomination::NATIVE),
+            &BaseUnits::native(1_000_000),
         );
         assert!(matches!(result, Err(Error::InsufficientBalance)));
 
@@ -503,7 +503,7 @@ fn test_authenticate_tx() {
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -513,7 +513,7 @@ fn test_authenticate_tx() {
                 0,
             )],
             fee: transaction::Fee {
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
                 gas: 1000,
                 ..Default::default()
             },
@@ -579,7 +579,7 @@ fn test_authenticate_tx() {
 
     // Should fail when there's not enough balance to pay fees.
     tx.auth_info.signer_info[0].nonce = nonce;
-    tx.auth_info.fee.amount = BaseUnits::new(1_100_000, Denomination::NATIVE);
+    tx.auth_info.fee.amount = BaseUnits::native(1_100_000);
     let result = Accounts::authenticate_tx(&ctx, &tx);
     assert!(matches!(result, Err(core::Error::InsufficientFeeBalance)));
 }
@@ -598,7 +598,7 @@ fn test_tx_transfer() {
             method: "accounts.Transfer".to_owned(),
             body: cbor::to_value(Transfer {
                 to: keys::bob::address(),
-                amount: BaseUnits::new(1_000, Denomination::NATIVE),
+                amount: BaseUnits::native(1_000),
             }),
             ..Default::default()
         },
@@ -683,7 +683,7 @@ fn test_fee_disbursement() {
             )],
             fee: transaction::Fee {
                 // Use an amount that does not split nicely among the good compute entities.
-                amount: BaseUnits::new(1_001, Denomination::NATIVE),
+                amount: BaseUnits::native(1_001),
                 gas: 1000,
                 ..Default::default()
             },
@@ -1135,11 +1135,8 @@ fn test_fee_manager_normal() {
     init_accounts(&ctx);
 
     // Check that Accounts::charge_tx_fee works.
-    Accounts::charge_tx_fee(
-        keys::alice::address(),
-        &BaseUnits::new(1_000, Denomination::NATIVE),
-    )
-    .expect("charge tx fee should succeed");
+    Accounts::charge_tx_fee(keys::alice::address(), &BaseUnits::native(1_000))
+        .expect("charge tx fee should succeed");
 
     let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
         .expect("get_balance should succeed");
@@ -1166,11 +1163,8 @@ fn test_fee_manager_sim() {
             .with_mode(state::Mode::Simulate)
             .with_tx(mock::transaction().into()),
         || {
-            Accounts::charge_tx_fee(
-                keys::alice::address(),
-                &BaseUnits::new(1_000, Denomination::NATIVE),
-            )
-            .expect("charge tx fee should succeed");
+            Accounts::charge_tx_fee(keys::alice::address(), &BaseUnits::native(1_000))
+                .expect("charge tx fee should succeed");
 
             let ab = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE)
                 .expect("get_balance should succeed");
@@ -1205,10 +1199,7 @@ fn test_get_set_balance() {
     let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000_000);
 
-    Accounts::set_balance(
-        keys::alice::address(),
-        &BaseUnits::new(500_000, Denomination::NATIVE),
-    );
+    Accounts::set_balance(keys::alice::address(), &BaseUnits::native(500_000));
 
     let balance = Accounts::get_balance(keys::alice::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 500_000);
@@ -1232,7 +1223,7 @@ fn test_get_set_allowance() {
     Accounts::set_allowance(
         keys::alice::address(),
         keys::bob::address(),
-        &BaseUnits::new(500_000, Denomination::NATIVE),
+        &BaseUnits::native(500_000),
     );
 
     let balance = Accounts::get_allowance(
@@ -1268,7 +1259,7 @@ fn test_get_set_total_supply() {
     );
 
     // Set total supply to 2m, note that this violates invariants.
-    Accounts::set_total_supply(&BaseUnits::new(2_000_000, Denomination::NATIVE));
+    Accounts::set_total_supply(&BaseUnits::native(2_000_000));
 
     let ts = Accounts::get_total_supplies().expect("get_total_supplies should succeed");
     assert_eq!(
@@ -1327,11 +1318,11 @@ fn test_fee_disbursement_2() {
         "accounts.Transfer",
         Transfer {
             to: keys::bob::address(),
-            amount: BaseUnits::new(5_000, Denomination::NATIVE),
+            amount: BaseUnits::native(5_000),
         },
         mock::CallOptions {
             fee: transaction::Fee {
-                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                amount: BaseUnits::native(1_500),
                 gas: 1_500,
                 ..Default::default()
             },
@@ -1358,11 +1349,11 @@ fn test_fee_disbursement_2() {
     let event = &events[0];
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.to, keys::bob::address());
-    assert_eq!(event.amount, BaseUnits::new(5_000, Denomination::NATIVE));
+    assert_eq!(event.amount, BaseUnits::native(5_000));
     let event = &events[1];
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-    assert_eq!(event.amount, BaseUnits::new(1_500, Denomination::NATIVE));
+    assert_eq!(event.amount, BaseUnits::native(1_500));
 
     // Make sure only one gas used event was emitted.
     #[derive(Debug, Default, cbor::Decode)]
@@ -1391,7 +1382,7 @@ fn test_fee_refund() {
             fail,
             mock::CallOptions {
                 fee: transaction::Fee {
-                    amount: BaseUnits::new(100_000, Denomination::NATIVE),
+                    amount: BaseUnits::native(100_000),
                     gas: 100_000,
                     ..Default::default()
                 },
@@ -1419,7 +1410,7 @@ fn test_fee_refund() {
         let event = &events[0];
         assert_eq!(event.from, keys::alice::address());
         assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-        assert_eq!(event.amount, BaseUnits::new(10_000, Denomination::NATIVE));
+        assert_eq!(event.amount, BaseUnits::native(10_000));
 
         #[derive(Debug, Default, cbor::Decode)]
         struct GasUsedEvent {
@@ -1447,7 +1438,7 @@ fn test_fee_refund_subcall() {
         (),
         mock::CallOptions {
             fee: transaction::Fee {
-                amount: BaseUnits::new(100_000, Denomination::NATIVE),
+                amount: BaseUnits::native(100_000),
                 gas: 100_000,
                 ..Default::default()
             },
@@ -1474,11 +1465,7 @@ fn test_fee_refund_subcall() {
     let event = &events[0];
     assert_eq!(event.from, keys::alice::address());
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-    assert_eq!(
-        event.amount,
-        BaseUnits::new(100_000, Denomination::NATIVE),
-        "no fee refunds"
-    );
+    assert_eq!(event.amount, BaseUnits::native(100_000), "no fee refunds");
 
     #[derive(Debug, Default, cbor::Decode)]
     struct GasUsedEvent {
@@ -1504,11 +1491,11 @@ fn test_fee_proxy() {
         "accounts.Transfer",
         Transfer {
             to: keys::bob::address(),
-            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+            amount: BaseUnits::default(), // Bob has no funds.
         },
         mock::CallOptions {
             fee: transaction::Fee {
-                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                amount: BaseUnits::native(1_500),
                 gas: 1_500,
                 proxy: Some(transaction::FeeProxy {
                     module: "test".to_owned(),
@@ -1539,7 +1526,7 @@ fn test_fee_proxy() {
     let event = &events[0];
     assert_eq!(event.from, keys::alice::address()); // Alice is paying via proxy!
     assert_eq!(event.to, *ADDRESS_FEE_ACCUMULATOR);
-    assert_eq!(event.amount, BaseUnits::new(1_500, Denomination::NATIVE));
+    assert_eq!(event.amount, BaseUnits::native(1_500));
 
     // Make sure only one gas used event was emitted.
     #[derive(Debug, Default, cbor::Decode)]
@@ -1557,11 +1544,11 @@ fn test_fee_proxy() {
         "accounts.Transfer",
         Transfer {
             to: keys::bob::address(),
-            amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+            amount: BaseUnits::default(), // Bob has no funds.
         },
         mock::CallOptions {
             fee: transaction::Fee {
-                amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                amount: BaseUnits::native(1_500),
                 gas: 1_500,
                 proxy: Some(transaction::FeeProxy {
                     module: "test".to_owned(),
@@ -1591,11 +1578,11 @@ fn test_fee_proxy_check() {
                 "accounts.Transfer",
                 Transfer {
                     to: keys::bob::address(),
-                    amount: BaseUnits::new(0, Denomination::NATIVE), // Bob has no funds.
+                    amount: BaseUnits::default(), // Bob has no funds.
                 },
                 mock::CallOptions {
                     fee: transaction::Fee {
-                        amount: BaseUnits::new(1_500, Denomination::NATIVE),
+                        amount: BaseUnits::native(1_500),
                         gas: 1_500,
                         proxy: Some(transaction::FeeProxy {
                             module: "test".to_owned(),
