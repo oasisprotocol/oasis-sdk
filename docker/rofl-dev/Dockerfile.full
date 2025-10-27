@@ -1,4 +1,4 @@
-FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.5.x AS oasis-core-dev
+FROM ghcr.io/oasisprotocol/oasis-core-dev:stable-25.6.x AS oasis-core-dev
 
 ARG OASIS_CLI_VERSION=0.16.0
 ARG DEBIAN_FRONTEND=noninteractive
