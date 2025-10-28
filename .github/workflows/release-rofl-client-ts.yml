@@ -1,0 +1,49 @@
+name: Publish to npm (rofl-client/ts)
+
+on:
+  push:
+    tags:
+      - "rofl-client/ts/v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version info
+        id: version
+        run: |
+          TAG=${{ github.ref_name }}
+          VERSION=${TAG##*/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install deps
+        working-directory: rofl-client/ts
+        run: npm ci --foreground-scripts
+
+      - name: Set package version
+        working-directory: rofl-client/ts
+        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Rebuild after version bump
+        working-directory: rofl-client/ts
+        run: npm run build
+
+      - name: Publish
+        working-directory: rofl-client/ts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

@@ -479,6 +479,32 @@ jobs:
         working-directory: client-sdk/ts-web/rt
         run: npm test
 
+  test-rofl-client-ts:
+    name: test-rofl-client-ts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.x"
+          cache: npm
+          cache-dependency-path: "rofl-client/ts/package-lock.json"
+
+      - name: Install deps and build
+        working-directory: rofl-client/ts
+        run: npm ci --foreground-scripts
+
+      - name: Unit tests
+        working-directory: rofl-client/ts
+        run: npm test
+
+      - name: Typedoc
+        working-directory: rofl-client/ts
+        run: npx typedoc
+
   ts-web-core-reflect:
     # NOTE: This name appears in GitHub's Checks API.
     name: ts-web-core-reflect
