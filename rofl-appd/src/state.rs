@@ -17,6 +17,9 @@ pub trait Env: Send + Sync {
         tx: transaction::Transaction,
         opts: SubmitTxOpts,
     ) -> Result<transaction::CallResult>;
+
+    /// Securely query the on-chain paratime state.
+    async fn query(&self, method: &str, args: Vec<u8>) -> Result<Vec<u8>>;
 }
 
 pub(crate) struct EnvImpl<A: App> {
@@ -49,5 +52,12 @@ impl<A: App> Env for EnvImpl<A> {
             .client()
             .multi_sign_and_submit_tx_opts(&[signer], tx, opts)
             .await
+    }
+
+    async fn query(&self, method: &str, args: Vec<u8>) -> Result<Vec<u8>> {
+        let args: cbor::Value = cbor::from_slice(&args)?;
+        let round = self.env.client().latest_round().await?;
+        let result: cbor::Value = self.env.client().query(round, method, args).await?;
+        Ok(cbor::to_vec(result))
     }
 }

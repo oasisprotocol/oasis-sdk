@@ -46,6 +46,8 @@ where
         routes![routes::metadata::set, routes::metadata::get],
     );
 
+    let server = server.mount("/rofl/v1/query", routes![routes::query::query]);
+
     #[cfg(feature = "tx")]
     let server = server
         .manage(routes::tx::Config::default())

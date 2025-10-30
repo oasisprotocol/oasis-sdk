@@ -145,3 +145,25 @@ class RoflClient:
         """
         path: str = "/rofl/v1/metadata"
         await self._appd_request("POST", path, metadata)
+
+    async def query(self, method: str, args: bytes) -> bytes:
+        """Query the on-chain paratime state.
+
+        Args:
+            method: The query method name
+            args: CBOR-encoded query arguments
+
+        Returns:
+            CBOR-encoded response data
+
+        Raises:
+            httpx.HTTPStatusError: If the request fails
+        """
+        payload: dict[str, str] = {
+            "method": method,
+            "args": args.hex(),
+        }
+
+        path: str = "/rofl/v1/query"
+        response: dict[str, str] = await self._appd_request("POST", path, payload)
+        return bytes.fromhex(response["data"])

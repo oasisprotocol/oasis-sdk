@@ -286,6 +286,60 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
             "https://rofl.example.com/rofl/v1/metadata", timeout=60.0
         )
 
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_query(self, mock_client_class):
+        """Test query method."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": "48656c6c6f"}  # "Hello" in hex
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test query
+        client = RoflClient()
+        args = b"\xa1\x64test\x65value"  # CBOR-encoded test data
+        result = await client.query("test.Method", args)
+
+        # Verify the result
+        self.assertEqual(result, b"Hello")
+
+        # Verify the API call
+        mock_client.post.assert_called_once_with(
+            "http://localhost/rofl/v1/query",
+            json={"method": "test.Method", "args": args.hex()},
+            timeout=60.0,
+        )
+
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_query_with_http_url(self, mock_client_class):
+        """Test query method with HTTP URL."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": "deadbeef"}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test with HTTP URL
+        client = RoflClient(url="https://rofl.example.com")
+        args = b"\x00\x01\x02"
+        result = await client.query("state.Query", args)
+
+        # Verify the result
+        self.assertEqual(result, bytes.fromhex("deadbeef"))
+
+        # Verify the API call uses the custom URL
+        mock_client.post.assert_called_once_with(
+            "https://rofl.example.com/rofl/v1/query",
+            json={"method": "state.Query", "args": "000102"},
+            timeout=60.0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
