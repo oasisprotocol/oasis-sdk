@@ -9,9 +9,11 @@ use crate::state::Env;
 #[serde_as]
 #[derive(Clone, Debug, serde::Deserialize)]
 pub struct QueryRequest {
-    method: String,
+    /// Method name.
+    pub method: String,
+    /// CBOR encoded arguments.
     #[serde_as(as = "serde_with::hex::Hex")]
-    args: Vec<u8>,
+    pub args: Vec<u8>,
 }
 
 /// Query response.
