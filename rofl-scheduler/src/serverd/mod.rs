@@ -29,6 +29,8 @@ pub struct Config<'a> {
     pub manager: Arc<Manager>,
     /// Scheduler configuration.
     pub config: Arc<LocalConfig>,
+    /// ACME account.
+    pub acme: tls::AcmeAccount,
 }
 
 pub struct State {
@@ -41,7 +43,7 @@ pub struct State {
 
 /// Start the server endpoint in a background task.
 pub async fn serve(cfg: Config<'_>) -> Result<()> {
-    let tls_provisioner = tls::CertificateProvisioner::new();
+    let tls_provisioner = tls::CertificateProvisioner::new(cfg.acme);
     tls_provisioner.handle().add_domain(cfg.domain).await;
 
     let state = Arc::new(State {

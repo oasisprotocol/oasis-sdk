@@ -94,7 +94,7 @@ async fn maybe_start<A: App>(
 
     slog::info!(logger, "proxy configuration is available, starting proxy");
     tokio::spawn(async move {
-        if let Err(err) = run(proxy_label, compose).await {
+        if let Err(err) = run(proxy_label, compose, kms).await {
             slog::error!(logger, "failed to start proxy"; "err" => ?err);
         }
     });
@@ -102,7 +102,11 @@ async fn maybe_start<A: App>(
     Ok(())
 }
 
-async fn run(proxy_label: ProxyLabel, compose: ParsedCompose) -> Result<()> {
+async fn run(
+    proxy_label: ProxyLabel,
+    compose: ParsedCompose,
+    kms: Arc<dyn services::kms::KmsService>,
+) -> Result<()> {
     let logger = get_logger("proxy");
 
     // We only need the IP address part of the IP/CIDR format.
@@ -146,13 +150,42 @@ async fn run(proxy_label: ProxyLabel, compose: ParsedCompose) -> Result<()> {
         .start()
         .context("failed to start wireguard client")?;
 
+    // Create ACME account from KMS-derived key.
+    slog::info!(logger, "creating ACME account");
+    let kms_acme = kms.clone();
+    let acme = http::tls::init_acme_account(
+        move |key_id: &[u8]| {
+            let kms_acme = kms_acme.clone();
+            let key_id = std::str::from_utf8(key_id)
+                .expect("key_id must be valid UTF-8")
+                .to_string();
+            async move {
+                let response = kms_acme
+                    .generate(&services::kms::GenerateRequest {
+                        key_id: &key_id,
+                        kind: services::kms::KeyKind::Raw256,
+                    })
+                    .await
+                    .context("failed to generate ACME key from KMS")?;
+                Ok(http::tls::RawAcmeKey(response.key.clone()))
+            }
+        },
+        // We could allow apps to configure to use staging url.
+        http::tls::LetsEncrypt::Production.url(),
+    )
+    .await
+    .context("failed to initialize ACME account")?;
+
     // Setup HTTPS proxy.
     slog::info!(logger, "setting up application proxy");
-    let mut http = http::Proxy::new(http::Config {
-        listen_address: listen_address.clone(),
-        listen_port: PROXY_HTTPS_LISTEN_PORT,
-        ..Default::default()
-    })
+    let mut http = http::Proxy::new(
+        http::Config {
+            listen_address: listen_address.clone(),
+            listen_port: PROXY_HTTPS_LISTEN_PORT,
+            ..Default::default()
+        },
+        acme,
+    )
     .context("failed to create https proxy")?;
     http.start();
 
