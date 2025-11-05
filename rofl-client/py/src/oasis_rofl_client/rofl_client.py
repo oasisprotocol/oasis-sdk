@@ -92,6 +92,10 @@ class RoflClient:
                 response = await client.post(full_url, json=payload, timeout=60.0)
 
             response.raise_for_status()
+
+            if not response.content:
+                return None
+
             return response.json()
 
     async def generate_key(
