@@ -17,6 +17,8 @@ use tokio::{
 use tokio_io_timeout::TimeoutStream;
 use tokio_rustls::TlsAcceptor;
 
+use crate::http::tls;
+
 use super::{
     sni,
     tls::{CertificateProvisioner, CertificateProvisionerHandle, ACME_TLS_ALPN_PROTOCOL_ID},
@@ -129,13 +131,13 @@ pub struct Proxy {
 
 impl Proxy {
     /// Create a new proxy instance.
-    pub fn new(cfg: Config) -> Result<Self> {
+    pub fn new(cfg: Config, acme: tls::AcmeAccount) -> Result<Self> {
         let rt = tokio::runtime::Builder::new_multi_thread()
             .thread_name("rofl-proxy")
             .enable_all()
             .build()?;
 
-        let provisioner = CertificateProvisioner::new();
+        let provisioner = CertificateProvisioner::new(acme);
         let state = State {
             cfg,
             mappings: Mappings::new(),

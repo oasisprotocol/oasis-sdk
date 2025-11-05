@@ -4,9 +4,12 @@
 
 use std::collections::BTreeMap;
 
-use oasis_runtime_sdk::core::{
-    common::{logger::get_logger, process},
-    Protocol,
+use oasis_runtime_sdk::{
+    core::{
+        common::{logger::get_logger, process},
+        Protocol,
+    },
+    modules::rofl::types::{KeyKind, KeyScope},
 };
 use rofl_app_core::prelude::*;
 
@@ -87,13 +90,47 @@ impl App for SchedulerApp {
         let logger = get_logger("scheduler");
         let cfg = self.cfg.as_ref().unwrap();
 
+        // Create ACME account from ROFL KMS.
+        slog::info!(logger, "creating ACME account");
+        let env_for_acme = env.clone();
+        let acme: rofl_proxy::http::tls::AcmeAccount = rofl_proxy::http::tls::init_acme_account(
+            move |key_id: &[u8]| {
+                let env = env_for_acme.clone();
+                let key_id = key_id.to_vec();
+                async move {
+                    let response = env
+                        .client()
+                        .derive_key(
+                            env.signer(),
+                            rofl_app_core::client::DeriveKeyRequest {
+                                key_id,
+                                kind: KeyKind::EntropyV0,
+                                // Use node scope so scheduler instances don't share the same ACME key.
+                                scope: KeyScope::Node,
+                                ..Default::default()
+                            },
+                        )
+                        .await
+                        .map_err(|e| {
+                            anyhow::anyhow!("failed to derive ACME key from KMS: {e:?}")
+                        })?;
+                    Ok(rofl_proxy::http::tls::RawAcmeKey(response.key))
+                }
+            },
+            rofl_proxy::http::tls::LetsEncrypt::Production.url(),
+        )
+        .await
+        .expect("failed to create ACME account");
+
         // Create and start the proxy when configured.
-        let proxy = cfg.proxy.as_ref().map(|cfg| {
-            let mut proxy = proxy::Proxy::new(cfg, HTTPS_SERVER_PORT).unwrap();
+        let proxy = if let Some(proxy_cfg) = cfg.proxy.as_ref() {
+            let mut proxy = proxy::Proxy::new(proxy_cfg, HTTPS_SERVER_PORT, acme.clone()).unwrap();
             proxy.start();
 
-            Arc::new(proxy)
-        });
+            Some(Arc::new(proxy))
+        } else {
+            None
+        };
 
         // Create the manager.
         let manager = manager::Manager::new(env.clone(), cfg.clone(), proxy.clone());
@@ -129,6 +166,7 @@ impl App for SchedulerApp {
                 env,
                 manager: manager.clone(),
                 config: cfg.clone(),
+                acme,
             })
             .await
             {

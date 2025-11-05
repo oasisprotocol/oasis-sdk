@@ -14,10 +14,13 @@ backoff = { version = "0.4", features = ["tokio"] }
 base64 = "0.22.1"
 byteorder = "1"
 defguard_wireguard_rs = "0.7.6"
-instant-acme = "0.8.2"
+# TODO: Switch to version 0.8.4 when released.
+instant-acme = { git = "https://github.com/djc/instant-acme", rev = "cd5780819817efd64205439c1ed9d33e0db8c866" }
+p256 = { version = "0.13", features = ["pkcs8"] }
 ptrie = "0.7.2"
 rcgen = "0.14.2"
 rustls = "0.23.27"
+serde_json = "1.0"
 slog = "2.7.0"
 tokio = { version = "1.38", features = [
     "rt",
@@ -35,6 +38,12 @@ zeroize = "1.8.1"
 
 # Fuzzing.
 honggfuzz = "0.5"
+
+[dev-dependencies]
+hex = "0.4"
+rand = "0.8"
+rofl-appd = { path = "../rofl-appd" }
+tokio-test = "0.4"
 
 [[bin]]
 name = "fuzz-sni"

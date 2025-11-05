@@ -44,7 +44,11 @@ pub struct Proxy {
 
 impl Proxy {
     /// Create a new app proxy.
-    pub fn new(cfg: &ProxyConfig, listen_port: u16) -> Result<Self> {
+    pub fn new(
+        cfg: &ProxyConfig,
+        listen_port: u16,
+        acme: rofl_proxy::http::tls::AcmeAccount,
+    ) -> Result<Self> {
         let logger = get_logger("scheduler/proxy");
 
         let wireguard = wireguard::Hub::new(wireguard::HubConfig {
@@ -71,7 +75,7 @@ impl Proxy {
         if let Some(max_connections) = cfg.max_connections {
             http_cfg.max_connections = max_connections as usize;
         }
-        let http = http::Proxy::new(http_cfg)?;
+        let http = http::Proxy::new(http_cfg, acme)?;
 
         let instances = Arc::new(Mutex::new(BTreeMap::new()));
         let notifier = Arc::new(ProxyDomainVerificationHandler::new(

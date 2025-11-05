@@ -26,7 +26,6 @@ cmd_lib = "1.9.5"
 futures-util = "0.3.31"
 hex = "0.4.3"
 hickory-resolver = { version = "0.25.2", features = ["https-aws-lc-rs", "dnssec-aws-lc-rs", "webpki-roots"] }
-instant-acme = "0.8.2"
 jsonwebtoken = "9"
 nix = { version = "0.29.0", features = ["signal"] }
 oci-client = "0.15.0"

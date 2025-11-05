@@ -11,10 +11,17 @@ use std::{
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
 use oasis_runtime_sdk::core::common::logger::get_logger;
+use p256::pkcs8::EncodePrivateKey;
 use rcgen::{KeyPair, PublicKeyData, PKCS_ECDSA_P256_SHA256};
-use rustls::{pki_types::pem::PemObject, sign::CertifiedKey};
+use rustls::{
+    pki_types::{pem::PemObject, PrivateKeyDer, PrivatePkcs8KeyDer},
+    sign::CertifiedKey,
+};
 use tokio::{sync::mpsc, task::JoinHandle};
 use zeroize::Zeroizing;
+
+/// Re-export instant_acme types for convenience.
+pub use instant_acme::{Account as AcmeAccount, LetsEncrypt};
 
 /// Metadata key used to signal the used TLS public key. The value is `Base64(DER(pk))`.
 const METADATA_KEY_TLS_PK: &str = "net.oasis.tls.pk";
@@ -25,6 +32,9 @@ const PERSISTENT_TLS_KEY_PATH: &str = "/storage/tls/identity";
 const PERSISTENT_TLS_CERTS_DIR: &str = "/storage/tls/certs";
 /// Rotate persistent TLS identity and certificates after this time.
 const PERSISTENT_TLS_ROTATE_AFTER_SECS: u64 = 7 * 24 * 3600; // 1 week
+
+/// KMS key identifier for the ACME account key.
+const KMS_ACME_KEY_ID: &str = "rofl-proxy/tls: acme account key v1";
 
 static IDENTITY: OnceLock<Identity> = OnceLock::new();
 
@@ -108,17 +118,96 @@ impl CertificateProvisionerHandle {
     }
 }
 
+/// Raw ACME account key material that will be zeroized on drop.
+#[derive(Debug, zeroize::Zeroize, zeroize::ZeroizeOnDrop)]
+pub struct RawAcmeKey(pub Vec<u8>);
+
+impl AsRef<[u8]> for RawAcmeKey {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+/// Initialize an ACME account from a key source (typically KMS-derived).
+pub async fn init_acme_account<F, Fut>(
+    derive_raw_key: F,
+    directory_url: &str,
+) -> Result<AcmeAccount>
+where
+    for<'a> F: Fn(&'a [u8]) -> Fut + Send + Sync + 'static,
+    Fut: std::future::Future<Output = Result<RawAcmeKey>> + Send,
+{
+    let logger = get_logger("acme-account");
+
+    let acme_key = derive_raw_key(KMS_ACME_KEY_ID.as_bytes()).await?;
+
+    // Back off to recover from Let's Encrypt authorization-failure limits.
+    // Limit: 10 new accounts per IP every 3 hours, refiling 1 slot every ~18 minutes.
+    // So we make the final interval >18 min.
+    //
+    // Note however, even with backoff, if multiple apps on the same host attempt
+    // to provision an ACME account concurrently, they may all hit this limit.
+    // Because rate-limited failures also count toward this limit this could create a never
+    // ending backoff situation. We try to mitigate this by using 1 hour max backoff and
+    // deterministic keys to avoid re-provisioning new accounts for apps on restarts.
+    let backoff = backoff::ExponentialBackoffBuilder::new()
+        .with_initial_interval(Duration::from_secs(30))
+        .with_multiplier(2.0)
+        .with_randomization_factor(0.1)
+        .with_max_interval(Duration::from_secs(60 * 60))
+        .with_max_elapsed_time(Some(Duration::from_secs(2 * 60 * 60)))
+        .build();
+    backoff::future::retry(backoff, || async {
+        let result = try_init_acme_account(acme_key.as_ref(), directory_url).await;
+        if let Err(ref err) = result {
+            slog::error!(logger, "failed to create ACME account"; "err" => ?err);
+        }
+        result.map_err(backoff::Error::transient)
+    })
+    .await
+}
+
+/// Try to create an ACME account from raw key bytes.
+async fn try_init_acme_account(acme_key: &[u8], directory_url: &str) -> Result<AcmeAccount> {
+    let (acme_key, private_key_der) =
+        raw_to_acme_key_pair(acme_key).context("failed to convert raw key into ACME key pair")?;
+
+    let (acc, _creds) = instant_acme::Account::builder()?
+        .create_from_key((acme_key, private_key_der), directory_url.to_string())
+        .await?;
+    Ok(acc)
+}
+
+/// Convert raw 32-byte entropy from KMS into a P-256 key pair for ACME.
+fn raw_to_acme_key_pair(raw_key: &[u8]) -> Result<(instant_acme::Key, PrivateKeyDer<'static>)> {
+    let secret_key = p256::SecretKey::from_slice(raw_key)
+        .map_err(|e| anyhow!("failed to create P-256 secret key: {e}"))?;
+
+    let pkcs8 = Zeroizing::new(
+        secret_key
+            .to_pkcs8_der()
+            .map_err(|e| anyhow!("failed to serialize key to PKCS#8: {e}"))?
+            .as_bytes()
+            .to_vec(),
+    );
+    let acme_key =
+        instant_acme::Key::from_pkcs8_der(PrivatePkcs8KeyDer::from(pkcs8.clone().to_vec()))?;
+    let private_key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(pkcs8.clone().to_vec()));
+    Ok((acme_key, private_key_der))
+}
+
 /// Provisioner of TLS certificates via ACME/Let's Encrypt.
 pub struct CertificateProvisioner {
     resolver: Arc<CertificateResolver>,
     logger: slog::Logger,
     cmd_rx: Option<mpsc::Receiver<Command>>,
     handle: CertificateProvisionerHandle,
+    acme: AcmeAccount,
 }
 
 impl CertificateProvisioner {
-    /// Create a new certificate provisioner for the given domain.
-    pub fn new() -> Self {
+    /// Create a new certificate provisioner.
+    pub fn new(acme: AcmeAccount) -> Self {
         let (cmd_tx, cmd_rx) = mpsc::channel(16);
 
         Self {
@@ -126,6 +215,7 @@ impl CertificateProvisioner {
             logger: get_logger("serverd/cert-provisioner"),
             cmd_rx: Some(cmd_rx),
             handle: CertificateProvisionerHandle { cmd_tx },
+            acme,
         }
     }
 
@@ -158,31 +248,6 @@ impl CertificateProvisioner {
     async fn manager(self: Arc<Self>, mut cmd_rx: mpsc::Receiver<Command>) {
         slog::info!(self.logger, "starting certificate provisioner task");
 
-        // Initialize the ACME account.
-        let acme = loop {
-            // TODO: Support saving/loading the account information.
-            let result = instant_acme::Account::builder()
-                .unwrap()
-                .create(
-                    &instant_acme::NewAccount {
-                        contact: &[],
-                        terms_of_service_agreed: true,
-                        only_return_existing: false,
-                    },
-                    instant_acme::LetsEncrypt::Production.url().to_owned(),
-                    None,
-                )
-                .await;
-            match result {
-                Ok((acct, _)) => break acct,
-                Err(err) => {
-                    slog::error!(self.logger, "failed to initialize ACME account"; "err" => ?err);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-            }
-        };
-        slog::info!(self.logger, "ACME account initialized");
-
         let mut domains: HashMap<String, JoinHandle<()>> = HashMap::new();
 
         while let Some(cmd) = cmd_rx.recv().await {
@@ -194,7 +259,8 @@ impl CertificateProvisioner {
 
                     slog::info!(self.logger, "adding new domain"; "sni" => &sni);
 
-                    let handle = tokio::spawn(self.clone().worker(sni.to_string(), acme.clone()));
+                    let handle =
+                        tokio::spawn(self.clone().worker(sni.to_string(), self.acme.clone()));
                     domains.insert(sni.to_string(), handle);
                 }
                 Command::RemoveDomain(sni) => {
@@ -207,7 +273,7 @@ impl CertificateProvisioner {
         }
     }
 
-    async fn worker(self: Arc<Self>, sni: String, acme: instant_acme::Account) {
+    async fn worker(self: Arc<Self>, sni: String, acme: AcmeAccount) {
         let sni = &sni;
 
         // First attempt to load existing certificate from persistent storage.
@@ -305,7 +371,7 @@ impl CertificateProvisioner {
         }
     }
 
-    pub async fn provision_once(&self, sni: &str, acme: &instant_acme::Account) -> Result<()> {
+    pub async fn provision_once(&self, sni: &str, acme: &AcmeAccount) -> Result<()> {
         slog::info!(self.logger, "provisioning new certificate"; "sni" => sni);
 
         // Create a new order.
@@ -408,12 +474,6 @@ impl CertificateProvisioner {
         slog::info!(self.logger, "certificate provisioned");
 
         Ok(())
-    }
-}
-
-impl Default for CertificateProvisioner {
-    fn default() -> Self {
-        CertificateProvisioner::new()
     }
 }
 
@@ -530,4 +590,69 @@ where
         .open(path)?;
     file.write_all(data.as_ref())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rofl_appd::services::kms::{GenerateRequest, KeyKind, KmsService, MockKmsService};
+
+    #[test]
+    fn test_raw_to_acme_key_pair() {
+        let kms = MockKmsService;
+
+        // Generate raw 32-byte key from the Mock KMS.
+        let response = tokio_test::block_on(kms.generate(&GenerateRequest {
+            key_id: KMS_ACME_KEY_ID,
+            kind: KeyKind::Raw256,
+        }))
+        .expect("failed to generate key");
+
+        // Convert raw key to ACME key pair.
+        let (_acme_key, private_key_der) = raw_to_acme_key_pair(&response.key)
+            .expect("failed to convert raw key to ACME key pair");
+
+        // Verify we got a valid PKCS8 private key.
+        assert!(
+            matches!(private_key_der, rustls::pki_types::PrivateKeyDer::Pkcs8(_)),
+            "private key should be PKCS8 format"
+        );
+    }
+
+    /// This test requires network access to Let's Encrypt staging servers.
+    /// Note: This test relies on network access and let's encrypt staging servers.
+    #[tokio::test]
+    async fn test_acme_account_creation() {
+        use rand::Rng;
+        let kms = Arc::new(MockKmsService);
+
+        let timeout = Duration::from_secs(30);
+        let acme = tokio::time::timeout(
+            timeout,
+            init_acme_account(
+                move |_key_id: &[u8]| {
+                    let kms = kms.clone();
+                    async move {
+                        // Use random key ID for test to avoid conflicts with previous test runs.
+                        let random_bytes: [u8; 32] = rand::thread_rng().gen();
+                        let key_id = format!("test-acme-account-{}", hex::encode(&random_bytes));
+                        let response = kms
+                            .generate(&GenerateRequest {
+                                key_id: &key_id,
+                                kind: KeyKind::Raw256,
+                            })
+                            .await
+                            .map_err(|e| anyhow!("failed to generate key: {}", e))?;
+                        Ok(RawAcmeKey(response.key.clone()))
+                    }
+                },
+                LetsEncrypt::Staging.url(),
+            ),
+        )
+        .await
+        .expect("timed out creating ACME account")
+        .expect("failed to create ACME account");
+
+        println!("ACME account created: {:?}", acme.id());
+    }
 }
