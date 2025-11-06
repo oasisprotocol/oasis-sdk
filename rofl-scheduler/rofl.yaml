@@ -5,7 +5,7 @@ description: Schedules and manages machines so you don't have to! Deploy your RO
 tee: tdx
 kind: raw
 resources:
-  memory: 512
+  memory: 1024
   cpus: 1
   storage:
     kind: ram
@@ -85,7 +85,13 @@ deployments:
         - id: HrBz+wxVn1DIbDpHTGbpJr/11HeM99o7LssYGfpLTPEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.1
         - id: lRpWhOiaI+8FI27QXN9Mme04y0phzGsVt9Ke/ylaejgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.2
         - id: 6Wzmz8ZQ9ZTmazzJag+r3zRwTQgQwGWgfrS7t/GTDRUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.2
+        - id: xVDhkREDTxE+KRbXOsk2HjLcybrzv1fpdv9rR4Oz4bYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: LzdLbxR984AZXC/g0TRViOejHg/1AcshJiKCGtWygwMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: F9AnrDeBZpMpu4XFfab7hyBGdlZUsmm8FEL3r7U3H2UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: jcpEa2+vdoTErDOjRZXkx8O++LoZ4fE1fYYL13VEL5wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
