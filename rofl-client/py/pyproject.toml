@@ -45,8 +45,11 @@ source = "vcs"
 fallback-version = "0.0.0"
 
 [tool.hatch.version.raw-options]
-root = "../.." 
+root = "../.."
 tag_regex = '^rofl-client/py/v(?P<version>\d+\.\d+\.\d+(?:[\w.-]*)?)$'
+
+[tool.hatch.version.raw-options.scm.git]
+describe_command = "git describe --dirty --tags --long --match 'rofl-client/py/v*'"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "src/oasis_rofl_client/_version.py"
