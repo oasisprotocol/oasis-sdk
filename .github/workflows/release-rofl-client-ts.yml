@@ -44,6 +44,4 @@ jobs:
 
       - name: Publish
         working-directory: rofl-client/ts
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
