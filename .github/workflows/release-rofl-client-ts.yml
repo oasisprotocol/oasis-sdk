@@ -17,13 +17,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version info
-        id: version
-        run: |
-          TAG=${{ github.ref_name }}
-          VERSION=${TAG##*/}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -34,11 +27,7 @@ jobs:
         working-directory: rofl-client/ts
         run: npm ci --foreground-scripts
 
-      - name: Set package version
-        working-directory: rofl-client/ts
-        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
-
-      - name: Rebuild after version bump
+      - name: Build
         working-directory: rofl-client/ts
         run: npm run build
 
