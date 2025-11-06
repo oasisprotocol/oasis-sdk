@@ -5,7 +5,7 @@
     "homepage": "https://github.com/oasisprotocol/oasis-sdk/tree/main/client-sdk/ts-web/signer-ledger",
     "repository": {
         "type": "git",
-        "url": "https://github.com/oasisprotocol/oasis-sdk.git",
+        "url": "git+https://github.com/oasisprotocol/oasis-sdk.git",
         "directory": "client-sdk/ts-web/signer-ledger"
     },
     "files": [

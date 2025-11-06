@@ -6,7 +6,7 @@
   "homepage": "https://github.com/oasisprotocol/oasis-sdk/tree/main/rofl-client/ts",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oasisprotocol/oasis-sdk.git",
+    "url": "git+https://github.com/oasisprotocol/oasis-sdk.git",
     "directory": "rofl-client/ts"
   },
   "files": [
