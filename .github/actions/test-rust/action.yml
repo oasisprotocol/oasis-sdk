@@ -22,7 +22,9 @@ runs:
         MANIFEST_PATH: ${{ inputs.manifest_path }}
 
     - name: Upload to codecov.io
-      uses: codecov/codecov-action@v2.1.0
+      uses: codecov/codecov-action@v5.5.1
+      with:
+        use_oidc: true  # Upload authentication to avoid rate-limiting
 
     - name: Archive code coverage results
       uses: actions/upload-artifact@v4

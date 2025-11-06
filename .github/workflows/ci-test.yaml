@@ -23,6 +23,10 @@ concurrency:
 env:
   CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
+permissions:
+  id-token: write  # Needed for "use_oidc" in codecov
+  contents: read
+
 jobs:
   test-rust:
     # NOTE: This name appears in GitHub's Checks API.
@@ -108,9 +112,10 @@ jobs:
         run: go test -race -coverprofile=coverage.txt -covermode=atomic -v ./...
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v4.3.1
+        uses: codecov/codecov-action@v5.5.1
         with:
           directory: client-sdk/go
+          use_oidc: true  # Upload authentication to avoid rate-limiting
 
   test-go-tools:
     # NOTE: This name appears in GitHub's Checks API.
