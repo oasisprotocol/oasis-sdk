@@ -579,7 +579,9 @@ fn write_from_string<P>(path: P, data: &str) -> Result<()>
 where
     P: AsRef<Path>,
 {
-    if let Some(dir) = path.as_ref().parent() {
+    let path = path.as_ref();
+
+    if let Some(dir) = path.parent() {
         fs::create_dir_all(dir)?;
     }
     let mut file = fs::OpenOptions::new()
@@ -588,7 +590,13 @@ where
         .create(true)
         .truncate(true)
         .open(path)?;
+
     file.write_all(data.as_ref())?;
+    file.sync_all()?;
+    if let Some(dir) = path.parent() {
+        fs::File::open(dir)?.sync_all()?;
+    }
+
     Ok(())
 }
 
