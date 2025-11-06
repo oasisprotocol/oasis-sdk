@@ -243,7 +243,7 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
         """Test set_metadata method."""
         # Setup mock
         mock_response = MagicMock()
-        mock_response.json.return_value = {}
+        mock_response.content = b""
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock()
