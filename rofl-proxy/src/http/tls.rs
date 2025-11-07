@@ -568,7 +568,7 @@ where
     P: AsRef<Path>,
 {
     let metadata = fs::metadata(&path)?;
-    let age = metadata.created()?.elapsed()?;
+    let age = metadata.modified()?.elapsed()?;
     if age > Duration::from_secs(expiry) {
         return Err(anyhow!("existing file expired"));
     }
