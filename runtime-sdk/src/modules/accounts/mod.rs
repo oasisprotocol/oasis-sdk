@@ -1035,9 +1035,6 @@ impl module::TransactionHandler for Module {
 
         // Update payer balance.
         Self::sub_amount(fee_updates.payer, &tx_auth_info.fee.amount).unwrap(); // Already checked.
-
-        // Update nonces.
-        Self::update_signer_nonces(ctx, tx_auth_info).unwrap();
     }
 }
 
