@@ -1010,7 +1010,7 @@ impl module::TransactionHandler for Module {
     }
 
     fn after_dispatch_tx<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         tx_auth_info: &AuthInfo,
         result: &module::CallResult,
     ) {
