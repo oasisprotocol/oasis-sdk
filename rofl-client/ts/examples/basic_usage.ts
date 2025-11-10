@@ -23,6 +23,10 @@ async function main() {
         const appId = await client.getAppId();
         console.log('App ID:', appId);
 
+        // Read-only runtime query (no args -> CBOR null)
+        const runtimeInfo = await client.query('core.RuntimeInfo');
+        console.log('Runtime info:', runtimeInfo);
+
         // Sign & submit (ETH style)
         const result = await client.signAndSubmit({
             kind: 'eth',

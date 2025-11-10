@@ -1,3 +1,4 @@
+import * as oasis from '@oasisprotocol/client';
 import {
     KeyKind,
     RoflClient,
@@ -22,6 +23,13 @@ function makeClient(collector: TransportRequest[]): RoflClient {
         }
         if (req.path === '/rofl/v1/metadata' && req.method === 'POST') {
             return {status: 200, body: {}, headers: {}};
+        }
+        if (req.path === '/rofl/v1/query' && req.method === 'POST') {
+            return {
+                status: 200,
+                body: {data: Buffer.from(oasis.misc.toCBOR({ok: true})).toString('hex')},
+                headers: {'content-type': 'application/json'},
+            };
         }
         if (req.path === '/rofl/v1/app/id' && req.method === 'GET') {
             return {
@@ -116,6 +124,51 @@ describe('RoflClient', () => {
 
         const appId = await client.getAppId();
         expect(appId.startsWith('rofl1')).toBeTruthy();
+    });
+
+    it('query encodes structured args and decodes response', async () => {
+        const calls: TransportRequest[] = [];
+        const client = makeClient(calls);
+
+        const result = await client.query<{foo: number}, {ok: boolean}>('rofl.Custom', {foo: 1});
+        expect(result).toEqual({ok: true});
+
+        const queryCall = calls.find((c) => c.path === '/rofl/v1/query')!;
+        expect(queryCall.method).toBe('POST');
+        expect((queryCall.payload as any).method).toBe('rofl.Custom');
+        const encoded = (queryCall.payload as {args: string}).args;
+        const decoded = oasis.misc.fromCBOR(Buffer.from(encoded, 'hex'));
+        expect(decoded).toEqual({foo: 1});
+    });
+
+    it('query accepts pre-encoded CBOR arguments', async () => {
+        const calls: TransportRequest[] = [];
+        const client = makeClient(calls);
+
+        const binaryArgs = oasis.misc.toCBOR({raw: true});
+        await client.query('rofl.Binary', binaryArgs);
+
+        const queryCall = calls.find(
+            (c) => c.path === '/rofl/v1/query' && (c.payload as any).method === 'rofl.Binary',
+        )!;
+        expect((queryCall.payload as {args: string}).args).toBe(
+            Buffer.from(binaryArgs).toString('hex'),
+        );
+    });
+
+    it('query without args encodes CBOR null', async () => {
+        const calls: TransportRequest[] = [];
+        const client = makeClient(calls);
+
+        await client.query('core.RuntimeInfo');
+
+        const queryCall = calls.find(
+            (c) => c.path === '/rofl/v1/query' && (c.payload as any).method === 'core.RuntimeInfo',
+        )!;
+        const argHex = (queryCall.payload as {args: string}).args;
+        const sent = Buffer.from(argHex, 'hex');
+        const expected = Buffer.from(oasis.misc.toCBOR(null));
+        expect(sent.equals(expected)).toBe(true);
     });
 
     it('propagates HTTP errors', async () => {
