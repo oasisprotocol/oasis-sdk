@@ -5,5 +5,6 @@ export type {
     TransportResponse,
     StdTx,
     EthTx,
+    EthValue,
     QueryArgsInput,
 } from './roflClient';

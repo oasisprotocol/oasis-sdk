@@ -32,7 +32,7 @@ async function main() {
             kind: 'eth',
             gas_limit: 200_000,
             to: '', // empty => contract creation
-            value: 0,
+            value: '0',
             data: '0x', // no-op calldata
         });
         console.log('CallResult (hex):', Buffer.from(result).toString('hex'));

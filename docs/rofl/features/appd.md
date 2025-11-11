@@ -110,7 +110,7 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
     "data": {
       "gas_limit": 200000,
       "to": "1234845aaB7b6CD88c7fAd9E9E1cf07638805b20",
-      "value": 0,
+      "value": "0",
       "data": "dae1ee1f00000000000000000000000000000000000000000000000000002695a9e649b2"
     }
   }
@@ -123,7 +123,9 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
   supported (as defined by the `kind` field):
 
   - Ethereum-compatible calls (`eth`) use standard fields (`gas_limit`, `to`,
-    `value` and `data`) to define the transaction content.
+    `value` and `data`) to define the transaction content. `value` must be a
+    decimal string (or `0x` hex string) representing a non-negative integer
+    up to 256 bits.
 
   - Oasis SDK calls (`std`) support CBOR-serialized hex-encoded `Transaction`s
     to be specified.

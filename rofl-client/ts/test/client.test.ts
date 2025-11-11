@@ -243,8 +243,64 @@ describe('RoflClient', () => {
         expect(payload.tx.kind).toBe('eth');
         expect(payload.tx.data.gas_limit).toBe(200000);
         expect(payload.tx.data.to).toBe('1234'); // 0x stripped
-        expect(payload.tx.data.value).toBe(0);
+        expect(payload.tx.data.value).toBe('0');
         expect(payload.tx.data.data).toBe('deadbeef'); // 0x stripped
+    });
+
+    it('normalizes EthTx.value inputs precisely', async () => {
+        const calls: TransportRequest[] = [];
+        const client = makeClient(calls);
+
+        await client.signAndSubmit({
+            kind: 'eth',
+            gas_limit: 1,
+            to: '0x00',
+            value: '0x2a',
+            data: '0x',
+        });
+
+        await client.signAndSubmit({
+            kind: 'eth',
+            gas_limit: 1,
+            to: '',
+            value: 123n,
+            data: '0x',
+        });
+
+        const txCalls = calls.filter((c) => c.path === '/rofl/v1/tx/sign-submit');
+        expect(txCalls).toHaveLength(2);
+        expect((txCalls[0].payload as any).tx.data.value).toBe('42');
+        expect((txCalls[1].payload as any).tx.data.value).toBe('123');
+    });
+
+    it('rejects invalid EthTx.value inputs early', async () => {
+        const client = new RoflClient({
+            transport: async (_req: TransportRequest): Promise<TransportResponse> => ({
+                status: 200,
+                body: {data: 'a1626f6b40'},
+                headers: {'content-type': 'application/json'},
+            }),
+        });
+
+        await expect(
+            client.signAndSubmit({
+                kind: 'eth',
+                gas_limit: 1,
+                to: '',
+                value: 'not-a-number',
+                data: '',
+            }),
+        ).rejects.toThrow(/EthTx\.value/);
+
+        await expect(
+            client.signAndSubmit({
+                kind: 'eth',
+                gas_limit: 1,
+                to: '',
+                value: Number.MAX_SAFE_INTEGER + 1,
+                data: '',
+            }),
+        ).rejects.toThrow(/EthTx\.value/);
     });
 
     it('index exports are wired correctly', () => {
