@@ -962,9 +962,8 @@ impl module::TransactionHandler for Module {
             <C::Runtime as Runtime>::Core::set_priority(gas_price.try_into().unwrap_or(u64::MAX));
         }
 
-        // Do not update nonces early during transaction checks. In case of checks, only do it after
-        // all the other checks have already passed as otherwise retrying the transaction will not
-        // be possible.
+        // Do not update nonces during transaction checks. This allows validating multiple
+        // transactions in a batch without ordering them by nonce.
         if !CurrentState::with_env(|env| env.is_check_only()) {
             Self::update_signer_nonces(ctx, &tx.auth_info)?;
         }
