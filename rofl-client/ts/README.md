@@ -30,7 +30,7 @@ const callResultBytes = await client.signAndSubmit({
   kind: 'eth',
   gas_limit: 200_000,
   to: '',                    // empty => contract creation
-  value: 0,
+  value: '0',                // decimal or 0x hex string
   data: '0x',                // hex calldata (0x optional)
 });
 // `callResultBytes` is the raw CBOR-encoded CallResult (Uint8Array)
@@ -126,8 +126,11 @@ type EthTx = {
   gas_limit: number;
   /** Hex address (0x optional). Empty string => contract creation. */
   to: string;
-  /** JSON number; must fit JS number range (backend expects u128). */
-  value: number;
+  /**
+   * Transaction value in wei. Accepts decimal strings, 0x-prefixed hex strings,
+   * bigint, or safe JS integers. Values are normalized to decimal strings.
+   */
+  value: string | number | bigint;
   /** Hex calldata (0x optional). */
   data: string;
 };

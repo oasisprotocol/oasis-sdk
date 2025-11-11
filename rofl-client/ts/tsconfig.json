@@ -1,13 +1,22 @@
 {
     "compilerOptions": {
-        "outDir": "./dist/",
+        "target": "ES2022",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+
         "rootDir": "./src",
-        "noImplicitAny": true,
+        "outDir": "./dist/esm",
+
+        "lib": ["ES2022"],
+        "types": ["node"],
+
         "strict": true,
-        "module": "CommonJS",
-        "target": "ES2020",
+        "noImplicitAny": true,
+        "resolveJsonModule": true,
         "declaration": true,
-        "resolveJsonModule": true
+        "declarationDir": "./dist",
+        "verbatimModuleSyntax": true,
+        "moduleDetection": "force"
     },
     "include": ["src/**/*"],
     "exclude": ["test/**/*", "examples/**/*"],
