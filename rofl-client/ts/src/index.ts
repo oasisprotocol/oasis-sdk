@@ -1,4 +1,4 @@
-export {RoflClient, type RoflClientOptions, ROFL_SOCKET_PATH, KeyKind} from './roflClient';
+export {RoflClient, type RoflClientOptions, ROFL_SOCKET_PATH, KeyKind} from './roflClient.js';
 export type {
     Transport,
     TransportRequest,
@@ -7,4 +7,4 @@ export type {
     EthTx,
     EthValue,
     QueryArgsInput,
-} from './roflClient';
+} from './roflClient.js';

@@ -1,7 +1,5 @@
 import * as http from 'node:http';
 import * as https from 'node:https';
-import {readFileSync} from 'node:fs';
-import {resolve as resolvePath} from 'node:path';
 import * as oasis from '@oasisprotocol/client';
 
 /** Default Unix domain socket path. */
@@ -195,18 +193,12 @@ function encodeQueryArgs(value: unknown): Uint8Array {
     return oasis.misc.toCBOR(value);
 }
 
-const PACKAGE_VERSION = (() => {
-    try {
-        const pkgPath = resolvePath(__dirname, '..', 'package.json');
-        const raw = readFileSync(pkgPath, 'utf8');
-        const parsed = JSON.parse(raw) as {version?: string};
-        return typeof parsed.version === 'string' ? parsed.version : 'dev';
-    } catch {
-        return 'dev';
-    }
-})();
+const PACKAGE_VERSION =
+    process.env.OASIS_ROFL_CLIENT_VERSION ?? process.env.npm_package_version ?? '';
 
-const DEFAULT_USER_AGENT = `@oasisprotocol/rofl-client/${PACKAGE_VERSION}`;
+const DEFAULT_USER_AGENT = PACKAGE_VERSION
+    ? `@oasisprotocol/rofl-client/${PACKAGE_VERSION}`
+    : '@oasisprotocol/rofl-client';
 
 /**
  * Client for interacting with the ROFL application daemon REST API.
