@@ -84,7 +84,10 @@ fn parse_u256_string(value: String) -> Result<evm::types::U256, String> {
     if trimmed.is_empty() {
         return Err("transaction value string must not be empty".to_string());
     }
-    let (radix, digits) = match trimmed.strip_prefix("0x").or_else(|| trimmed.strip_prefix("0X")) {
+    let (radix, digits) = match trimmed
+        .strip_prefix("0x")
+        .or_else(|| trimmed.strip_prefix("0X"))
+    {
         Some(rest) => (16, rest),
         None => (10, trimmed),
     };
@@ -148,9 +151,7 @@ pub async fn sign_and_submit(
             value,
             data,
         } => {
-            let value = value
-                .into_u256()
-                .map_err(|err| (Status::BadRequest, err))?;
+            let value = value.into_u256().map_err(|err| (Status::BadRequest, err))?;
             let (method, body) = if to.is_empty() {
                 // Create.
                 (
@@ -226,4 +227,44 @@ pub async fn sign_and_submit(
     };
 
     Ok(Json(response))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{evm, *};
+
+    #[test]
+    fn parse_u256_string_supports_decimal_and_hex() {
+        let decimal = parse_u256_string("42".to_string()).unwrap();
+        assert_eq!(decimal, evm::types::U256::from(42u32));
+
+        let hex_lower = parse_u256_string("0x2a".to_string()).unwrap();
+        assert_eq!(hex_lower, evm::types::U256::from(42u32));
+
+        let hex_upper = parse_u256_string("  0X2A  ".to_string()).unwrap();
+        assert_eq!(hex_upper, evm::types::U256::from(42u32));
+    }
+
+    #[test]
+    fn parse_u256_string_rejects_invalid_inputs() {
+        assert!(parse_u256_string("".to_string()).is_err());
+        assert!(parse_u256_string("0x".to_string()).is_err());
+        assert!(parse_u256_string("-1".to_string()).is_err());
+        assert!(parse_u256_string("0xZZ".to_string()).is_err());
+    }
+
+    #[test]
+    fn transaction_value_into_u256_handles_number_variant() {
+        let value = TransactionValue::Number(10u128.pow(18));
+        assert_eq!(
+            value.into_u256().unwrap(),
+            evm::types::U256::from(10u128.pow(18))
+        );
+    }
+
+    #[test]
+    fn transaction_value_into_u256_handles_string_variant() {
+        let value = TransactionValue::String("1000".to_string());
+        assert_eq!(value.into_u256().unwrap(), evm::types::U256::from(1000u32));
+    }
 }
