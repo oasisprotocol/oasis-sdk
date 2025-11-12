@@ -25,13 +25,14 @@ const metadata = await client.getMetadata();
 
 const appId = await client.getAppId(); // bech32 string (helper)
 
-// Sign & submit an authenticated transaction (ETH-style)
+// Sign & submit an authenticated transaction (ETH-style): transfer ROSE
+// NOTE: 'value' uses 18-decimals on EVM ParaTimes (wei-like). Example sends 0.001 ROSE.
 const callResultBytes = await client.signAndSubmit({
   kind: 'eth',
-  gas_limit: 200_000,
-  to: '',                    // empty => contract creation
-  value: 0,
-  data: '0x',                // hex calldata (0x optional)
+  gas_limit: 21_000,
+  to: '0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20', // example address, replace with your own
+  value: 1_000_000_000_000_000, // 0.001 ROSE
+  data: '0x',
 });
 // `callResultBytes` is the raw CBOR-encoded CallResult (Uint8Array)
 ```
@@ -88,7 +89,10 @@ type EthTx = {
   gas_limit: number;
   /** Hex address (0x optional). Empty string => contract creation. */
   to: string;
-  /** JSON number; must fit JS number range (backend expects u128). */
+  /**
+   * JSON number; must fit JS number range (backend expects u128).
+   * Units: base units (18 decimals on EVM ParaTimes).
+   */
   value: number;
   /** Hex calldata (0x optional). */
   data: string;
