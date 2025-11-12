@@ -224,7 +224,7 @@ describe('RoflClient', () => {
             {
                 kind: 'eth',
                 gas_limit: 200000,
-                to: '0x1234',
+                to: '0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20',
                 value: 0,
                 data: '0xdeadbeef',
             },
@@ -242,7 +242,7 @@ describe('RoflClient', () => {
         expect(payload.encrypt).toBe(false);
         expect(payload.tx.kind).toBe('eth');
         expect(payload.tx.data.gas_limit).toBe(200000);
-        expect(payload.tx.data.to).toBe('1234'); // 0x stripped
+        expect(payload.tx.data.to).toBe('1234845aaB7b6CD88c7fAd9E9E1cf07638805b20'); // 0x stripped
         expect(payload.tx.data.value).toBe('0');
         expect(payload.tx.data.data).toBe('deadbeef'); // 0x stripped
     });
