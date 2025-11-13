@@ -291,8 +291,8 @@ github.com/oasisprotocol/cometbft v0.37.15-oasis2 h1:wCXrQK+n2T7TPFEslmA8pK+VG4K
 github.com/oasisprotocol/cometbft v0.37.15-oasis2/go.mod h1:PeXF4BJSZ3DvCqMAKOqw2pcbbehw8XpgZBS7TlYbD2A=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a h1:dlRvE5fWabOchtH7znfiFCcOvmIYgOeAS5ifBXBlh9Q=
 github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a/go.mod h1:hVoHR2EVESiICEMbg137etN/Lx+lSrHPTD39Z/uE+2s=
-github.com/oasisprotocol/oasis-core/go v0.2506.0 h1:YfWtwX6KG1IO74GnK9+uQMj7mJNTT5pobA2ZMDAs0r4=
-github.com/oasisprotocol/oasis-core/go v0.2506.0/go.mod h1:hmqg0TxDogeRlAvPSlsbXgOPkOG4PskpOS2r6MLaIXY=
+github.com/oasisprotocol/oasis-core/go v0.2507.0 h1:MUx7dfQbHQ5JobQ+qbmCJbqTkI3V/w4RUQaTI7lY1Yo=
+github.com/oasisprotocol/oasis-core/go v0.2507.0/go.mod h1:SVF7hYkpCF8HAhE3PWsZ3nxMv13FbY0EUw9yDM5ZbbA=
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
