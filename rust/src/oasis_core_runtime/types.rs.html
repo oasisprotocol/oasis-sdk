@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/2b4cf1b/runtime/src/types.rs`."><title>types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (50aa04180 2025-05-08)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/</div>types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Types used by the worker-host protocol.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/d4e949c/runtime/src/types.rs`."><title>types.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (50aa04180 2025-05-08)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../static.files/storage-4e99c027.js"></script><script defer src="../../static.files/src-script-63605ae7.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/</div>types.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Types used by the worker-host protocol.
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span>std::collections::BTreeMap;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>thiserror::Error;
@@ -416,110 +416,102 @@
 <a href=#416 id=416 data-nosnippet>416</a><span class="doccomment">/// Batch execution mode.
 <a href=#417 id=417 data-nosnippet>417</a></span><span class="attr">#[derive(Clone, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 <a href=#418 id=418 data-nosnippet>418</a>#[cbor(with_default)]
-<a href=#419 id=419 data-nosnippet>419</a></span><span class="kw">pub enum </span>ExecutionMode {
-<a href=#420 id=420 data-nosnippet>420</a>    <span class="doccomment">/// Execution mode where the batch of transactions is executed as-is without the ability to
-<a href=#421 id=421 data-nosnippet>421</a>    /// perform and modifications to the batch.
-<a href=#422 id=422 data-nosnippet>422</a>    </span>Execute = <span class="number">0</span>,
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="doccomment">/// Execution mode where the runtime is in control of scheduling and may arbitrarily modify the
-<a href=#424 id=424 data-nosnippet>424</a>    /// batch during execution.
-<a href=#425 id=425 data-nosnippet>425</a>    ///
-<a href=#426 id=426 data-nosnippet>426</a>    /// This execution mode will only be used in case the runtime advertises to support the schedule
-<a href=#427 id=427 data-nosnippet>427</a>    /// control feature. In this case the call will only contain up to InitialBatchSize transactions
-<a href=#428 id=428 data-nosnippet>428</a>    /// and the runtime will need to request more if it needs more.
-<a href=#429 id=429 data-nosnippet>429</a>    </span>Schedule = <span class="number">1</span>,
-<a href=#430 id=430 data-nosnippet>430</a>}
-<a href=#431 id=431 data-nosnippet>431</a>
-<a href=#432 id=432 data-nosnippet>432</a><span class="kw">impl </span>Default <span class="kw">for </span>ExecutionMode {
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-<a href=#434 id=434 data-nosnippet>434</a>        <span class="self">Self</span>::Execute
-<a href=#435 id=435 data-nosnippet>435</a>    }
-<a href=#436 id=436 data-nosnippet>436</a>}
-<a href=#437 id=437 data-nosnippet>437</a>
-<a href=#438 id=438 data-nosnippet>438</a><span class="doccomment">/// Result of a CheckTx operation.
-<a href=#439 id=439 data-nosnippet>439</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#440 id=440 data-nosnippet>440</a></span><span class="kw">pub struct </span>CheckTxResult {
-<a href=#441 id=441 data-nosnippet>441</a>    <span class="kw">pub </span>error: Error,
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;CheckTxMetadata&gt;,
-<a href=#443 id=443 data-nosnippet>443</a>}
-<a href=#444 id=444 data-nosnippet>444</a>
-<a href=#445 id=445 data-nosnippet>445</a><span class="doccomment">/// CheckTx transaction metadata.
-<a href=#446 id=446 data-nosnippet>446</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#447 id=447 data-nosnippet>447</a></span><span class="kw">pub struct </span>CheckTxMetadata {
-<a href=#448 id=448 data-nosnippet>448</a>    <span class="attr">#[cbor(optional)]
-<a href=#449 id=449 data-nosnippet>449</a>    </span><span class="kw">pub </span>priority: u64,
-<a href=#450 id=450 data-nosnippet>450</a>
+<a href=#419 id=419 data-nosnippet>419</a>#[derive(Default)]
+<a href=#420 id=420 data-nosnippet>420</a></span><span class="kw">pub enum </span>ExecutionMode {
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="doccomment">/// Execution mode where the batch of transactions is executed as-is without the ability to
+<a href=#422 id=422 data-nosnippet>422</a>    /// perform and modifications to the batch.
+<a href=#423 id=423 data-nosnippet>423</a>    </span><span class="attr">#[default]
+<a href=#424 id=424 data-nosnippet>424</a>    </span>Execute = <span class="number">0</span>,
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="doccomment">/// Execution mode where the runtime is in control of scheduling and may arbitrarily modify the
+<a href=#426 id=426 data-nosnippet>426</a>    /// batch during execution.
+<a href=#427 id=427 data-nosnippet>427</a>    ///
+<a href=#428 id=428 data-nosnippet>428</a>    /// This execution mode will only be used in case the runtime advertises to support the schedule
+<a href=#429 id=429 data-nosnippet>429</a>    /// control feature. In this case the call will only contain up to InitialBatchSize transactions
+<a href=#430 id=430 data-nosnippet>430</a>    /// and the runtime will need to request more if it needs more.
+<a href=#431 id=431 data-nosnippet>431</a>    </span>Schedule = <span class="number">1</span>,
+<a href=#432 id=432 data-nosnippet>432</a>}
+<a href=#433 id=433 data-nosnippet>433</a>
+<a href=#434 id=434 data-nosnippet>434</a><span class="doccomment">/// Result of a CheckTx operation.
+<a href=#435 id=435 data-nosnippet>435</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#436 id=436 data-nosnippet>436</a></span><span class="kw">pub struct </span>CheckTxResult {
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">pub </span>error: Error,
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">pub </span>meta: <span class="prelude-ty">Option</span>&lt;CheckTxMetadata&gt;,
+<a href=#439 id=439 data-nosnippet>439</a>}
+<a href=#440 id=440 data-nosnippet>440</a>
+<a href=#441 id=441 data-nosnippet>441</a><span class="doccomment">/// CheckTx transaction metadata.
+<a href=#442 id=442 data-nosnippet>442</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#443 id=443 data-nosnippet>443</a></span><span class="kw">pub struct </span>CheckTxMetadata {
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="attr">#[cbor(optional)]
+<a href=#445 id=445 data-nosnippet>445</a>    </span><span class="kw">pub </span>priority: u64,
+<a href=#446 id=446 data-nosnippet>446</a>
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="attr">#[cbor(optional)]
+<a href=#448 id=448 data-nosnippet>448</a>    </span><span class="kw">pub </span>sender: Vec&lt;u8&gt;,
+<a href=#449 id=449 data-nosnippet>449</a>    <span class="attr">#[cbor(optional)]
+<a href=#450 id=450 data-nosnippet>450</a>    </span><span class="kw">pub </span>sender_seq: u64,
 <a href=#451 id=451 data-nosnippet>451</a>    <span class="attr">#[cbor(optional)]
-<a href=#452 id=452 data-nosnippet>452</a>    </span><span class="kw">pub </span>sender: Vec&lt;u8&gt;,
-<a href=#453 id=453 data-nosnippet>453</a>    <span class="attr">#[cbor(optional)]
-<a href=#454 id=454 data-nosnippet>454</a>    </span><span class="kw">pub </span>sender_seq: u64,
-<a href=#455 id=455 data-nosnippet>455</a>    <span class="attr">#[cbor(optional)]
-<a href=#456 id=456 data-nosnippet>456</a>    </span><span class="kw">pub </span>sender_state_seq: u64,
-<a href=#457 id=457 data-nosnippet>457</a>}
-<a href=#458 id=458 data-nosnippet>458</a>
-<a href=#459 id=459 data-nosnippet>459</a><span class="doccomment">/// Consensus event kind.
-<a href=#460 id=460 data-nosnippet>460</a></span><span class="attr">#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
-<a href=#461 id=461 data-nosnippet>461</a>#[repr(u8)]
-<a href=#462 id=462 data-nosnippet>462</a></span><span class="kw">pub enum </span>EventKind {
-<a href=#463 id=463 data-nosnippet>463</a>    Staking = <span class="number">1</span>,
-<a href=#464 id=464 data-nosnippet>464</a>    Registry = <span class="number">2</span>,
-<a href=#465 id=465 data-nosnippet>465</a>    RootHash = <span class="number">3</span>,
-<a href=#466 id=466 data-nosnippet>466</a>    Governance = <span class="number">4</span>,
-<a href=#467 id=467 data-nosnippet>467</a>}
-<a href=#468 id=468 data-nosnippet>468</a>
-<a href=#469 id=469 data-nosnippet>469</a><span class="doccomment">/// Request to host to fetch the consensus events for the given height.
-<a href=#470 id=470 data-nosnippet>470</a></span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
-<a href=#471 id=471 data-nosnippet>471</a>#[cbor(no_default)]
-<a href=#472 id=472 data-nosnippet>472</a></span><span class="kw">pub struct </span>HostFetchConsensusEventsRequest {
-<a href=#473 id=473 data-nosnippet>473</a>    <span class="kw">pub </span>height: u64,
-<a href=#474 id=474 data-nosnippet>474</a>    <span class="kw">pub </span>kind: EventKind,
-<a href=#475 id=475 data-nosnippet>475</a>}
-<a href=#476 id=476 data-nosnippet>476</a>
-<a href=#477 id=477 data-nosnippet>477</a><span class="doccomment">/// Response from host fetching the consensus events for the given height.
-<a href=#478 id=478 data-nosnippet>478</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#479 id=479 data-nosnippet>479</a></span><span class="kw">pub struct </span>HostFetchConsensusEventsResponse {
-<a href=#480 id=480 data-nosnippet>480</a>    <span class="kw">pub </span>events: Vec&lt;consensus::Event&gt;,
-<a href=#481 id=481 data-nosnippet>481</a>}
-<a href=#482 id=482 data-nosnippet>482</a>
-<a href=#483 id=483 data-nosnippet>483</a><span class="doccomment">/// Registration for runtime event notifications.
-<a href=#484 id=484 data-nosnippet>484</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#485 id=485 data-nosnippet>485</a></span><span class="kw">pub struct </span>RegisterNotifyRuntimeEvent {
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="doccomment">/// Event tags to subscribe to.
-<a href=#487 id=487 data-nosnippet>487</a>    </span><span class="kw">pub </span>tags: Vec&lt;Vec&lt;u8&gt;&gt;,
-<a href=#488 id=488 data-nosnippet>488</a>}
-<a href=#489 id=489 data-nosnippet>489</a>
-<a href=#490 id=490 data-nosnippet>490</a><span class="doccomment">/// An event notification.
-<a href=#491 id=491 data-nosnippet>491</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#492 id=492 data-nosnippet>492</a></span><span class="kw">pub struct </span>RuntimeNotifyEvent {
-<a href=#493 id=493 data-nosnippet>493</a>    <span class="doccomment">/// Header of the block that emitted the event.
-<a href=#494 id=494 data-nosnippet>494</a>    </span><span class="kw">pub </span>block: roothash::AnnotatedBlock,
-<a href=#495 id=495 data-nosnippet>495</a>    <span class="doccomment">/// Matching tags.
-<a href=#496 id=496 data-nosnippet>496</a>    </span><span class="kw">pub </span>tags: Vec&lt;Vec&lt;u8&gt;&gt;,
-<a href=#497 id=497 data-nosnippet>497</a>}
-<a href=#498 id=498 data-nosnippet>498</a>
-<a href=#499 id=499 data-nosnippet>499</a><span class="attr">#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
-<a href=#500 id=500 data-nosnippet>500</a>#[repr(u8)]
-<a href=#501 id=501 data-nosnippet>501</a></span><span class="kw">pub enum </span>MessageType {
-<a href=#502 id=502 data-nosnippet>502</a>    <span class="doccomment">/// Invalid message (should never be seen on the wire).
-<a href=#503 id=503 data-nosnippet>503</a>    </span>Invalid = <span class="number">0</span>,
-<a href=#504 id=504 data-nosnippet>504</a>    <span class="doccomment">/// Request.
-<a href=#505 id=505 data-nosnippet>505</a>    </span>Request = <span class="number">1</span>,
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="doccomment">/// Response.
-<a href=#507 id=507 data-nosnippet>507</a>    </span>Response = <span class="number">2</span>,
-<a href=#508 id=508 data-nosnippet>508</a>}
-<a href=#509 id=509 data-nosnippet>509</a>
-<a href=#510 id=510 data-nosnippet>510</a><span class="kw">impl </span>Default <span class="kw">for </span>MessageType {
-<a href=#511 id=511 data-nosnippet>511</a>    <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{
-<a href=#512 id=512 data-nosnippet>512</a>        <span class="self">Self</span>::Invalid
-<a href=#513 id=513 data-nosnippet>513</a>    }
-<a href=#514 id=514 data-nosnippet>514</a>}
-<a href=#515 id=515 data-nosnippet>515</a>
-<a href=#516 id=516 data-nosnippet>516</a><span class="doccomment">/// Runtime protocol message.
-<a href=#517 id=517 data-nosnippet>517</a></span><span class="attr">#[derive(Debug, Default, cbor::Encode, cbor::Decode)]
-<a href=#518 id=518 data-nosnippet>518</a></span><span class="kw">pub struct </span>Message {
-<a href=#519 id=519 data-nosnippet>519</a>    <span class="doccomment">/// Unique request identifier.
-<a href=#520 id=520 data-nosnippet>520</a>    </span><span class="kw">pub </span>id: u64,
-<a href=#521 id=521 data-nosnippet>521</a>    <span class="doccomment">/// Message type.
-<a href=#522 id=522 data-nosnippet>522</a>    </span><span class="kw">pub </span>message_type: MessageType,
-<a href=#523 id=523 data-nosnippet>523</a>    <span class="doccomment">/// Message body.
-<a href=#524 id=524 data-nosnippet>524</a>    </span><span class="kw">pub </span>body: Body,
-<a href=#525 id=525 data-nosnippet>525</a>}</code></pre></div></section></main></body></html>
+<a href=#452 id=452 data-nosnippet>452</a>    </span><span class="kw">pub </span>sender_state_seq: u64,
+<a href=#453 id=453 data-nosnippet>453</a>}
+<a href=#454 id=454 data-nosnippet>454</a>
+<a href=#455 id=455 data-nosnippet>455</a><span class="doccomment">/// Consensus event kind.
+<a href=#456 id=456 data-nosnippet>456</a></span><span class="attr">#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
+<a href=#457 id=457 data-nosnippet>457</a>#[repr(u8)]
+<a href=#458 id=458 data-nosnippet>458</a></span><span class="kw">pub enum </span>EventKind {
+<a href=#459 id=459 data-nosnippet>459</a>    Staking = <span class="number">1</span>,
+<a href=#460 id=460 data-nosnippet>460</a>    Registry = <span class="number">2</span>,
+<a href=#461 id=461 data-nosnippet>461</a>    RootHash = <span class="number">3</span>,
+<a href=#462 id=462 data-nosnippet>462</a>    Governance = <span class="number">4</span>,
+<a href=#463 id=463 data-nosnippet>463</a>}
+<a href=#464 id=464 data-nosnippet>464</a>
+<a href=#465 id=465 data-nosnippet>465</a><span class="doccomment">/// Request to host to fetch the consensus events for the given height.
+<a href=#466 id=466 data-nosnippet>466</a></span><span class="attr">#[derive(Clone, Debug, cbor::Encode, cbor::Decode)]
+<a href=#467 id=467 data-nosnippet>467</a>#[cbor(no_default)]
+<a href=#468 id=468 data-nosnippet>468</a></span><span class="kw">pub struct </span>HostFetchConsensusEventsRequest {
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">pub </span>height: u64,
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="kw">pub </span>kind: EventKind,
+<a href=#471 id=471 data-nosnippet>471</a>}
+<a href=#472 id=472 data-nosnippet>472</a>
+<a href=#473 id=473 data-nosnippet>473</a><span class="doccomment">/// Response from host fetching the consensus events for the given height.
+<a href=#474 id=474 data-nosnippet>474</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#475 id=475 data-nosnippet>475</a></span><span class="kw">pub struct </span>HostFetchConsensusEventsResponse {
+<a href=#476 id=476 data-nosnippet>476</a>    <span class="kw">pub </span>events: Vec&lt;consensus::Event&gt;,
+<a href=#477 id=477 data-nosnippet>477</a>}
+<a href=#478 id=478 data-nosnippet>478</a>
+<a href=#479 id=479 data-nosnippet>479</a><span class="doccomment">/// Registration for runtime event notifications.
+<a href=#480 id=480 data-nosnippet>480</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#481 id=481 data-nosnippet>481</a></span><span class="kw">pub struct </span>RegisterNotifyRuntimeEvent {
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="doccomment">/// Event tags to subscribe to.
+<a href=#483 id=483 data-nosnippet>483</a>    </span><span class="kw">pub </span>tags: Vec&lt;Vec&lt;u8&gt;&gt;,
+<a href=#484 id=484 data-nosnippet>484</a>}
+<a href=#485 id=485 data-nosnippet>485</a>
+<a href=#486 id=486 data-nosnippet>486</a><span class="doccomment">/// An event notification.
+<a href=#487 id=487 data-nosnippet>487</a></span><span class="attr">#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#488 id=488 data-nosnippet>488</a></span><span class="kw">pub struct </span>RuntimeNotifyEvent {
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="doccomment">/// Header of the block that emitted the event.
+<a href=#490 id=490 data-nosnippet>490</a>    </span><span class="kw">pub </span>block: roothash::AnnotatedBlock,
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="doccomment">/// Matching tags.
+<a href=#492 id=492 data-nosnippet>492</a>    </span><span class="kw">pub </span>tags: Vec&lt;Vec&lt;u8&gt;&gt;,
+<a href=#493 id=493 data-nosnippet>493</a>}
+<a href=#494 id=494 data-nosnippet>494</a>
+<a href=#495 id=495 data-nosnippet>495</a><span class="attr">#[derive(Clone, Copy, Debug, cbor::Encode, cbor::Decode)]
+<a href=#496 id=496 data-nosnippet>496</a>#[repr(u8)]
+<a href=#497 id=497 data-nosnippet>497</a>#[derive(Default)]
+<a href=#498 id=498 data-nosnippet>498</a></span><span class="kw">pub enum </span>MessageType {
+<a href=#499 id=499 data-nosnippet>499</a>    <span class="doccomment">/// Invalid message (should never be seen on the wire).
+<a href=#500 id=500 data-nosnippet>500</a>    </span><span class="attr">#[default]
+<a href=#501 id=501 data-nosnippet>501</a>    </span>Invalid = <span class="number">0</span>,
+<a href=#502 id=502 data-nosnippet>502</a>    <span class="doccomment">/// Request.
+<a href=#503 id=503 data-nosnippet>503</a>    </span>Request = <span class="number">1</span>,
+<a href=#504 id=504 data-nosnippet>504</a>    <span class="doccomment">/// Response.
+<a href=#505 id=505 data-nosnippet>505</a>    </span>Response = <span class="number">2</span>,
+<a href=#506 id=506 data-nosnippet>506</a>}
+<a href=#507 id=507 data-nosnippet>507</a>
+<a href=#508 id=508 data-nosnippet>508</a><span class="doccomment">/// Runtime protocol message.
+<a href=#509 id=509 data-nosnippet>509</a></span><span class="attr">#[derive(Debug, Default, cbor::Encode, cbor::Decode)]
+<a href=#510 id=510 data-nosnippet>510</a></span><span class="kw">pub struct </span>Message {
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="doccomment">/// Unique request identifier.
+<a href=#512 id=512 data-nosnippet>512</a>    </span><span class="kw">pub </span>id: u64,
+<a href=#513 id=513 data-nosnippet>513</a>    <span class="doccomment">/// Message type.
+<a href=#514 id=514 data-nosnippet>514</a>    </span><span class="kw">pub </span>message_type: MessageType,
+<a href=#515 id=515 data-nosnippet>515</a>    <span class="doccomment">/// Message body.
+<a href=#516 id=516 data-nosnippet>516</a>    </span><span class="kw">pub </span>body: Body,
+<a href=#517 id=517 data-nosnippet>517</a>}</code></pre></div></section></main></body></html>
