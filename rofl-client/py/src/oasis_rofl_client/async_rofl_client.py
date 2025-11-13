@@ -1,6 +1,6 @@
-"""ROFL client for interacting with ROFL appd REST API.
+"""Async ROFL client for interacting with ROFL appd REST API.
 
-Provides native python methods for the ROFL appd REST API endpoints.
+Provides native async python methods for the ROFL appd REST API endpoints.
 """
 
 import json
@@ -25,8 +25,8 @@ from oasis_rofl_client.common import (
 logger = logging.getLogger(__name__)
 
 
-class RoflClient:
-    """Client for interacting with ROFL REST API.
+class AsyncRoflClient:
+    """Async client for interacting with ROFL REST API.
 
     Provides methods for key fetching through the ROFL REST API.
     """
@@ -38,7 +38,7 @@ class RoflClient:
         """
         self.url: str = url
 
-    def _appd_request(
+    async def _appd_request(
         self, method: str, path: str, payload: Any = None
     ) -> httpx.Response:
         """Request to ROFL application daemon.
@@ -53,16 +53,16 @@ class RoflClient:
         if method not in ("GET", "POST"):
             raise ValueError(f"Unsupported HTTP method: {method}")
 
-        transport: httpx.HTTPTransport | None = None
+        transport: httpx.AsyncHTTPTransport | None = None
 
         if self.url and not self.url.startswith("http"):
-            transport = httpx.HTTPTransport(uds=self.url)
+            transport = httpx.AsyncHTTPTransport(uds=self.url)
             logger.debug(f"Using HTTP socket: {self.url}")
         elif not self.url:
-            transport = httpx.HTTPTransport(uds=ROFL_SOCKET_PATH)
+            transport = httpx.AsyncHTTPTransport(uds=ROFL_SOCKET_PATH)
             logger.debug(f"Using unix domain socket: {ROFL_SOCKET_PATH}")
 
-        with httpx.Client(transport=transport) as client:
+        async with httpx.AsyncClient(transport=transport) as client:
             base_url: str = (
                 self.url
                 if self.url and self.url.startswith("http")
@@ -72,10 +72,14 @@ class RoflClient:
 
             if method == "GET":
                 logger.debug(f"Getting from {full_url}")
-                response: httpx.Response = client.get(full_url, timeout=60.0)
+                response: httpx.Response = await client.get(
+                    full_url, timeout=60.0
+                )
             else:  # POST
                 logger.debug(f"Posting to {full_url}: {json.dumps(payload)}")
-                response = client.post(full_url, json=payload, timeout=60.0)
+                response = await client.post(
+                    full_url, json=payload, timeout=60.0
+                )
 
             response.raise_for_status()
 
@@ -84,15 +88,15 @@ class RoflClient:
 
             return response
 
-    def get_app_id(self) -> str:
+    async def get_app_id(self) -> str:
         """Retrieve the app ID.
 
         :returns: The app ID as Bech32-encoded string
         :raises httpx.HTTPStatusError: If key fetch fails
         """
-        return (self._appd_request("GET", ENDPOINT_APP_ID)).text
+        return (await self._appd_request("GET", ENDPOINT_APP_ID)).text
 
-    def generate_key(
+    async def generate_key(
         self, key_id: str, kind: KeyKind = KeyKind.SECP256K1
     ) -> str:
         """Fetch or generate a cryptographic key from ROFL.
@@ -109,11 +113,11 @@ class RoflClient:
         }
 
         response: dict[str, Any] = (
-            self._appd_request("POST", ENDPOINT_KEYS_GENERATE, payload)
+            await self._appd_request("POST", ENDPOINT_KEYS_GENERATE, payload)
         ).json()
         return response["key"]
 
-    def sign_submit(
+    async def sign_submit(
         self,
         tx: TxParams,
         encrypt: bool = True,
@@ -131,7 +135,7 @@ class RoflClient:
         payload = get_tx_payload(tx, encrypt)
 
         response: dict[str, str] = (
-            self._appd_request("POST", ENDPOINT_TX_SIGN_SUBMIT, payload)
+            await self._appd_request("POST", ENDPOINT_TX_SIGN_SUBMIT, payload)
         ).json()
         result = {}
         # Decode CBOR-encoded data field to python object.
@@ -139,18 +143,18 @@ class RoflClient:
             result = cbor2.loads(bytes.fromhex(response["data"]))
         return result
 
-    def get_metadata(self) -> dict[str, str]:
+    async def get_metadata(self) -> dict[str, str]:
         """Get all user-set metadata key-value pairs.
 
         :returns: Dictionary of metadata key-value pairs
         :raises httpx.HTTPStatusError: If the request fails
         """
         response: dict[str, str] = (
-            self._appd_request("GET", ENDPOINT_METADATA)
+            await self._appd_request("GET", ENDPOINT_METADATA)
         ).json()
         return response
 
-    def set_metadata(self, metadata: dict[str, str]) -> None:
+    async def set_metadata(self, metadata: dict[str, str]) -> None:
         """Set metadata key-value pairs.
 
         This replaces all existing app-provided metadata. Will trigger a registration
@@ -159,9 +163,9 @@ class RoflClient:
         :param metadata: Dictionary of metadata key-value pairs to set
         :raises httpx.HTTPStatusError: If the request fails
         """
-        self._appd_request("POST", ENDPOINT_METADATA, metadata)
+        await self._appd_request("POST", ENDPOINT_METADATA, metadata)
 
-    def query(self, method: str, args: bytes) -> bytes:
+    async def query(self, method: str, args: bytes) -> bytes:
         """Query the on-chain paratime state.
 
         :param method: The query method name
@@ -175,6 +179,6 @@ class RoflClient:
         }
 
         response: dict[str, str] = (
-            self._appd_request("POST", ENDPOINT_QUERY, payload)
+            await self._appd_request("POST", ENDPOINT_QUERY, payload)
         ).json()
         return bytes.fromhex(response["data"])

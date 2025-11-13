@@ -1,48 +1,48 @@
-"""Tests for RoflClient."""
+"""Tests for AsyncRoflClient."""
 
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from web3.types import TxParams
 
-from oasis_rofl_client import KeyKind, RoflClient
+from oasis_rofl_client import AsyncRoflClient, KeyKind
 from oasis_rofl_client.common import ROFL_SOCKET_PATH
 
 
-class TestRoflClient(unittest.TestCase):
+class TestAsyncRoflClient(unittest.IsolatedAsyncioTestCase):
     """Test cases for RoflClient."""
 
     def test_init_default(self):
         """Test client initialization with default settings."""
-        client = RoflClient()
+        client = AsyncRoflClient()
         self.assertEqual(client.url, "")
         self.assertEqual(ROFL_SOCKET_PATH, "/run/rofl-appd.sock")
 
     def test_init_with_url(self):
         """Test client initialization with custom URL."""
-        client = RoflClient(url="https://example.rofl")
+        client = AsyncRoflClient(url="https://example.rofl")
         self.assertEqual(client.url, "https://example.rofl")
 
     def test_init_with_socket_path(self):
         """Test client initialization with custom socket path."""
-        client = RoflClient(url="/custom/socket.sock")
+        client = AsyncRoflClient(url="/custom/socket.sock")
         self.assertEqual(client.url, "/custom/socket.sock")
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_generate_key(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_generate_key(self, mock_client_class):
         """Test generate_key method."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key": "0x123456789abcdef"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test key generation
-        client = RoflClient()
-        key = client.generate_key("test-key-id")
+        client = AsyncRoflClient()
+        key = await client.generate_key("test-key-id")
 
         # Verify the result
         self.assertEqual(key, "0x123456789abcdef")
@@ -54,21 +54,21 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_generate_key_with_http_url(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_generate_key_with_http_url(self, mock_client_class):
         """Test generate_key method with HTTP URL."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key": "0xfedcba987654321"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test with HTTP URL
-        client = RoflClient(url="https://rofl.example.com")
-        key = client.generate_key("another-key")
+        client = AsyncRoflClient(url="https://rofl.example.com")
+        key = await client.generate_key("another-key")
 
         # Verify the result
         self.assertEqual(key, "0xfedcba987654321")
@@ -80,9 +80,9 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.HTTPTransport")
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_unix_socket_transport(
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncHTTPTransport")
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_unix_socket_transport(
         self, mock_client_class, mock_transport_class
     ):
         """Test that Unix socket transport is used correctly."""
@@ -91,24 +91,24 @@ class TestRoflClient(unittest.TestCase):
         mock_response.json.return_value = {"key": "0xabcdef"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         mock_transport = MagicMock()
         mock_transport_class.return_value = mock_transport
 
         # Test with default Unix socket
-        client = RoflClient()
-        client.generate_key("socket-key")
+        client = AsyncRoflClient()
+        await client.generate_key("socket-key")
 
         # Verify Unix socket transport was created
         mock_transport_class.assert_called_once_with(uds="/run/rofl-appd.sock")
         mock_client_class.assert_called_once_with(transport=mock_transport)
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.HTTPTransport")
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_custom_socket_transport(
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncHTTPTransport")
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_custom_socket_transport(
         self, mock_client_class, mock_transport_class
     ):
         """Test that custom socket path is used correctly."""
@@ -117,36 +117,36 @@ class TestRoflClient(unittest.TestCase):
         mock_response.json.return_value = {"key": "0x123"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         mock_transport = MagicMock()
         mock_transport_class.return_value = mock_transport
 
         # Test with custom socket path
-        client = RoflClient(url="/custom/path.sock")
-        client.generate_key("custom-key")
+        client = AsyncRoflClient(url="/custom/path.sock")
+        await client.generate_key("custom-key")
 
         # Verify custom socket transport was created
         mock_transport_class.assert_called_once_with(uds="/custom/path.sock")
         mock_client_class.assert_called_once_with(transport=mock_transport)
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_generate_key_with_ed25519(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_generate_key_with_ed25519(self, mock_client_class):
         """Test generate_key with Ed25519 key kind."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key": "0xed25519key"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test key generation with Ed25519
-        client = RoflClient()
-        key = client.generate_key("ed25519-key", kind=KeyKind.ED25519)
+        client = AsyncRoflClient()
+        key = await client.generate_key("ed25519-key", kind=KeyKind.ED25519)
 
         # Verify the result
         self.assertEqual(key, "0xed25519key")
@@ -158,21 +158,21 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_generate_key_with_raw_256(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_generate_key_with_raw_256(self, mock_client_class):
         """Test generate_key with RAW_256 entropy."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key": "0xraw256entropy"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test key generation with RAW_256
-        client = RoflClient()
-        key = client.generate_key("entropy-256", kind=KeyKind.RAW_256)
+        client = AsyncRoflClient()
+        key = await client.generate_key("entropy-256", kind=KeyKind.RAW_256)
 
         # Verify the result
         self.assertEqual(key, "0xraw256entropy")
@@ -184,21 +184,21 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_generate_key_with_raw_384(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_generate_key_with_raw_384(self, mock_client_class):
         """Test generate_key with RAW_384 entropy."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key": "0xraw384entropy"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test key generation with RAW_384
-        client = RoflClient()
-        key = client.generate_key("entropy-384", kind=KeyKind.RAW_384)
+        client = AsyncRoflClient()
+        key = await client.generate_key("entropy-384", kind=KeyKind.RAW_384)
 
         # Verify the result
         self.assertEqual(key, "0xraw384entropy")
@@ -210,21 +210,28 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_get_app_id(self, mock_client_class):
+    def test_key_kind_enum_values(self):
+        """Test that KeyKind enum has correct values."""
+        self.assertEqual(KeyKind.RAW_256.value, "raw-256")
+        self.assertEqual(KeyKind.RAW_384.value, "raw-384")
+        self.assertEqual(KeyKind.ED25519.value, "ed25519")
+        self.assertEqual(KeyKind.SECP256K1.value, "secp256k1")
+
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_get_app_id(self, mock_client_class):
         """Test get_app_id method."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.text = "rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf"
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test get metadata
-        client = RoflClient()
-        app_id = client.get_app_id()
+        client = AsyncRoflClient()
+        app_id = await client.get_app_id()
 
         # Verify the result
         self.assertEqual(
@@ -236,8 +243,8 @@ class TestRoflClient(unittest.TestCase):
             "http://localhost/rofl/v1/app/id", timeout=60.0
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_sign_submit(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_sign_submit(self, mock_client_class):
         """Test sign_submit method."""
         # Setup mock
         mock_response = MagicMock()
@@ -246,12 +253,12 @@ class TestRoflClient(unittest.TestCase):
         }
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test set metadata
-        client = RoflClient()
+        client = AsyncRoflClient()
         tx: TxParams = {
             "from": "0x1234567890123456789012345678901234567890",
             "to": "0x0987654321098765432109876543210987654321",
@@ -262,7 +269,7 @@ class TestRoflClient(unittest.TestCase):
             "nonce": 0,
         }
 
-        response = client.sign_submit(tx, True)
+        response = await client.sign_submit(tx, True)
 
         self.assertEqual(
             response,
@@ -293,18 +300,18 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_sign_submit_default_encrypt_true(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_sign_submit_default_encrypt_true(self, mock_client_class):
         """sign_submit should default encrypt to True when omitted."""
         mock_response = MagicMock()
         mock_response.json.return_value = {"data": ""}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
-        client = RoflClient()
+        client = AsyncRoflClient()
         tx: TxParams = {
             "from": "0x1234567890123456789012345678901234567890",
             "data": "0x",
@@ -314,27 +321,27 @@ class TestRoflClient(unittest.TestCase):
             "nonce": 0,
         }
 
-        client.sign_submit(tx)  # no encrypt argument
+        await client.sign_submit(tx)  # no encrypt argument
 
         mock_client.post.assert_called_once()
         _, kwargs = mock_client.post.call_args
         assert kwargs["json"]["encrypt"] is True
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_get_metadata(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_get_metadata(self, mock_client_class):
         """Test get_metadata method."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"key1": "value1", "key2": "value2"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test get metadata
-        client = RoflClient()
-        metadata = client.get_metadata()
+        client = AsyncRoflClient()
+        metadata = await client.get_metadata()
 
         # Verify the result
         self.assertEqual(metadata, {"key1": "value1", "key2": "value2"})
@@ -344,25 +351,25 @@ class TestRoflClient(unittest.TestCase):
             "http://localhost/rofl/v1/metadata", timeout=60.0
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_set_metadata(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_set_metadata(self, mock_client_class):
         """Test set_metadata method."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.content = b""
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test set metadata
-        client = RoflClient()
+        client = AsyncRoflClient()
         metadata_to_set = {
             "new_key": "new_value",
             "another_key": "another_value",
         }
-        client.set_metadata(metadata_to_set)
+        await client.set_metadata(metadata_to_set)
 
         # Verify the API call
         mock_client.post.assert_called_once_with(
@@ -371,21 +378,21 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_get_metadata_with_http_url(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_get_metadata_with_http_url(self, mock_client_class):
         """Test get_metadata method with HTTP URL."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"custom": "metadata"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.get.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test with HTTP URL
-        client = RoflClient(url="https://rofl.example.com")
-        metadata = client.get_metadata()
+        client = AsyncRoflClient(url="https://rofl.example.com")
+        metadata = await client.get_metadata()
 
         # Verify the result
         self.assertEqual(metadata, {"custom": "metadata"})
@@ -395,8 +402,8 @@ class TestRoflClient(unittest.TestCase):
             "https://rofl.example.com/rofl/v1/metadata", timeout=60.0
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_query(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_query(self, mock_client_class):
         """Test query method."""
         # Setup mock
         mock_response = MagicMock()
@@ -405,14 +412,14 @@ class TestRoflClient(unittest.TestCase):
         }  # "Hello" in hex
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test query
-        client = RoflClient()
+        client = AsyncRoflClient()
         args = b"\xa1\x64test\x65value"  # CBOR-encoded test data
-        result = client.query("test.Method", args)
+        result = await client.query("test.Method", args)
 
         # Verify the result
         self.assertEqual(result, b"Hello")
@@ -424,22 +431,22 @@ class TestRoflClient(unittest.TestCase):
             timeout=60.0,
         )
 
-    @patch("oasis_rofl_client.async_rofl_client.httpx.Client")
-    def test_query_with_http_url(self, mock_client_class):
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_query_with_http_url(self, mock_client_class):
         """Test query method with HTTP URL."""
         # Setup mock
         mock_response = MagicMock()
         mock_response.json.return_value = {"data": "deadbeef"}
         mock_response.raise_for_status = MagicMock()
 
-        mock_client = Mock()
+        mock_client = AsyncMock()
         mock_client.post.return_value = mock_response
-        mock_client_class.return_value.__enter__.return_value = mock_client
+        mock_client_class.return_value.__aenter__.return_value = mock_client
 
         # Test with HTTP URL
-        client = RoflClient(url="https://rofl.example.com")
+        client = AsyncRoflClient(url="https://rofl.example.com")
         args = b"\x00\x01\x02"
-        result = client.query("state.Query", args)
+        result = await client.query("state.Query", args)
 
         # Verify the result
         self.assertEqual(result, bytes.fromhex("deadbeef"))

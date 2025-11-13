@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Basic usage example for oasis-rofl-client."""
 
-import asyncio
 import logging
 import sys
 from pathlib import Path
@@ -18,7 +17,7 @@ logging.basicConfig(
 )
 
 
-async def main():
+def main():
     """Demonstrate basic RoflClient usage."""
 
     # Create client with default Unix socket
@@ -27,23 +26,21 @@ async def main():
 
     # Generate a key with default type (SECP256K1)
     try:
-        key = await client.generate_key("my-first-key")
+        key = client.generate_key("my-first-key")
         print(f"Generated SECP256K1 key: {key}")
 
         # Generate an Ed25519 key
-        ed_key = await client.generate_key(
-            "my-ed25519-key", kind=KeyKind.ED25519
-        )
+        ed_key = client.generate_key("my-ed25519-key", kind=KeyKind.ED25519)
         print(f"Generated Ed25519 key: {ed_key}")
 
         # Generate raw entropy (256 bits)
-        entropy = await client.generate_key("my-entropy", kind=KeyKind.RAW_256)
+        entropy = client.generate_key("my-entropy", kind=KeyKind.RAW_256)
         print(f"Generated 256-bit entropy: {entropy}")
 
         # Set metadata (published on-chain in ROFL replica registration)
         # In practice, derive and publish the public key from the private key
         print("\nPublishing metadata...")
-        await client.set_metadata(
+        client.set_metadata(
             {
                 "key_fingerprint": key[:16],
             }
@@ -51,7 +48,7 @@ async def main():
         print("Metadata set successfully")
 
         # Retrieve current metadata
-        metadata = await client.get_metadata()
+        metadata = client.get_metadata()
         print(f"Current metadata: {metadata}")
 
     except Exception as e:
@@ -60,4 +57,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
