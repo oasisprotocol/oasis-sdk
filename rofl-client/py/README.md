@@ -54,6 +54,13 @@ RoflClient(url: str = '')
 
 #### Methods
 
+##### `async get_app_id() -> str`
+
+Get app ID.
+
+- **Returns:** Bech32-encoded ROFL app ID
+- **Raises:** `httpx.HTTPStatusError` if the request fails
+
 ##### `async generate_key(key_id: str, kind: KeyKind = KeyKind.SECP256K1) -> str`
 
 Fetches or generates a cryptographic key from ROFL.
@@ -67,6 +74,19 @@ Fetches or generates a cryptographic key from ROFL.
     - `KeyKind.SECP256K1`: Generate a Secp256k1 private key
 - **Returns:** The private key as a hex string
 - **Raises:** `httpx.HTTPStatusError` if the request fails
+
+##### `async sign_submit(tx: TxParams, encrypt: bool = False) -> dict[str, Any]`
+
+Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.
+
+Note: Transaction nonce and gas price are ignored.
+
+- **Parameters:**
+    - `tx`: Transaction parameters
+    - `encrypt`: End-to-end encrypt the transaction before submitting (default: False)
+- **Returns:** Deserialized response data object
+- **Raises:** `httpx.HTTPStatusError` if the request fails
+- **Raises:** `cbor2.CBORDecodeValueError` If the response data is invalid
 
 ##### `async get_metadata() -> dict[str, str]`
 
