@@ -1,11 +1,11 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/reflect-go
 
-go 1.25.0
+go 1.25.3
 
 replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis2
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2506.0
+	github.com/oasisprotocol/oasis-core/go v0.2507.0
 	golang.org/x/tools v0.36.0
 )
 
@@ -15,7 +15,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cometbft/cometbft v0.37.15 // indirect
+	github.com/cometbft/cometbft v0.37.16 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dgraph-io/badger/v4 v4.5.1 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect

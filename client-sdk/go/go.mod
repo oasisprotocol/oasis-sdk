@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
-go 1.25.0
+go 1.25.3
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
@@ -15,7 +15,7 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2506.0
+	github.com/oasisprotocol/oasis-core/go v0.2507.0
 	github.com/shopspring/decimal v1.4.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.42.0
@@ -31,7 +31,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cometbft/cometbft v0.37.15 // indirect
+	github.com/cometbft/cometbft v0.37.16 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect

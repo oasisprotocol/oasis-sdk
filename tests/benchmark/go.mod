@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tests/benchmark
 
-go 1.25.0
+go 1.25.3
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
@@ -12,7 +12,7 @@ replace (
 )
 
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2506.0
+	github.com/oasisprotocol/oasis-core/go v0.2507.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/cobra v1.8.1
@@ -31,7 +31,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cometbft/cometbft v0.37.15 // indirect
+	github.com/cometbft/cometbft v0.37.16 // indirect
 	github.com/cometbft/cometbft-db v0.9.5 // indirect
 	github.com/cosmos/gogoproto v1.7.0 // indirect
 	github.com/creachadair/taskgroup v0.13.0 // indirect
