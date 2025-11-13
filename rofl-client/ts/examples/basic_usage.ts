@@ -23,13 +23,14 @@ async function main() {
         const appId = await client.getAppId();
         console.log('App ID:', appId);
 
-        // Sign & submit (ETH style)
+        // Sign & submit (ETH-style): transfer native currency (ROSE)
+        // NOTE: 'value' uses 18-decimals on EVM ParaTimes (wei-like). Example sends 0.001 ROSE.
         const result = await client.signAndSubmit({
             kind: 'eth',
-            gas_limit: 200_000,
-            to: '', // empty => contract creation
-            value: 0,
-            data: '0x', // no-op calldata
+            gas_limit: 21_000,
+            to: '0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20', // example address, replace with your own
+            value: 1_000_000_000_000_000, // 0.001 ROSE
+            data: '0x',
         });
         console.log('CallResult (hex):', Buffer.from(result).toString('hex'));
     } catch (err) {
