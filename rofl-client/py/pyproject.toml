@@ -22,13 +22,15 @@ classifiers = [
 ]
 
 dependencies = [
+  "cbor2>=5.7.1",
   "httpx>=0.25.0",
+  "web3>=7.14.0",
 ]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.4.1",
-    "ruff>=0.8.4",
+  "pytest>=8.4.1",
+  "ruff>=0.8.4",
 ]
 
 [project.urls]

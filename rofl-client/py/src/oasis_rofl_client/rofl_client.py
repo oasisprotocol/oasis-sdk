@@ -10,7 +10,9 @@ import logging
 from enum import Enum
 from typing import Any
 
+import cbor2
 import httpx
+from web3.types import TxParams
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +123,57 @@ class RoflClient:
         path: str = "/rofl/v1/keys/generate"
         response: dict[str, Any] = await self._appd_request("POST", path, payload)
         return response["key"]
+
+    async def sign_submit(
+        self,
+        tx: TxParams,
+        encrypt: bool = False,
+    ) -> dict[str, Any]:
+        """Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.
+
+        Args:
+            tx: Transaction parameters
+            encrypt: End-to-end encrypt the transaction before submitting (default: False)
+
+        Returns:
+            Deserialized response data object.
+
+        Raises:
+            httpx.HTTPStatusError: If the request fails
+            cbor2.CBORDecodeValueError: If the response data is invalid
+
+        Note: Transaction nonce and gas price are ignored.
+        """
+        payload = {
+            "tx": {
+                "kind": "eth",
+                "data": {
+                    "gas_limit": tx["gas"],
+                    "value": tx["value"],
+                    "data": tx["data"][2:]
+                    if tx["data"].startswith("0x")
+                    else tx["data"],
+                },
+            },
+            "encrypt": encrypt,
+        }
+
+        # Contract create transactions don't have "to". For others, include it.
+        if "to" in tx:
+            payload["tx"]["data"]["to"] = (
+                tx["to"][2:] if tx["to"].startswith("0x") else tx["to"]
+            )
+
+        path = "/rofl/v1/tx/sign-submit"
+
+        response: dict[str, str] = await self._appd_request(
+            "POST", path, payload
+        )
+        result = {}
+        # Decode CBOR-encoded data field to python object.
+        if response.get("data"):
+            result = cbor2.loads(bytes.fromhex(response["data"]))
+        return result
 
     async def get_metadata(self) -> dict[str, str]:
         """Get all user-set metadata key-value pairs.
