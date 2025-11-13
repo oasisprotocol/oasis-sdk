@@ -30,7 +30,7 @@ const callResultBytes = await client.signAndSubmit({
   kind: 'eth',
   gas_limit: 200_000,
   to: '',                    // empty => contract creation
-  value: 0,
+  value: '0',                // decimal or 0x hex string
   data: '0x',                // hex calldata (0x optional)
 });
 // `callResultBytes` is the raw CBOR-encoded CallResult (Uint8Array)
@@ -57,6 +57,11 @@ const callResultBytes = await client.signAndSubmit({
 - `getMetadata(): Promise<Record<string, string>>`
 - `setMetadata(metadata: Record<string, string>): Promise<void>`
 - `getAppId(): Promise<string>` (helper)
+- `query<TArgs = void, TResult = unknown>(method: string,
+  args?: QueryArgsInput<TArgs>): Promise<TResult)`
+  ([`QueryArgsInput`](#queryargsinput))
+  - Encodes `args` as CBOR (or uses provided binary CBOR), POSTs to
+    `/rofl/v1/query`, and decodes the CBOR response body into `TResult`.
 - `signAndSubmit(tx: StdTx | EthTx, opts?: { encrypt?: boolean }):
   Promise<Uint8Array>`
   - Signs the transaction with an app-authenticated key, submits it,
@@ -64,6 +69,39 @@ const callResultBytes = await client.signAndSubmit({
   - Hex fields may be provided with or without `0x` and will be normalized.
 
 [`CallResult`]: https://api.docs.oasis.io/rust/oasis_runtime_sdk/types/transaction/enum.CallResult.html
+
+### Runtime Queries
+
+`query` lets you execute read-only runtime methods exposed by ROFL-compatible
+paratimes. Use the generated types from `@oasisprotocol/client-rt` for complete
+type safety:
+
+```ts
+import {rofl, types} from '@oasisprotocol/client-rt';
+import {RoflClient} from '@oasisprotocol/rofl-client';
+
+const client = new RoflClient();
+const appConfig = await client.query<types.RoflAppQuery, types.RoflAppConfig>(
+  rofl.METHOD_APP,
+  { id: myAppId }
+);
+```
+
+If you already have CBOR-encoded arguments (e.g., from `oasis.misc.toCBOR`),
+pass them directly as `Uint8Array`, `Buffer`, `ArrayBuffer`, or any
+`ArrayBufferView` via `QueryArgsInput`.
+
+### QueryArgsInput
+
+`QueryArgsInput<TArgs>` mirrors the runtime schema expected by your query method:
+
+- When `TArgs` is anything other than `void`, you must pass either structured arguments (`TArgs`)
+  or pre-encoded CBOR bytes (`Uint8Array`, `Buffer`, `ArrayBuffer`, or any `ArrayBufferView`).
+- When `TArgs` is omitted or `void`, the `args` parameter becomes optional; omit it to send `null`
+  or pass CBOR bytes directly.
+
+This keeps the `query` call site type-safe—TypeScript now enforces that calls providing structured
+types also supply the corresponding payload.
 
 ### KeyKind
 
@@ -88,8 +126,11 @@ type EthTx = {
   gas_limit: number;
   /** Hex address (0x optional). Empty string => contract creation. */
   to: string;
-  /** JSON number; must fit JS number range (backend expects u128). */
-  value: number;
+  /**
+   * Transaction value in wei. Accepts decimal strings, 0x-prefixed hex strings,
+   * bigint, or safe JS integers. Values are normalized to decimal strings.
+   */
+  value: string | number | bigint;
   /** Hex calldata (0x optional). */
   data: string;
 };

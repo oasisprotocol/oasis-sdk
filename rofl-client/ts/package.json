@@ -9,17 +9,19 @@
     "url": "git+https://github.com/oasisprotocol/oasis-sdk.git",
     "directory": "rofl-client/ts"
   },
+  "type": "module",
   "files": [
     "dist"
   ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.js",
+      "default": "./dist/esm/index.js"
     }
   },
   "sideEffects": false,
@@ -32,10 +34,13 @@
     "lint": "prettier --check src test examples",
     "test": "jest",
     "typedoc": "npx typedoc",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.cjs.json && node scripts/emit-cjs-pkg.cjs"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@oasisprotocol/client": "^1.3.0"
   },
   "devDependencies": {
     "@types/jest": "29.5.13",
