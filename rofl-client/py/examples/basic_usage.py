@@ -43,9 +43,11 @@ async def main():
         # Set metadata (published on-chain in ROFL replica registration)
         # In practice, derive and publish the public key from the private key
         print("\nPublishing metadata...")
-        await client.set_metadata({
-            "key_fingerprint": key[:16],
-        })
+        await client.set_metadata(
+            {
+                "key_fingerprint": key[:16],
+            }
+        )
         print("Metadata set successfully")
 
         # Retrieve current metadata
