@@ -217,11 +217,37 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(KeyKind.SECP256K1.value, "secp256k1")
 
     @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_get_app_id(self, mock_client_class):
+        """Test get_app_id method."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_response.text = "rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf"
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        # Test get metadata
+        client = RoflClient()
+        app_id = await client.get_app_id()
+
+        # Verify the result
+        self.assertEqual(
+            app_id, "rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf"
+        )
+
+        # Verify the API call
+        mock_client.get.assert_called_once_with(
+            "http://localhost/rofl/v1/app/id", timeout=60.0
+        )
+
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
     async def test_sign_submit(self, mock_client_class):
         """Test sign_submit method."""
         # Setup mock
         mock_response = MagicMock()
-        mock_response.json = lambda: {
+        mock_response.json.return_value = {
             "data": "a1646661696ca364636f646508666d6f64756c656365766d676d6573736167657272657665727465643a20614a416f4c773d3d"
         }
         mock_response.raise_for_status = MagicMock()
@@ -244,7 +270,16 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
 
         response = await client.sign_submit(tx, True)
 
-        self.assertEqual(response, {"fail": {"code": 8, "module": "evm", "message": "reverted: aJAoLw=="}})
+        self.assertEqual(
+            response,
+            {
+                "fail": {
+                    "code": 8,
+                    "module": "evm",
+                    "message": "reverted: aJAoLw==",
+                }
+            },
+        )
 
         # Verify the API call
         mock_client.post.assert_called_once_with(
@@ -302,7 +337,10 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
 
         # Test set metadata
         client = RoflClient()
-        metadata_to_set = {"new_key": "new_value", "another_key": "another_value"}
+        metadata_to_set = {
+            "new_key": "new_value",
+            "another_key": "another_value",
+        }
         await client.set_metadata(metadata_to_set)
 
         # Verify the API call
@@ -341,7 +379,9 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
         """Test query method."""
         # Setup mock
         mock_response = MagicMock()
-        mock_response.json.return_value = {"data": "48656c6c6f"}  # "Hello" in hex
+        mock_response.json.return_value = {
+            "data": "48656c6c6f"
+        }  # "Hello" in hex
         mock_response.raise_for_status = MagicMock()
 
         mock_client = AsyncMock()

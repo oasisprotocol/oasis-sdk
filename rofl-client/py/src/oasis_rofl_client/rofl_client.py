@@ -51,7 +51,7 @@ class RoflClient:
 
     async def _appd_request(
         self, method: str, path: str, payload: Any = None
-    ) -> Any:
+    ) -> httpx.Response:
         """Request to ROFL application daemon.
 
         Args:
@@ -60,7 +60,7 @@ class RoflClient:
             payload: JSON payload to send (for POST requests)
 
         Returns:
-            JSON response from the daemon
+            HTTP response from the daemon
 
         Raises:
             ValueError: If an unsupported HTTP method is provided
@@ -98,7 +98,18 @@ class RoflClient:
             if not response.content:
                 return None
 
-            return response.json()
+            return response
+
+    async def get_app_id(self) -> str:
+        """Retrieve the app ID.
+
+        Returns:
+            The app ID as Bech32-encoded string
+        Raises:
+            httpx.HTTPStatusError: If key fetch fails
+        """
+        path: str = "/rofl/v1/app/id"
+        return (await self._appd_request("GET", path)).text
 
     async def generate_key(
         self, key_id: str, kind: KeyKind = KeyKind.SECP256K1
@@ -121,7 +132,7 @@ class RoflClient:
         }
 
         path: str = "/rofl/v1/keys/generate"
-        response: dict[str, Any] = await self._appd_request("POST", path, payload)
+        response: dict[str, Any] = (await self._appd_request("POST", path, payload)).json()
         return response["key"]
 
     async def sign_submit(
@@ -166,9 +177,9 @@ class RoflClient:
 
         path = "/rofl/v1/tx/sign-submit"
 
-        response: dict[str, str] = await self._appd_request(
+        response: dict[str, str] = (await self._appd_request(
             "POST", path, payload
-        )
+        )).json()
         result = {}
         # Decode CBOR-encoded data field to python object.
         if response.get("data"):
@@ -185,7 +196,7 @@ class RoflClient:
             httpx.HTTPStatusError: If the request fails
         """
         path: str = "/rofl/v1/metadata"
-        response: dict[str, str] = await self._appd_request("GET", path)
+        response: dict[str, str] = (await self._appd_request("GET", path)).json()
         return response
 
     async def set_metadata(self, metadata: dict[str, str]) -> None:
@@ -222,5 +233,5 @@ class RoflClient:
         }
 
         path: str = "/rofl/v1/query"
-        response: dict[str, str] = await self._appd_request("POST", path, payload)
+        response: dict[str, str] = (await self._appd_request("POST", path, payload)).json()
         return bytes.fromhex(response["data"])
