@@ -7,8 +7,8 @@ replace (
 	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis1
 	// We want to test the current client-sdk.
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
-	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20210505121811-294cf0fbfb43
-	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20210505121811-294cf0fbfb43
+	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20251114093237-2ab5a27a1729
+	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20251114093237-2ab5a27a1729
 )
 
 require (
