@@ -3,11 +3,7 @@ module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 go 1.25.3
 
 // Should be synced with Oasis Core as replace directives are not propagated.
-replace (
-	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis1
-	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20210505121811-294cf0fbfb43
-	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20210505121811-294cf0fbfb43
-)
+replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis1
 
 require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
