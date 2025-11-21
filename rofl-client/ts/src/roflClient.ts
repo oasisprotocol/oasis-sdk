@@ -1,7 +1,6 @@
 import * as http from 'node:http';
 import * as https from 'node:https';
-import {readFileSync} from 'node:fs';
-import {resolve as resolvePath} from 'node:path';
+import * as oasis from '@oasisprotocol/client';
 
 /** Default Unix domain socket path. */
 export const ROFL_SOCKET_PATH = '/run/rofl-appd.sock';
@@ -61,12 +60,24 @@ export interface TransportResponse {
 
 export type Transport = (req: TransportRequest) => Promise<TransportResponse>;
 
+type BinaryArgs = ArrayBuffer | ArrayBufferView;
+
+export type QueryArgsInput<TArgs> = TArgs extends void | undefined
+    ? BinaryArgs | undefined
+    : TArgs | BinaryArgs;
+
+type QueryArgsTuple<TArgs> = TArgs extends void | undefined
+    ? [args?: QueryArgsInput<TArgs>]
+    : [args: QueryArgsInput<TArgs>];
+
 export type StdTx = {
     /** Kind marker for standard Oasis SDK transactions. */
     kind: 'std';
     /** CBOR-serialized hex-encoded Transaction bytes (with or without 0x). */
     data: string;
 };
+
+export type EthValue = string | number | bigint;
 
 export type EthTx = {
     /** Kind marker for Ethereum-compatible calls. */
@@ -79,10 +90,15 @@ export type EthTx = {
      */
     to: string;
     /**
-     * Transaction value. NOTE: This is a JSON number and must fit in JS number range.
-     * The backend expects a `u128`, but does not currently accept strings.
+     * Transaction value (wei). Accepts:
+     * - Decimal strings (e.g. `'1000000000000000000'`)
+     * - 0x-prefixed hex strings (e.g. `'0xde0b6b3a7640000'`)
+     * - `bigint`
+     * - Safe JS integers (will be converted to string)
+     *
+     * Values are normalized to decimal strings before submission to preserve precision.
      */
-    value: number;
+    value: EthValue;
     /** Hex-encoded calldata (with or without 0x). */
     data: string;
 };
@@ -90,7 +106,7 @@ export type EthTx = {
 type AdjacentStdTx = {kind: 'std'; data: string};
 type AdjacentEthTx = {
     kind: 'eth';
-    data: {gas_limit: number; to: string; value: number; data: string};
+    data: {gas_limit: number; to: string; value: string; data: string};
 };
 
 type TxPayload = {tx: AdjacentStdTx | AdjacentEthTx; encrypt: boolean};
@@ -109,10 +125,44 @@ function normalizeTx(tx: StdTx | EthTx): AdjacentStdTx | AdjacentEthTx {
         data: {
             gas_limit: tx.gas_limit,
             to: stripHexPrefix(tx.to),
-            value: tx.value,
+            value: normalizeEthValue(tx.value),
             data: stripHexPrefix(tx.data),
         },
     };
+}
+
+function normalizeEthValue(value: EthValue): string {
+    if (typeof value === 'bigint') {
+        if (value < 0n) {
+            throw new Error('EthTx.value cannot be negative');
+        }
+        return value.toString(10);
+    }
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || !Number.isSafeInteger(value) || value < 0) {
+            throw new Error('EthTx.value numbers must be safe non-negative integers');
+        }
+        return BigInt(value).toString(10);
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (!trimmed) {
+            throw new Error('EthTx.value string must not be empty');
+        }
+        let parsed: bigint;
+        try {
+            parsed = BigInt(trimmed);
+        } catch {
+            throw new Error(
+                'EthTx.value string must be a decimal integer or 0x-prefixed hex literal',
+            );
+        }
+        if (parsed < 0n) {
+            throw new Error('EthTx.value cannot be negative');
+        }
+        return parsed.toString(10);
+    }
+    throw new Error('EthTx.value must be a string, number, or bigint');
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -122,18 +172,33 @@ function hexToBytes(hex: string): Uint8Array {
     return Buffer.from(h, 'hex');
 }
 
-const PACKAGE_VERSION = (() => {
-    try {
-        const pkgPath = resolvePath(__dirname, '..', 'package.json');
-        const raw = readFileSync(pkgPath, 'utf8');
-        const parsed = JSON.parse(raw) as {version?: string};
-        return typeof parsed.version === 'string' ? parsed.version : 'dev';
-    } catch {
-        return 'dev';
-    }
-})();
+function bytesToHex(bytes: Uint8Array): string {
+    return Buffer.from(bytes).toString('hex');
+}
 
-const DEFAULT_USER_AGENT = `@oasisprotocol/rofl-client/${PACKAGE_VERSION}`;
+function isBinaryArgs(value: unknown): value is BinaryArgs {
+    return value instanceof ArrayBuffer || ArrayBuffer.isView(value);
+}
+
+function toUint8Array(value: BinaryArgs): Uint8Array {
+    if (value instanceof ArrayBuffer) {
+        return new Uint8Array(value);
+    }
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+}
+
+function encodeQueryArgs(value: unknown): Uint8Array {
+    if (value === undefined) return oasis.misc.toCBOR(null);
+    if (isBinaryArgs(value)) return toUint8Array(value);
+    return oasis.misc.toCBOR(value);
+}
+
+const PACKAGE_VERSION =
+    process.env.OASIS_ROFL_CLIENT_VERSION ?? process.env.npm_package_version ?? '';
+
+const DEFAULT_USER_AGENT = PACKAGE_VERSION
+    ? `@oasisprotocol/rofl-client/${PACKAGE_VERSION}`
+    : '@oasisprotocol/rofl-client';
 
 /**
  * Client for interacting with the ROFL application daemon REST API.
@@ -294,6 +359,54 @@ export class RoflClient {
         }
 
         return res;
+    }
+
+    /**
+     * Execute a read-only runtime query via ROFL.
+     *
+     * Query arguments and results follow the CBOR schema published by the Oasis runtime.
+     * When using the Oasis TypeScript runtime SDK (`@oasisprotocol/client-rt`), pass the
+     * generated `types.*` definitions as generics to get end-to-end typing:
+     *
+     * @example
+     * ```typescript
+     * import {rofl, types} from '@oasisprotocol/client-rt';
+     *
+     * const config = await client.query<types.RoflAppQuery, types.RoflAppConfig>(
+     *   rofl.METHOD_APP,
+     *   {id: myAppId},
+     * );
+     * ```
+     *
+     * @param method - Fully-qualified runtime method name (e.g., 'rofl.App')
+     * @param args - Structured arguments or pre-encoded CBOR bytes
+     * @returns Decoded query response body
+     */
+    async query<TArgs = void, TResult = unknown>(
+        method: string,
+        ...argsTuple: QueryArgsTuple<TArgs>
+    ): Promise<TResult> {
+        const args = argsTuple.length ? argsTuple[0] : undefined;
+        const encodedArgs = encodeQueryArgs(args);
+        const res = await this.appdRequest('POST', '/rofl/v1/query', {
+            method,
+            args: bytesToHex(encodedArgs),
+        });
+
+        if (!res || typeof res !== 'object' || res === null) {
+            throw new Error('Invalid response from ROFL query');
+        }
+        const data = (res as Record<string, unknown>).data;
+        if (typeof data !== 'string') {
+            throw new Error('Invalid response from ROFL query: missing data');
+        }
+
+        const bytes = hexToBytes(data);
+        try {
+            return oasis.misc.fromCBOR(bytes) as TResult;
+        } catch (err) {
+            throw new Error(`Failed to decode ROFL query response: ${(err as Error).message}`);
+        }
     }
 
     /** Sign and submit an authenticated transaction via ROFL.
