@@ -1,10 +1,10 @@
-# Port Proxy
+# ROFL Proxy
 
-Port proxy for your ROFL automatically generates public HTTPS URLs for
-services in your app. Simply publish a port in your `compose.yaml` and the
-proxy handles TLS certificates and routing.
+The ROFL proxy automatically generates public HTTPS URLs for services in your
+ROFL app. Simply publish a port in your `compose.yaml` and the proxy handles
+TLS certificates and routing.
 
-TLS is terminated inside the app, providing end-to-end encryption so that
+TLS is terminated inside the ROFL app, providing end-to-end encryption so that
 even the provider cannot see the traffic.
 
 ## Enabling the Proxy
@@ -20,7 +20,7 @@ services:
       - "5678:5678" # Expose container port 5678 on host port 5678
 ```
 
-After deploying your app, you can find the generated URL by
+After deploying your ROFL app, you can find the generated URL by
 running `oasis rofl machine show`:
 
 ```shell
@@ -41,27 +41,52 @@ Proxy:
 The proxy behavior can be configured using annotations in
 your `compose.yaml` file.
 
-The annotation key is `net.oasis.proxy.ports.<published_port>.mode`.
+### Overview
 
-Supported modes are:
+Each annotation follows this general format:
 
-- `terminate-tls` (default): The proxy terminates the TLS connection and
-  forwards the unencrypted traffic to your container.
-  This is suitable for HTTPS services.
-- `passthrough`: The proxy forwards the raw TCP connection to your container.
-  This is suitable for services that handle their own TLS or
-  use other TCP-based protocols.
-- `ignore`: The proxy will ignore this port, and it will
-  not be exposed publicly.
+`net.oasis.proxy.ports.<published_port>.<setting>: <value>`
 
-Example of configuring a port for TCP passthrough:
+Where:
 
-```yaml title="compose.yaml"
+`<published_port>` — the external port exposed in your compose.yaml
+
+`<setting>` — the specific proxy configuration (e.g., mode, custom_domain)
+
+### Example Configuration
+
+The following example configures a service to use TCP passthrough with a custom domain:
+
+```yaml
+title="compose.yaml"
 services:
   myservice:
     image: docker.io/my/service:latest
     ports:
       - "8080:8080"
+      - "80:80"
     annotations:
       net.oasis.proxy.ports.8080.mode: passthrough
+      net.oasis.proxy.ports.80.custom_domain: mydomain.com
 ```
+
+Explanation:
+- The container exposes ports 8080 and 80.
+- The proxy forwards the raw TCP connection to your container (mode: passthrough).
+- Requests to mydomain.com are routed to this service (custom_domain: mydomain.com).
+
+### Annotation Reference
+
+Defines how the proxy should handle connections for the specified port.
+
+1. `net.oasis.proxy.ports.<published_port>.mode`
+
+| Mode                      | Description                                                                 | Typical Use Case                                                     |
+| ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `terminate-tls` (default) | The proxy terminates TLS and forwards unencrypted traffic to the container. | Standard HTTPS web applications.                                     |
+| `passthrough`             | The proxy forwards raw TCP traffic directly to the container.               | Services that handle their own TLS or use other TCP-based protocols. |
+| `ignore`                  | The proxy ignores this port entirely and does not expose it publicly.       | Internal or non-public service ports.                                |
+
+2. `net.oasis.proxy.ports.<published_port>.custom_domain`
+
+  - Assigns a custom domain name to the published port.
