@@ -156,10 +156,10 @@ If your application uses environment variables you would like to privately
 store on-chain, use the [`oasis rofl secret`] command, for example:
 
 ```shell
-echo -n "my-secret-token" | oasis rofl secret set TOKEN -
+echo -n "my-secret-token" | oasis rofl secret set TELEGRAM_API_TOKEN -
 ```
 
-This will populate the `TOKEN` secret and you can use it in your compose
+This will populate the `TELEGRAM_API_TOKEN` secret and you can use it in your compose
 file as follows:
 
 ```yaml title="compose.yaml" {6-7}
@@ -169,7 +169,7 @@ services:
     image: "ghcr.io/oasisprotocol/demo-rofl-tgbot:ollama"
     platform: linux/amd64
     environment:
-      - TOKEN=${TOKEN}
+      - TELEGRAM_API_TOKEN=${TELEGRAM_API_TOKEN}
 ```
 
 To submit the secrets and the ROFL bundle information from the previous step
