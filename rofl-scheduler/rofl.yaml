@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.6.3
+version: 0.7.0
 repository: https://github.com/oasisprotocol/oasis-sdk
 description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 tee: tdx
@@ -31,14 +31,6 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: 6WS0pl5unAEW4bZkUNHqgxSlKqxzmlsJqOtigCnHK+gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.4.0
-        - id: MTvk+/bi32kT3SVy6Q/uVMs8c2WhkP9IRRf+Nm9wC1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.4.0
-        - id: v/uFh7OB0RXf6PEkJvP17BkxXDhwRMJG+Zy6kj1A5Q8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.5.0
-        - id: UtHVE5wpjyUV1J2AFvsUG6MaUz5GKbVSwDpXjY8s4+4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.5.0
         - id: dOQWbbY3l3wnAqoFvC9DAOj+4XMmBBiBry3L1+2ikggAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.0
         - id: ogfIWHYEzhj3lwqpYlhI4i+hF1ECpWUNVoKe8IrVl+0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
@@ -52,7 +44,11 @@ deployments:
         - id: 8NKWF9GPTP14ZZYxdU18DGDPrFdH9qWG/u9xt3gjyH0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.2
         - id: lqBl7lYJw7WeMKZSJjYmW1gwlvfIXTC30otJUgqa5hcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.3
         - id: iEhH0oJ7RCsuBWL2RgV9mYRek1Lp2s4KDyLH9Yi19AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.3
+        - id: Q93d04I7OA5aWotmB9717cT19DXWueiuZBz5AQdmBhwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: aVhLf5JvG0cYzqrBzrtGslAfgiofMsrLgWxwkXYpSA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -72,14 +68,6 @@ deployments:
           min_tcb_evaluation_data_number: 18
           tdx: {}
       enclaves:
-        - id: xF6FtolPmZuLZ5yd96qN41Kqr+ZR6NRGmXiu/Eg60y4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.4.0
-        - id: 0aspYhMnD23lBnKE2SpbOZtGzEQglb1YrPhGIZdLducAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.4.0
-        - id: 4iorYQU9ykup1IFRztls+g7+c/k0aUI4snNiudOY7R4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.5.0
-        - id: P1LCXho722wTsU4U3TwY3a1in3N4cEDTiUAiq8945IgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.5.0
         - id: 2aTw4jNUWXPdN+ZsPMElILVSZzNAhLi1jQOoWh0Y324AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.0
         - id: 1+o5iEUdML9FTOtPxcFdjriPL+xjxG/EfG238Ae5WFUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
@@ -93,7 +81,11 @@ deployments:
         - id: 6Wzmz8ZQ9ZTmazzJag+r3zRwTQgQwGWgfrS7t/GTDRUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.2
         - id: F9AnrDeBZpMpu4XFfab7hyBGdlZUsmm8FEL3r7U3H2UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.3
         - id: jcpEa2+vdoTErDOjRZXkx8O++LoZ4fE1fYYL13VEL5wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.6.3
+        - id: wcj3vGIU8JQtALywmJf/83AlGfKvTEUVD4J8d2aGaEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: hlr8yDrlEKcvZbfhAm5raS0BrbW7j2OZQ59Gic0zyN0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
