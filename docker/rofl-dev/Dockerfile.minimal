@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-ARG OASIS_CLI_VERSION=0.16.0
+ARG OASIS_CLI_VERSION=0.17.1
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && apt-get install -qq --no-install-recommends curl ca-certificates squashfs-tools cryptsetup-bin qemu-utils && apt-get clean && \
