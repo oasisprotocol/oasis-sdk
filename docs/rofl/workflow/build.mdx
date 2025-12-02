@@ -1,6 +1,3 @@
-import Tabs from "@theme/Tabs";
-import TabItem from "@theme/TabItem";
-
 # Build
 
 This operation packs `compose.yaml`, specific operating system components and
@@ -20,18 +17,9 @@ before granting them access to the key management system and [other features].
 
 To build an app and update the enclave identity in the app manifest, simply run:
 
-<Tabs>
-    <TabItem value="Native Linux">
-        ```shell
-        oasis rofl build
-        ```
-    </TabItem>
-    <TabItem value="Docker (Windows, Mac, Linux)">
-        ```shell
-        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
-        ```
-    </TabItem>
-</Tabs>
+```shell
+oasis rofl build
+```
 
 This will generate a ROFL bundle which can be used for later deployment and
 output something like:
