@@ -105,6 +105,16 @@ This replaces all existing app-provided metadata. Will trigger a registration re
   - `metadata`: Dictionary of metadata key-value pairs to set
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
+##### `async query(method: str, args: bytes) -> bytes`
+
+Query the on-chain paratime state.
+
+- **Parameters:**
+  - `method`: The query method name
+  - `args`: CBOR-encoded query arguments
+- **Returns:** CBOR-encoded response data
+- **Raises:** `httpx.HTTPStatusError` if the request fails
+
 ## Examples
 
 For a complete working example, see [`examples/basic_usage.py`](examples/basic_usage.py).
