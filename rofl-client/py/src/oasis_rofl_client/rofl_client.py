@@ -147,7 +147,7 @@ class RoflClient:
                 "kind": "eth",
                 "data": {
                     "gas_limit": tx["gas"],
-                    "value": tx["value"],
+                    "value": str(tx["value"]),
                     "data": tx["data"][2:]
                     if tx["data"].startswith("0x")
                     else tx["data"],

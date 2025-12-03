@@ -289,7 +289,7 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
                     "kind": "eth",
                     "data": {
                         "gas_limit": 21000,
-                        "value": 1000000000,
+                        "value": "1000000000",
                         "data": "dae1ee1f00000000000000000000000000000000000000000000000000002695a9e649b2",
                         "to": "0987654321098765432109876543210987654321",
                     },
