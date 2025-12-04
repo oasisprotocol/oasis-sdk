@@ -25,21 +25,11 @@ Pick among the three setups below.
 
 1. [Download and install][oasis-cli-setup] the Oasis CLI to your platform.
 
-2. For building apps for ROFL, the Oasis team prepared the
-   [`ghcr.io/oasisprotocol/rofl-dev`][rofl-dev] image. It contains all
-   the tools needed to compile any ROFL flavor of your app. You can test it out
-   by running:
+2. Test that everything works by building the ROFL app:
 
    ```shell
-   docker run --platform linux/amd64 --rm -v .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
+   oasis rofl build
    ```
-
-   :::info --platform linux/amd64
-
-   Always provide the `--platform linux/amd64` parameter to the `rofl-dev` image,
-   no matter which processor your computer has or the operating system you're running.
-
-   :::
 
 [rofl-dev]: https://github.com/oasisprotocol/oasis-sdk/pkgs/container/rofl-dev
 [oasis-cli-setup]: ../../tools/cli/setup.mdx
