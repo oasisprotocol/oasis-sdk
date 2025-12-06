@@ -133,7 +133,7 @@ To prevent another container image being pulled inside ROFL, pin the **image
 digest** inside `compose.yaml`. Fetch the `sha256:...` digest by invoking:
 
 ```shell
-docker images --digest
+docker images --digests
 ```
 
 Then append `@` and the digest next to the image tag in your `compose.yaml`, for
