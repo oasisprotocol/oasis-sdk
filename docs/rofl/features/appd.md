@@ -105,6 +105,7 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
 
 ```json
 {
+  "encrypt" true,
   "tx": {
     "kind": "eth",
     "data": {
