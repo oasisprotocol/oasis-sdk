@@ -95,6 +95,16 @@ service will be triggered to restart `oracle` and try again.
 
 [podman-compose-depends-on-bug]: https://github.com/containers/podman-compose/issues/575
 
+## appd
+
+### `422 Unprocessable Entity`
+
+The `422 Unprocessable Entity` error is returned when the provided request
+couldn't be decoded. Make sure [all the required fields are present and
+correctly formatted][appd].
+
+[appd]: features/appd.md
+
 ## ROFL Proxy URL is not working
 
 If you have exposed a port in your `compose.yaml` but the proxy URL shown
