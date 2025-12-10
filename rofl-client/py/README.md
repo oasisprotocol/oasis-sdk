@@ -75,7 +75,7 @@ Fetches or generates a cryptographic key from ROFL.
 - **Returns:** The private key as a hex string
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
-##### `async sign_submit(tx: TxParams, encrypt: bool = False) -> dict[str, Any]`
+##### `async sign_submit(tx: TxParams, encrypt: bool = True) -> dict[str, Any]`
 
 Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.
 
@@ -83,7 +83,7 @@ Note: Transaction nonce and gas price are ignored.
 
 - **Parameters:**
     - `tx`: Transaction parameters
-    - `encrypt`: End-to-end encrypt the transaction before submitting (default: False)
+    - `encrypt`: End-to-end encrypt the transaction before submitting (default: True)
 - **Returns:** Deserialized response data object
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 - **Raises:** `cbor2.CBORDecodeValueError` If the response data is invalid

@@ -247,6 +247,24 @@ describe('RoflClient', () => {
         expect(payload.tx.data.data).toBe('deadbeef'); // 0x stripped
     });
 
+    it('sign-submit defaults encrypt to true when opts are omitted', async () => {
+        const calls: TransportRequest[] = [];
+        const client = makeClient(calls);
+
+        await client.signAndSubmit({
+            kind: 'eth',
+            gas_limit: 1,
+            to: '',
+            value: 0,
+            data: '0x',
+        });
+
+        const call = calls.find((c) => c.path === '/rofl/v1/tx/sign-submit')!;
+        expect(call).toBeTruthy();
+        const payload = call.payload as any;
+        expect(payload.encrypt).toBe(true);
+    });
+
     it('normalizes EthTx.value inputs precisely', async () => {
         const calls: TransportRequest[] = [];
         const client = makeClient(calls);
