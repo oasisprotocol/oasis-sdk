@@ -130,14 +130,14 @@ class RoflClient:
     async def sign_submit(
         self,
         tx: TxParams,
-        encrypt: bool = False,
+        encrypt: bool = True,
     ) -> dict[str, Any]:
         """Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.
 
         Note: Transaction nonce and gas price are ignored.
 
         :param tx: Transaction parameters
-        :param encrypt: End-to-end encrypt the transaction before submitting (default: False)
+        :param encrypt: End-to-end encrypt the transaction before submitting (default: True)
         :returns: Deserialized response data object.
         :raises httpx.HTTPStatusError: If the request fails
         :raises cbor2.CBORDecodeValueError: If the response data is invalid
