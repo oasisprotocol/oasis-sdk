@@ -5058,6 +5058,7 @@ name = "rofl-appd"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "hex",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
@@ -5065,6 +5066,7 @@ dependencies = [
  "rofl-app-core",
  "rustc-hex",
  "serde",
+ "serde_json",
  "serde_with",
  "sp800-185",
  "thiserror 1.0.69",

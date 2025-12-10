@@ -105,7 +105,7 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
 
 ```json
 {
-  "encrypt" true,
+  "encrypt": true,
   "tx": {
     "kind": "eth",
     "data": {
@@ -124,9 +124,20 @@ Subcall.roflEnsureAuthorizedOrigin(roflAppID);
   supported (as defined by the `kind` field):
 
   - Ethereum-compatible calls (`eth`) use standard fields (`gas_limit`, `to`,
-    `value` and `data`) to define the transaction content. `value` must be a
-    decimal string (or `0x` hex string) representing a non-negative integer
-    up to 256 bits.
+    `value` and `data`) to define the transaction content.
+
+    - `gas_limit` may be provided either as a JSON number (e.g. `21000`) or as
+      a decimal string or `0x`-prefixed hex string. All forms are interpreted
+      as a non-negative 64-bit integer and must not contain whitespace.
+    - `value` must represent a non-negative integer up to 256 bits and may be
+      provided as a decimal string, a `0x`-prefixed hex string, or as a JSON
+      number up to `2^64 - 1`. String forms must not contain whitespace.
+    - Hex-encoded fields such as `to` and `data` accept strings with or without
+      a leading `0x` prefix, must not contain whitespace, and must not be
+      prefix-only (`"0x"`). Use an empty string (`""`) to represent empty bytes
+      (e.g. `to: ""` for contract creation, `data: ""` for empty calldata).
+      When `to` is non-empty it must decode to exactly 20 bytes (an Ethereum
+      address).
 
   - Oasis SDK calls (`std`) support CBOR-serialized hex-encoded `Transaction`s
     to be specified.
