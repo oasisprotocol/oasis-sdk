@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["BACKEND_NAME","TENDERMINT_CONTEXT"],"fn":["chain_id","decode_light_block","encode_light_block","state_root_from_header"],"mod":["merkle","verifier"],"struct":["LightBlockMeta"]};
+window.SIDEBAR_ITEMS = {"constant":["BACKEND_NAME","TENDERMINT_CONTEXT"],"fn":["chain_id","decode_light_block","decode_validators","encode_light_block","state_root_from_header"],"mod":["merkle","verifier"],"struct":["LightBlockMeta"]};

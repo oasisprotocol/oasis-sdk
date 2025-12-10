@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["HEIGHT_LATEST","METHOD_META","MODULE_NAME"],"enum":["Event"],"mod":["address","beacon","governance","keymanager","registry","roothash","scheduler","staking","state","tendermint","transaction","verifier"],"struct":["BlockMetadata","LightBlock"]};
+window.SIDEBAR_ITEMS = {"constant":["HEIGHT_LATEST","METHOD_META","MODULE_NAME"],"enum":["Event"],"mod":["address","beacon","governance","keymanager","registry","roothash","scheduler","staking","state","tendermint","transaction","verifier"],"struct":["BlockMetadata","LightBlock","Validators"]};
