@@ -28,10 +28,10 @@ const appId = await client.getAppId(); // bech32 string (helper)
 // Sign & submit an authenticated transaction (ETH-style)
 const callResultBytes = await client.signAndSubmit({
   kind: 'eth',
-  gas_limit: 200_000,
-  to: '',                    // empty => contract creation
-  value: '0',                // decimal or 0x hex string
-  data: '0x',                // hex calldata (0x optional)
+  gas_limit: 21_000,
+  to: '0x1234845aaB7b6CD88c7fAd9E9E1cf07638805b20',
+  value: '1000000000000000',  // 0.001 ROSE
+  data: '0x',
 });
 // `callResultBytes` is the raw CBOR-encoded CallResult (Uint8Array)
 ```
