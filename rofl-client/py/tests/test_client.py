@@ -300,6 +300,33 @@ class TestRoflClient(unittest.IsolatedAsyncioTestCase):
         )
 
     @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
+    async def test_sign_submit_default_encrypt_true(self, mock_client_class):
+        """sign_submit should default encrypt to True when omitted."""
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"data": ""}
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        client = RoflClient()
+        tx: TxParams = {
+            "from": "0x1234567890123456789012345678901234567890",
+            "data": "0x",
+            "gas": 21000,
+            "gasPrice": 0,
+            "value": 0,
+            "nonce": 0,
+        }
+
+        await client.sign_submit(tx)  # no encrypt argument
+
+        mock_client.post.assert_called_once()
+        _, kwargs = mock_client.post.call_args
+        assert kwargs["json"]["encrypt"] is True
+
+    @patch("oasis_rofl_client.rofl_client.httpx.AsyncClient")
     async def test_get_metadata(self, mock_client_class):
         """Test get_metadata method."""
         # Setup mock
