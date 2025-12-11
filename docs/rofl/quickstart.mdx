@@ -135,18 +135,9 @@ If the transaction succeeds, you should be able to find your app on the
 
 Next, build the ROFL bundle.
 
-<Tabs>
-    <TabItem value="Native Linux">
-        ```shell
-        oasis rofl build
-        ```
-    </TabItem>
-    <TabItem value="Docker (Windows, Mac, Linux)">
-        ```shell
-        docker run --platform linux/amd64 --volume .:/src -it ghcr.io/oasisprotocol/rofl-dev:main oasis rofl build
-        ```
-    </TabItem>
-</Tabs>
+```shell
+oasis rofl build
+```
 
 As a result, a new `.orc` file will appear inside your project folder.
 
