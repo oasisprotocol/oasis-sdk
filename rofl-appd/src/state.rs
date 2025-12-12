@@ -61,3 +61,43 @@ impl<A: App> Env for EnvImpl<A> {
         Ok(cbor::to_vec(result))
     }
 }
+
+
+
+pub(crate) struct MockEnv {
+    app_id: AppId,
+    signer: Arc<dyn Signer>,
+}
+
+
+impl MockEnv {
+    pub fn new(app_id: AppId, signer: Arc<dyn Signer>) -> Self {
+        Self { app_id, signer }
+    }
+}
+
+#[async_trait]
+impl Env for MockEnv {
+    fn app_id(&self) -> AppId {
+        self.app_id.clone()
+    }
+
+    fn signer(&self) -> Arc<dyn Signer> {
+        self.signer.clone()
+    }
+
+    async fn sign_and_submit_tx(
+        &self,
+        _signer: Arc<dyn Signer>,
+        _tx: transaction::Transaction,
+        _opts: SubmitTxOpts,
+    ) -> Result<transaction::CallResult> {
+        // In mock mode, just return a default CallResult.
+        Ok(transaction::CallResult::default())
+    }
+
+    async fn query(&self, _method: &str, _args: Vec<u8>) -> Result<Vec<u8>> {
+        // In mock mode, just return an empty response.
+        Ok(vec![])
+    }
+}

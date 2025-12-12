@@ -37,3 +37,8 @@ rustc-hex = "2.0.1"
 default = ["tx"]
 # Add routes for transaction submission.
 tx = []
+mock = []
+
+[[bin]]
+name = "rofl-appd-mock"
+path = "src/main.rs"
