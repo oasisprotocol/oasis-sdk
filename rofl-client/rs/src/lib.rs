@@ -21,7 +21,7 @@ impl RoflClient {
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let socket_path = socket_path.as_ref().to_string_lossy().to_string();
         if !Path::new(&socket_path).exists() {
-            return Err(format!("Socket not found at: {}", socket_path).into());
+            return Err(format!("Socket not found at: {socket_path}").into());
         }
         Ok(Self { socket_path })
     }
@@ -257,8 +257,7 @@ fn http_unix_request(
 
     if !(200..300).contains(&code) {
         let msg = String::from_utf8_lossy(body_bytes).to_string();
-        return Err(Error::new(
-            ErrorKind::Other,
+        return Err(Error::other(         
             format!("HTTP {code} error: {msg}"),
         ));
     }
