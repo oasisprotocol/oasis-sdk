@@ -3897,12 +3897,13 @@ dependencies = [
 name = "oasis-rofl-client"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "hex",
  "serde",
  "serde_json",
  "tempfile",
+ "thiserror 1.0.69",
  "tokio",
- "tracing",
 ]
 
 [[package]]

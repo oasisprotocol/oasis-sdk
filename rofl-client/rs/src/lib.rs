@@ -1,7 +1,6 @@
 // rofl-client/rs/src/lib.rs
 use serde::{Deserialize, Serialize};
 use std::{
-    io::{Read, Write},
     path::Path,
 };
 
