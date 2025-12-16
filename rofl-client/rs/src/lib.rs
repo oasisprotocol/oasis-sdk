@@ -1,8 +1,6 @@
 // rofl-client/rs/src/lib.rs
 use serde::{Deserialize, Serialize};
-use std::{
-    path::Path,
-};
+use std::path::Path;
 
 const DEFAULT_SOCKET: &str = "/run/rofl-appd.sock";
 
@@ -97,14 +95,18 @@ impl RoflClient {
     }
 
     // GET /rofl/v1/metadata
-    pub async fn get_metadata(&self) -> Result<std::collections::HashMap<String, String>, Box<dyn std::error::Error>> {
+    pub async fn get_metadata(
+        &self,
+    ) -> Result<std::collections::HashMap<String, String>, Box<dyn std::error::Error>> {
         let sock = self.socket_path.clone();
-        let res = tokio::task::spawn_blocking(move || -> std::io::Result<std::collections::HashMap<String, String>> {
-            let body = http_unix_request(&sock, "GET", "/rofl/v1/metadata", None, None)?;
-            let resp: std::collections::HashMap<String, String> = serde_json::from_slice(&body)
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            Ok(resp)
-        })
+        let res = tokio::task::spawn_blocking(
+            move || -> std::io::Result<std::collections::HashMap<String, String>> {
+                let body = http_unix_request(&sock, "GET", "/rofl/v1/metadata", None, None)?;
+                let resp: std::collections::HashMap<String, String> = serde_json::from_slice(&body)
+                    .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+                Ok(resp)
+            },
+        )
         .await
         .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?
         .map_err(|e| -> Box<dyn std::error::Error> { Box::new(e) })?;
@@ -156,9 +158,9 @@ impl RoflClient {
             )?;
             let resp: serde_json::Value = serde_json::from_slice(&body)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            let data_hex = resp.get("data")
-                .and_then(|v| v.as_str())
-                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "Missing 'data' field"))?;
+            let data_hex = resp.get("data").and_then(|v| v.as_str()).ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidData, "Missing 'data' field")
+            })?;
             let data = hex::decode(data_hex)
                 .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
             Ok(data)
@@ -257,9 +259,7 @@ fn http_unix_request(
 
     if !(200..300).contains(&code) {
         let msg = String::from_utf8_lossy(body_bytes).to_string();
-        return Err(Error::other(         
-            format!("HTTP {code} error: {msg}"),
-        ));
+        return Err(Error::other(format!("HTTP {code} error: {msg}")));
     }
 
     Ok(body_bytes.to_vec())
@@ -331,28 +331,30 @@ struct SignSubmitResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Read, Write};
-    use std::os::unix::net::UnixListener;
-    use std::thread;
+    use std::{
+        io::{Read, Write},
+        os::unix::net::UnixListener,
+        thread,
+    };
     use tempfile::TempDir;
 
     fn setup_mock_server(responses: Vec<(String, String)>) -> (TempDir, String) {
         let temp_dir = TempDir::new().unwrap();
         let socket_path = temp_dir.path().join("test.sock");
         let socket_path_str = socket_path.to_string_lossy().to_string();
-        
+
         let listener = UnixListener::bind(&socket_path).unwrap();
-        
+
         thread::spawn(move || {
             for (expected_path, response) in responses {
                 if let Ok((mut stream, _)) = listener.accept() {
                     let mut buf = vec![0u8; 4096];
                     let n = stream.read(&mut buf).unwrap();
                     let request = String::from_utf8_lossy(&buf[..n]);
-                    
+
                     // Check if the request contains the expected path
                     assert!(request.contains(&expected_path));
-                    
+
                     let http_response = format!(
                         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
                         response.len(),
@@ -362,76 +364,80 @@ mod tests {
                 }
             }
         });
-        
+
         // Give the server time to start
         thread::sleep(std::time::Duration::from_millis(100));
-        
+
         (temp_dir, socket_path_str)
     }
 
     #[tokio::test]
     async fn test_get_app_id() {
-        let (_temp_dir, socket_path) = setup_mock_server(vec![
-            ("/rofl/v1/app/id".to_string(), "oasis1qr677rv0dcnh7ys4yanlynysvnjtk9gnsyhvm5wj".to_string())
-        ]);
-        
+        let (_temp_dir, socket_path) = setup_mock_server(vec![(
+            "/rofl/v1/app/id".to_string(),
+            "oasis1qr677rv0dcnh7ys4yanlynysvnjtk9gnsyhvm5wj".to_string(),
+        )]);
+
         let client = RoflClient::with_socket_path(&socket_path).unwrap();
         let app_id = client.get_app_id().await.unwrap();
-        
+
         assert_eq!(app_id, "oasis1qr677rv0dcnh7ys4yanlynysvnjtk9gnsyhvm5wj");
     }
 
     #[tokio::test]
     async fn test_generate_key() {
         let response = r#"{"key":"0x123456789abcdef"}"#;
-        let (_temp_dir, socket_path) = setup_mock_server(vec![
-            ("/rofl/v1/keys/generate".to_string(), response.to_string())
-        ]);
-        
+        let (_temp_dir, socket_path) = setup_mock_server(vec![(
+            "/rofl/v1/keys/generate".to_string(),
+            response.to_string(),
+        )]);
+
         let client = RoflClient::with_socket_path(&socket_path).unwrap();
-        let key = client.generate_key("test-key-id", KeyKind::Secp256k1).await.unwrap();
-        
+        let key = client
+            .generate_key("test-key-id", KeyKind::Secp256k1)
+            .await
+            .unwrap();
+
         assert_eq!(key, "0x123456789abcdef");
     }
 
     #[tokio::test]
     async fn test_get_metadata() {
         let response = r#"{"key1":"value1","key2":"value2"}"#;
-        let (_temp_dir, socket_path) = setup_mock_server(vec![
-            ("/rofl/v1/metadata".to_string(), response.to_string())
-        ]);
-        
+        let (_temp_dir, socket_path) = setup_mock_server(vec![(
+            "/rofl/v1/metadata".to_string(),
+            response.to_string(),
+        )]);
+
         let client = RoflClient::with_socket_path(&socket_path).unwrap();
         let metadata = client.get_metadata().await.unwrap();
-        
+
         assert_eq!(metadata.get("key1").unwrap(), "value1");
         assert_eq!(metadata.get("key2").unwrap(), "value2");
     }
 
     #[tokio::test]
     async fn test_set_metadata() {
-        let (_temp_dir, socket_path) = setup_mock_server(vec![
-            ("/rofl/v1/metadata".to_string(), "".to_string())
-        ]);
-        
+        let (_temp_dir, socket_path) =
+            setup_mock_server(vec![("/rofl/v1/metadata".to_string(), "".to_string())]);
+
         let client = RoflClient::with_socket_path(&socket_path).unwrap();
         let mut metadata = std::collections::HashMap::new();
         metadata.insert("new_key".to_string(), "new_value".to_string());
-        
+
         client.set_metadata(&metadata).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_query() {
         let response = r#"{"data":"48656c6c6f"}"#;
-        let (_temp_dir, socket_path) = setup_mock_server(vec![
-            ("/rofl/v1/query".to_string(), response.to_string())
-        ]);
-        
+        let (_temp_dir, socket_path) =
+            setup_mock_server(vec![("/rofl/v1/query".to_string(), response.to_string())]);
+
         let client = RoflClient::with_socket_path(&socket_path).unwrap();
         let args = b"\xa1\x64test\x65value";
         let result = client.query("test.Method", args).await.unwrap();
-        
+
         assert_eq!(result, b"Hello");
     }
 
