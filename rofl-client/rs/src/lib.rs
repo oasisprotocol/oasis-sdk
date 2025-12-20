@@ -176,14 +176,14 @@ impl RoflClient {
         &self,
         gas_limit: u64,
         to: &str,
-        value: u64,
+        value: &str,
         data_hex: &str,
         encrypt: Option<bool>,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let eth = EthCall {
             gas_limit,
             to: to.to_string(),
-            value,
+            value: value.to_string(),
             data: data_hex.to_string(),
         };
         self.sign_submit(Tx::Eth(eth), encrypt).await
@@ -312,7 +312,7 @@ pub enum Tx {
 pub struct EthCall {
     pub gas_limit: u64,
     pub to: String,
-    pub value: u64,
+    pub value: String,
     pub data: String, // hex string without 0x prefix
 }
 
