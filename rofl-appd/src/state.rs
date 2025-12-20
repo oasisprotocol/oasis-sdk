@@ -1,3 +1,4 @@
+use anyhow::Ok;
 use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
 use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 
@@ -59,5 +60,81 @@ impl<A: App> Env for EnvImpl<A> {
         let round = self.env.client().latest_round().await?;
         let result: cbor::Value = self.env.client().query(round, method, args).await?;
         Ok(cbor::to_vec(result))
+    }
+}
+
+
+
+pub(crate) struct LocalEnv {
+    app_id: AppId,
+    signer: Arc<dyn Signer>,
+    rpc_url: Option<String>,
+}
+
+
+impl LocalEnv {
+    pub fn new(app_id: AppId, signer: Arc<dyn Signer>, rpc_url: Option<String>) -> Self {
+        Self { app_id, signer, rpc_url }
+    }
+}
+
+#[async_trait]
+impl Env for LocalEnv {
+    fn app_id(&self) -> AppId {
+        self.app_id.clone()
+    }
+
+    fn signer(&self) -> Arc<dyn Signer> {
+        self.signer.clone()
+    }
+
+    async fn sign_and_submit_tx(
+        &self,
+        _signer: Arc<dyn Signer>,
+        _tx: transaction::Transaction,
+        _opts: SubmitTxOpts,
+    ) -> Result<transaction::CallResult> {
+        if let Some(rpc_url) = &self.rpc_url {
+            // Make an HTTP JSON-RPC call to Sapphire
+            let client = reqwest::Client::new();
+            let response = client
+                .post(rpc_url)
+                .json(&serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "eth_sendTransaction", // or similar Sapphire method
+                    "params": [/* tx encoded */],
+                    "id": 1,
+                }))
+                .send()
+                .await?;
+
+
+            Ok(transaction::CallResult::default())
+        } else {
+            // Mock mode: return default
+            Ok(transaction::CallResult::default())
+        }
+    }
+
+    async fn query(&self, method: &str, args: Vec<u8>) -> Result<Vec<u8>> {
+        if let Some(rpc_url) = &self.rpc_url {
+            // Make an HTTP JSON-RPC call to Sapphire
+            let client = reqwest::Client::new();
+            let response = client
+                .post(rpc_url)
+                .json(&serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": method,
+                    "params": args,
+                    "id": 1,
+                }))
+                .send()
+                .await?;
+
+            Ok(response.bytes().await?.to_vec())
+        } else {
+            // Mock mode: return empty
+            Ok(vec![])
+        }
     }
 }

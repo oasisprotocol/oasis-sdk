@@ -6,9 +6,13 @@ pub(crate) mod state;
 
 use std::sync::Arc;
 
+use oasis_runtime_sdk::crypto::signature::{Signer, secp256k1};
+
 use rocket::{figment::Figment, routes};
 
-use rofl_app_core::{App, Environment};
+use rofl_app_core::{App, AppId, Environment};
+
+use crate::state::LocalEnv;
 
 /// API server configuration.
 #[derive(Clone)]
@@ -38,6 +42,45 @@ where
     let server = rocket::custom(rocket_cfg)
         .manage(env)
         .manage(cfg.kms)
+        .mount("/rofl/v1/app", routes![routes::app::id,])
+        .mount("/rofl/v1/keys", routes![routes::keys::generate,]);
+
+    let server = server.manage(cfg.metadata).mount(
+        "/rofl/v1/metadata",
+        routes![routes::metadata::set, routes::metadata::get],
+    );
+
+    let server = server.mount("/rofl/v1/query", routes![routes::query::query]);
+
+    #[cfg(feature = "tx")]
+    let server = server
+        .manage(routes::tx::Config::default())
+        .mount("/rofl/v1/tx", routes![routes::tx::sign_and_submit]);
+
+    server.launch().await?;
+
+    Ok(())
+}
+
+
+/// Start the REST API server in mock mode
+pub async fn start_local(cfg: Config<'_>, rpc_url: Option<String>) -> Result<(), rocket::Error>
+{
+    let signer = secp256k1::MemorySigner::new_from_seed(b"24b41929dc5bc3ec792f8792c7b7c32f").unwrap();
+
+       // For mock mode, just use a simple stub that implements Env
+    let env: Arc<dyn state::Env> = Arc::new(LocalEnv::new(AppId::default(), Arc::new(signer), rpc_url));
+    
+    
+    // Server configuration.
+    let rocket_cfg = Figment::from(rocket::config::Config::default())
+        .select("default")
+        .merge(("address", cfg.address))
+        .merge(("reuse", true));
+
+    let server = rocket::custom(rocket_cfg)
+        .manage(cfg.kms)
+        .manage(env)
         .mount("/rofl/v1/app", routes![routes::app::id,])
         .mount("/rofl/v1/keys", routes![routes::keys::generate,]);
 
