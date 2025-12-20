@@ -3894,6 +3894,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "oasis-rofl-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
 name = "oasis-runtime-sdk"
 version = "0.15.0"
 dependencies = [
