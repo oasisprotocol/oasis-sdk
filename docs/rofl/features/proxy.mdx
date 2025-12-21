@@ -55,10 +55,10 @@ Where:
 
 ### Example Configuration
 
-The following example configures a service to use TCP passthrough with a custom domain:
+The following example configures port 8080 to use TCP passthrough,
+and port 80 to use `terminate-tls` mode (the default) with a custom domain.
 
-```yaml
-title="compose.yaml"
+```yaml title="compose.yaml"
 services:
   myservice:
     image: docker.io/my/service:latest
@@ -70,23 +70,57 @@ services:
       net.oasis.proxy.ports.80.custom_domain: mydomain.com
 ```
 
-Explanation:
-- The container exposes ports 8080 and 80.
-- The proxy forwards the raw TCP connection to your container (mode: passthrough).
-- Requests to mydomain.com are routed to this service (custom_domain: mydomain.com).
+What this configuration does:
+- The application container exposes ports 8080 and 80.
+- On port 8080 the proxy forwards the raw TCP connection to your application container (mode: passthrough).
+- On port 80 the proxy terminates TLS for mydomain.com and forwards traffic to the application container.
 
 ### Annotation Reference
 
-Defines how the proxy should handle connections for the specified port.
+#### `mode`
 
-1. `net.oasis.proxy.ports.<published_port>.mode`
+`net.oasis.proxy.ports.<published_port>.mode`
+
+Defines how the proxy should handle connections for the specified port.
 
 | Mode                      | Description                                                                 | Typical Use Case                                                     |
 | ------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `terminate-tls` (default) | The proxy terminates TLS and forwards unencrypted traffic to the container. | Standard HTTPS web applications.                                     |
+| `terminate-tls` (default) | The proxy terminates TLS and forwards traffic to the container (all within the TEE). | Standard HTTPS web applications.                                     |
 | `passthrough`             | The proxy forwards raw TCP traffic directly to the container.               | Services that handle their own TLS or use other TCP-based protocols. |
 | `ignore`                  | The proxy ignores this port entirely and does not expose it publicly.       | Internal or non-public service ports.                                |
 
-2. `net.oasis.proxy.ports.<published_port>.custom_domain`
+#### `custom_domain`
 
-  - Assigns a custom domain name to the published port.
+`net.oasis.proxy.ports.<published_port>.custom_domain`
+
+Assigns a custom domain name to the published port.
+
+This setting only applies when using `terminate-tls` mode (the default) — when the ROFL
+proxy handles TLS termination. In this case, you can configure your custom domain to
+route through the proxy.
+
+When using `custom_domain`, you must verify ownership of the domain and complete the
+routing setup. After your ROFL app is deployed, use the Oasis CLI to obtain setup
+instructions:
+
+```shell
+oasis rofl machine show
+```
+
+The output will include the custom domain verification details:
+
+```
+Proxy:
+  Domain: m897.opf-testnet-rofl-25.rofl.app
+  Ports from compose file:
+    5678 (frontend): https://demo.rofl.build
+      * Point the A record of your domain to: 131.153.241.25
+      * Add a TXT record to your domain: oasis-rofl-verification=4SKHCn4E2SNDB5tXayQeHZsvH/+kJSNGuQaTAPepYJc=
+```
+
+If you're using `passthrough` mode, the proxy doesn't terminate TLS — your app handles
+it directly. In this case, the `custom_domain` setting is not needed. Instead, configure
+your domain to point directly to the ROFL instance's address.
+
+If you're using `ignore` mode, the port isn't published, so the `custom_domain` setting
+has no effect.
