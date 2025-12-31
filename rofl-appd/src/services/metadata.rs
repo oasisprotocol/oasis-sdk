@@ -104,3 +104,29 @@ impl<A: App> MetadataService for OasisMetadataService<A> {
         Ok(map.clone())
     }
 }
+
+pub struct InMemoryMetadataService {
+    metadata: RwLock<BTreeMap<String, String>>,
+}
+
+impl Default for InMemoryMetadataService {
+    fn default() -> Self {
+        Self {
+            metadata: RwLock::new(BTreeMap::new()),
+        }
+    }
+}
+
+#[async_trait]
+impl MetadataService for InMemoryMetadataService {
+    async fn set(&self, metadata: BTreeMap<String, String>) -> Result<(), Error> {
+        let mut map = self.metadata.write().await;
+        *map = metadata;
+        Ok(())
+    }
+
+    async fn get(&self) -> Result<BTreeMap<String, String>, Error> {
+        let map = self.metadata.read().await;
+        Ok(map.clone())
+    }
+}
