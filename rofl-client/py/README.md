@@ -20,15 +20,26 @@ The package requires Python 3.9+ and depends on `httpx` for async HTTP operation
 
 ## Quickstart
 
-The RoflClient provides async methods for interacting with ROFL services:
+RoflClient provides methods for interacting with ROFL services:
+
+```python
+from oasis_rofl_client import RoflClient
+
+client = RoflClient()
+
+key = client.generate_key("my-key-id")
+print(f"Generated SECP256K1 key: {key}")
+```
+
+You can also use an async version:
 
 ```python
 import asyncio
-from oasis_rofl_client import RoflClient
+from oasis_rofl_client import AsyncRoflClient
 
 async def main():
-    client = RoflClient()
-    
+    client = AsyncRoflClient()
+
     key = await client.generate_key("my-key-id")
     print(f"Generated SECP256K1 key: {key}")
 
@@ -54,14 +65,14 @@ RoflClient(url: str = '')
 
 #### Methods
 
-##### `async get_app_id() -> str`
+##### `get_app_id() -> str`
 
 Get app ID.
 
 - **Returns:** Bech32-encoded ROFL app ID
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
-##### `async generate_key(key_id: str, kind: KeyKind = KeyKind.SECP256K1) -> str`
+##### `generate_key(key_id: str, kind: KeyKind = KeyKind.SECP256K1) -> str`
 
 Fetches or generates a cryptographic key from ROFL.
 
@@ -75,7 +86,7 @@ Fetches or generates a cryptographic key from ROFL.
 - **Returns:** The private key as a hex string
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
-##### `async sign_submit(tx: TxParams, encrypt: bool = True) -> dict[str, Any]`
+##### `sign_submit(tx: TxParams, encrypt: bool = True) -> dict[str, Any]`
 
 Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.
 
@@ -88,14 +99,14 @@ Note: Transaction nonce and gas price are ignored.
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 - **Raises:** `cbor2.CBORDecodeValueError` If the response data is invalid
 
-##### `async get_metadata() -> dict[str, str]`
+##### `get_metadata() -> dict[str, str]`
 
 Get all user-set metadata key-value pairs.
 
 - **Returns:** Dictionary of metadata key-value pairs
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
-##### `async set_metadata(metadata: dict[str, str]) -> None`
+##### `set_metadata(metadata: dict[str, str]) -> None`
 
 Set metadata key-value pairs.
 
@@ -105,7 +116,7 @@ This replaces all existing app-provided metadata. Will trigger a registration re
   - `metadata`: Dictionary of metadata key-value pairs to set
 - **Raises:** `httpx.HTTPStatusError` if the request fails
 
-##### `async query(method: str, args: bytes) -> bytes`
+##### `query(method: str, args: bytes) -> bytes`
 
 Query the on-chain paratime state.
 
