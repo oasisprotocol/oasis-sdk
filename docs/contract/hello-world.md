@@ -155,7 +155,7 @@ the instantiated contract. Next, you can test calling the contract.
 oasis contract call INSTANCEID '{say_hello: {who: "me"}}'
 ```
 
-:::info Example
+:::example
 
 You can view and download a [complete example] from the Oasis SDK repository.
 

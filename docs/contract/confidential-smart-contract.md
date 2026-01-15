@@ -166,7 +166,7 @@ smart contract, any [emitted event][emit_event] will be public.
 
 :::
 
-:::info Example
+:::example
 
 You can view and download a [complete example] from the Oasis SDK repository.
 
