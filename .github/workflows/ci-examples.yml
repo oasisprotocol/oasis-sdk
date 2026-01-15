@@ -67,16 +67,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Oasis CLI
-        env:
-          CLI_VERSION: 0.14.3
-        run: |
-          wget https://github.com/oasisprotocol/cli/releases/download/v${CLI_VERSION}/oasis_cli_${CLI_VERSION}_linux_amd64.tar.gz -O cli.tar.gz
-          tar --strip-components 1 -xf cli.tar.gz
+      - name: Setup Oasis CLI
+        uses: oasisprotocol/setup-cli-action@0.0.2
 
       - name: Build ${{ matrix.example }}
         working-directory: examples/${{ matrix.example }}
-        run: ../../../oasis rofl build --deployment testnet
+        run: oasis rofl build --deployment testnet
 
   lint-test-contract-sdk:
     name: lint-test-contract-sdk
