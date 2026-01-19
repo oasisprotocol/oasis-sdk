@@ -87,17 +87,57 @@ func NewBaseUnits(amount quantity.Quantity, denomination Denomination) BaseUnits
 	}
 }
 
+// FormatNamedAddress returns a human-friendly representation of an address.
+//
+// It prints the name (if known) followed by the preferred form of the address
+// in parentheses. If an Ethereum hex address mapping is provided for the native
+// address, it is used; otherwise the native Bech32 address is used.
+func FormatNamedAddress(ctx context.Context, addr Address) string {
+	var (
+		names  AccountNames
+		ethMap map[string]string
+	)
+	if v, ok := ctx.Value(ContextKeyAccountNames).(AccountNames); ok {
+		names = v
+	}
+	if v, ok := ctx.Value(ContextKeyAccountEthMap).(map[string]string); ok {
+		ethMap = v
+	}
+	return FormatNamedAddressWith(names, ethMap, addr)
+}
+
+// FormatNamedAddressWith is a pure helper for address formatting to make testing easier.
+func FormatNamedAddressWith(names AccountNames, ethMap map[string]string, addr Address) string {
+	native := addr.String()
+
+	name := ""
+	if names != nil {
+		name = names[native]
+	}
+	if name == "" {
+		return native
+	}
+
+	preferred := native
+	if ethMap != nil {
+		if hex := ethMap[native]; hex != "" {
+			preferred = hex
+		}
+	}
+
+	// Guard against redundant "name (name)" output.
+	if name == preferred {
+		return preferred
+	}
+
+	return fmt.Sprintf("%s (%s)", name, preferred)
+}
+
 // PrettyPrintToAmount is a helper for printing To-Amount transaction bodies (e.g. transfer, deposit, withdraw).
 func PrettyPrintToAmount(ctx context.Context, prefix string, w io.Writer, to *Address, amount BaseUnits) {
 	toStr := "Self"
 	if to != nil {
-		toStr = to.String()
-		an, ok := ctx.Value(ContextKeyAccountNames).(AccountNames)
-		if ok {
-			if name, ok := an[to.String()]; ok {
-				toStr = fmt.Sprintf("%s (%s)", name, to)
-			}
-		}
+		toStr = FormatNamedAddress(ctx, *to)
 	}
 	_, _ = fmt.Fprintf(w, "%sTo: %s\n", prefix, toStr)
 	_, _ = fmt.Fprintf(w, "%sAmount: ", prefix)
