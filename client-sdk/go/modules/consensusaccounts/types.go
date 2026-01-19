@@ -65,8 +65,8 @@ type Undelegate struct {
 }
 
 // PrettyPrint writes a pretty-printed representation of the transaction to the given writer.
-func (ud *Undelegate) PrettyPrint(_ context.Context, prefix string, w io.Writer) {
-	_, _ = fmt.Fprintf(w, "%sFrom: %s\n", prefix, ud.From)
+func (ud *Undelegate) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	_, _ = fmt.Fprintf(w, "%sFrom: %s\n", prefix, types.FormatNamedAddress(ctx, ud.From))
 	_, _ = fmt.Fprintf(w, "%sShares: %s\n", prefix, ud.Shares)
 }
 

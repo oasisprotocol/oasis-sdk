@@ -87,17 +87,67 @@ func NewBaseUnits(amount quantity.Quantity, denomination Denomination) BaseUnits
 	}
 }
 
+// FormatNamedAddress is like FormatNamedAddressWith but reads the name and eth maps from ctx.
+func FormatNamedAddress(ctx context.Context, addr Address) string {
+	var (
+		names  AccountNames
+		ethMap map[string]string
+	)
+	if v, ok := ctx.Value(ContextKeyAccountNames).(AccountNames); ok {
+		names = v
+	}
+	if v, ok := ctx.Value(ContextKeyAccountEthMap).(map[string]string); ok {
+		ethMap = v
+	}
+
+	return FormatNamedAddressWith(names, ethMap, addr)
+}
+
+// FormatNamedAddressWith formats an address for display. Output cases:
+//   - Named + eth known:    "name (0x...)"
+//   - Named + eth unknown:  "name (oasis1...)"
+//   - Unnamed + eth known:  "0x... (oasis1...)"
+//   - Unnamed + eth unknown: "oasis1..."
+func FormatNamedAddressWith(names AccountNames, ethMap map[string]string, addr Address) string {
+	native := addr.String()
+
+	ethHex := ""
+	if ethMap != nil {
+		if hex := ethMap[native]; hex != "" {
+			ethHex = hex
+		}
+	}
+
+	name := ""
+	if names != nil {
+		name = names[native]
+	}
+
+	// Named address.
+	if name != "" {
+		preferred := native
+		if ethHex != "" {
+			preferred = ethHex
+		}
+		if name == preferred {
+			return preferred
+		}
+		return fmt.Sprintf("%s (%s)", name, preferred)
+	}
+
+	// Unnamed address.
+	if ethHex != "" {
+		return fmt.Sprintf("%s (%s)", ethHex, native)
+	}
+
+	return native
+}
+
 // PrettyPrintToAmount is a helper for printing To-Amount transaction bodies (e.g. transfer, deposit, withdraw).
 func PrettyPrintToAmount(ctx context.Context, prefix string, w io.Writer, to *Address, amount BaseUnits) {
 	toStr := "Self"
 	if to != nil {
-		toStr = to.String()
-		an, ok := ctx.Value(ContextKeyAccountNames).(AccountNames)
-		if ok {
-			if name, ok := an[to.String()]; ok {
-				toStr = fmt.Sprintf("%s (%s)", name, to)
-			}
-		}
+		toStr = FormatNamedAddress(ctx, *to)
 	}
 	_, _ = fmt.Fprintf(w, "%sTo: %s\n", prefix, toStr)
 	_, _ = fmt.Fprintf(w, "%sAmount: ", prefix)
