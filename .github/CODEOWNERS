@@ -1,5 +1,5 @@
 # Default code owners.
 * @kostko @ptrus @peternose
 /docs/ @matevz @kostko @ptrus @peternose
-/rofl-client/ @matevz @lukaw3d @rube-de @kostko @ptrus @peternose
-/client-sdk/ts-web/ @lukaw3d @kostko @ptrus @peternose
+/rofl-client/ @matevz @rube-de @kostko @ptrus @peternose
+/client-sdk/ts-web/ @kostko @ptrus @peternose
