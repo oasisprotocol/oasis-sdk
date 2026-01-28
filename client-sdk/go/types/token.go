@@ -113,10 +113,8 @@ func FormatNamedAddress(ctx context.Context, addr Address) string {
 			name = names[native]
 		}
 
-		switch {
-		case name == "":
-			return origToHex
-		case name == origToHex:
+		switch name {
+		case "", origToHex:
 			return origToHex
 		default:
 			return fmt.Sprintf("%s (%s)", name, origToHex)
