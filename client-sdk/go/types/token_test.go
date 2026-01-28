@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"testing"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
 func TestToken(t *testing.T) {
@@ -75,6 +77,18 @@ func TestPrettyPrintToAmount(t *testing.T) {
 	var buf bytes.Buffer
 	PrettyPrintToAmount(ctx, "", &buf, &to, amt)
 	require.Equal("To: test:dave (oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt)\nAmount: 50.0 TEST\n", buf.String())
+
+	// Preserve the user-provided Ethereum address even when the account is unnamed.
+	buf.Reset()
+	ethAddr := ethCommon.HexToAddress("0x60a6321ea71d37102dbf923aae2e08d005c4e403")
+	ethTo := NewAddressFromEth(ethAddr.Bytes())
+	ctx2 := context.Background()
+	ctx2 = context.WithValue(ctx2, config.ContextKeyParaTimeCfg, ptCfg)
+	ctx2 = context.WithValue(ctx2, sdkSignature.ContextKeySigContext, &sdkSignature.RichContext{
+		TxDetails: &sdkSignature.TxDetails{OrigTo: &ethAddr},
+	})
+	PrettyPrintToAmount(ctx2, "", &buf, &ethTo, amt)
+	require.Equal("To: "+ethAddr.Hex()+"\nAmount: 50.0 TEST\n", buf.String())
 
 	// No ParaTime set. Amount cannot be correctly determined.
 	buf.Reset()

@@ -9,6 +9,7 @@ import (
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
 // Quantity is a arbitrary precision unsigned integer that never underflows.
@@ -103,6 +104,25 @@ func FormatNamedAddress(ctx context.Context, addr Address) string {
 	if v, ok := ctx.Value(ContextKeyAccountEthMap).(map[string]string); ok {
 		ethMap = v
 	}
+
+	// Preserve the user-provided Ethereum address even when the account is unnamed.
+	if origToHex, ok := origToHexForAddress(ctx, addr); ok {
+		native := addr.String()
+		name := ""
+		if names != nil {
+			name = names[native]
+		}
+
+		switch {
+		case name == "":
+			return origToHex
+		case name == origToHex:
+			return origToHex
+		default:
+			return fmt.Sprintf("%s (%s)", name, origToHex)
+		}
+	}
+
 	return FormatNamedAddressWith(names, ethMap, addr)
 }
 
@@ -131,6 +151,21 @@ func FormatNamedAddressWith(names AccountNames, ethMap map[string]string, addr A
 	}
 
 	return fmt.Sprintf("%s (%s)", name, preferred)
+}
+
+func origToHexForAddress(ctx context.Context, addr Address) (string, bool) {
+	sc, ok := ctx.Value(sdkSignature.ContextKeySigContext).(*sdkSignature.RichContext)
+	if !ok || sc == nil || sc.TxDetails == nil || sc.TxDetails.OrigTo == nil {
+		return "", false
+	}
+
+	// Only apply OrigTo if it matches the address being printed.
+	derived := NewAddressFromEth(sc.TxDetails.OrigTo.Bytes())
+	if !derived.Equal(addr) {
+		return "", false
+	}
+
+	return sc.TxDetails.OrigTo.Hex(), true
 }
 
 // PrettyPrintToAmount is a helper for printing To-Amount transaction bodies (e.g. transfer, deposit, withdraw).

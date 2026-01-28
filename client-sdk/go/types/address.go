@@ -41,7 +41,7 @@ var (
 
 type contextKey string
 
-// ContextKeyAccountNames is the key to retrieve the public key to account name map from context.
+// ContextKeyAccountNames is the key to retrieve the native (Bech32) address string to account name map from context.
 const ContextKeyAccountNames = contextKey("runtime/account-names")
 
 // ContextKeyAccountEthMap is the key to retrieve a mapping from native (Bech32)
