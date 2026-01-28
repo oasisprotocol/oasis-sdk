@@ -6,12 +6,14 @@ import (
 	"encoding/hex"
 	"testing"
 
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/quantity"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/config"
+	sdkSignature "github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 )
 
 func TestToken(t *testing.T) {
@@ -76,9 +78,62 @@ func TestPrettyPrintToAmount(t *testing.T) {
 	PrettyPrintToAmount(ctx, "", &buf, &to, amt)
 	require.Equal("To: test:dave (oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt)\nAmount: 50.0 TEST\n", buf.String())
 
+	// Preserve the user-provided Ethereum address even when the account is unnamed.
+	buf.Reset()
+	ethAddr := ethCommon.HexToAddress("0x60a6321ea71d37102dbf923aae2e08d005c4e403")
+	ethTo := NewAddressFromEth(ethAddr.Bytes())
+	ctx2 := context.Background()
+	ctx2 = context.WithValue(ctx2, config.ContextKeyParaTimeCfg, ptCfg)
+	ctx2 = context.WithValue(ctx2, sdkSignature.ContextKeySigContext, &sdkSignature.RichContext{
+		TxDetails: &sdkSignature.TxDetails{OrigTo: &ethAddr},
+	})
+	PrettyPrintToAmount(ctx2, "", &buf, &ethTo, amt)
+	require.Equal("To: "+ethAddr.Hex()+"\nAmount: 50.0 TEST\n", buf.String())
+
 	// No ParaTime set. Amount cannot be correctly determined.
 	buf.Reset()
 	ctx = context.WithValue(ctx, config.ContextKeyParaTimeCfg, nil)
 	PrettyPrintToAmount(ctx, "", &buf, &to, amt)
 	require.Equal("To: test:dave (oasis1qrk58a6j2qn065m6p06jgjyt032f7qucy5wqeqpt)\nAmount: <error: ParaTime information not available>\n", buf.String())
+}
+
+func TestFormatNamedAddressWith(t *testing.T) {
+	require := require.New(t)
+
+	ethHex := "0x60a6321ea71d37102dbf923aae2e08d005c4e403"
+	ethBytes, err := hex.DecodeString(ethHex[2:])
+	require.NoError(err)
+
+	addr := NewAddressFromEth(ethBytes)
+	native := addr.String()
+
+	t.Run("unknown returns native", func(_ *testing.T) {
+		require.Equal(native, FormatNamedAddressWith(nil, nil, addr))
+		require.Equal(native, FormatNamedAddressWith(AccountNames{}, map[string]string{}, addr))
+	})
+
+	t.Run("native fallback when eth unknown", func(_ *testing.T) {
+		names := AccountNames{native: "my"}
+		require.Equal("my ("+native+")", FormatNamedAddressWith(names, nil, addr))
+		require.Equal("my ("+native+")", FormatNamedAddressWith(names, map[string]string{}, addr))
+		require.Equal("my ("+native+")", FormatNamedAddressWith(names, map[string]string{native: ""}, addr))
+	})
+
+	t.Run("eth preferred when known", func(_ *testing.T) {
+		names := AccountNames{native: "my"}
+		ethMap := map[string]string{native: ethHex}
+		require.Equal("my ("+ethHex+")", FormatNamedAddressWith(names, ethMap, addr))
+	})
+
+	t.Run("name equals preferred yields preferred", func(_ *testing.T) {
+		names := AccountNames{native: native}
+		require.Equal(native, FormatNamedAddressWith(names, nil, addr))
+	})
+
+	t.Run("ctx wrapper reads maps", func(_ *testing.T) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, ContextKeyAccountNames, AccountNames{native: "my"})
+		ctx = context.WithValue(ctx, ContextKeyAccountEthMap, map[string]string{native: ethHex})
+		require.Equal("my ("+ethHex+")", FormatNamedAddress(ctx, addr))
+	})
 }
