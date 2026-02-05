@@ -81,11 +81,13 @@ values currently supported:
 
 The `size` argument defines the amount of storage to provision in megabytes.
 
-## Deployments (`deployments`)
+## Deployments (`deployments`) {#deployments}
 
 This section contains ROFL deployments on specific networks.
 
-### `<deployment name>`
+### `<deployment_name>`
+
+User-defined deployment name.
 
 #### `policy`
 
@@ -127,7 +129,7 @@ Contains machines which the specific app deployment lives on. A new `default`
 machine is created during [`oasis rofl deploy`] if none exists yet. Otherwise,
 the existing machine is considered for redeployment of the app.
 
-- `<machine_name>`: Machine name.
+- `<machine_name>`: User-defined machine name.
   - `provider: <provider_address>`: Oasis native address of the ROFL provider
     hosting the machine.
   - `offer: <offer_name>`: The name of the offer used.
