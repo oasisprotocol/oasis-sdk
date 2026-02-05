@@ -1,3 +1,7 @@
+---
+toc_max_heading_level: 4
+---
+
 # `rofl.yaml` Manifest File
 
 ## Metadata {#metadata}
@@ -61,19 +65,19 @@ Each app running in ROFL can request different storage options, depending on its
 use case. The storage kind is specified in the `kind` field with the following
 values currently supported:
 
-- `disk-persistent` provisions a persistent disk of the given size. The disk is
+- `disk-persistent`: Provisions a persistent disk of the given size. The disk is
   encrypted and authenticated using a key derived by the decentralized on-chain
   key management system after successful attestation.
 
-- `disk-ephemeral` provisions an ephemeral disk of the given size. The disk is
+- `disk-ephemeral`: Provisions an ephemeral disk of the given size. The disk is
   encrypted and authenticated using an ephemeral key randomly generated on each
   boot.
 
-- `ram` provisions an ephemeral filesystem entirely contained in encrypted
+- `ram`: Provisions an ephemeral filesystem entirely contained in encrypted
   memory.
 
-- `none` does not provision any kind of storage. Specifying this option will not
-  work for containerized apps.
+- `none`: Does not provision any kind of storage. Specifying this option will
+  not work for containerized apps.
 
 The `size` argument defines the amount of storage to provision in megabytes.
 
@@ -87,16 +91,16 @@ This section contains ROFL deployments on specific networks.
 
 Contains the policy under which the app will be allowed to spin up:
 
-- `quotes`: defines a TEE-specific policy requirements such as the TCB validity
+- `quotes`: A TEE-specific policy requirements such as the TCB validity
   period, and the minimum TCB-R number which indicates what security updates
   must be applied to the given platform.
-- `enclaves`: defines the allowed enclave IDs for running this app.
-- `endorsements`: a list of conditions that define who can run this app.
-  - `- any: {}`: any node is allowed to run the app.
-  - `- node: <node_id>`: node with a specific node ID is allowed to run the app.
-  - `- provider: <address>`: nodes belonging to the specified ROFL provider
+- `enclaves`: Allowed enclave IDs for running this app.
+- `endorsements`: A list of conditions that define who can run this app.
+  - `- any: {}`: Any node is allowed to run the app.
+  - `- node: <node_id>`: Node with a specific node ID is allowed to run the app.
+  - `- provider: <address>`: Nodes belonging to the specified ROFL provider
     are allowed to run the app.
-  - `- provider_instance_admin: <address>`: machines having the specified admin
+  - `- provider_instance_admin: <address>`: Machines having the specified admin
     are allowed to run the app.
 
   You can also nest conditions with `and` and `or` operators. For example:
@@ -113,6 +117,22 @@ Contains the policy under which the app will be allowed to spin up:
   In the example the app will only run on a specified provider and on machines
   owned by either of the two admin addresses.
 
-- `fees: <fee_policy>`: who pays for the registration and other fees:
-  - `endorsing_node`: the node running the app pays the fees.
+- `fees: <fee_policy>`: Who pays for the registration and other fees:
+  - `endorsing_node`: The node running the app pays the fees.
   - `instance`: The app instance pays the fees.
+
+#### `machines`
+
+Contains machines which the specific app deployment lives on. A new `default`
+machine is created during [`oasis rofl deploy`] if none exists yet. Otherwise,
+the existing machine is considered for redeployment of the app.
+
+- `<machine_name>`: Machine name.
+  - `provider: <provider_address>`: Oasis native address of the ROFL provider
+    hosting the machine.
+  - `offer: <offer_name>`: The name of the offer used.
+  - `id: <machine_id>`: Unique ID of the machine per provider.
+  - `permissions` (optional): ROFL scheduler-specific permissions.
+    - `log.view`: List of Oasis native addresses that can access machine logs
+
+[`oasis rofl deploy`]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
