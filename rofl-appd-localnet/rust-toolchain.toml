@@ -1,0 +1,5 @@
+[toolchain]
+channel = "nightly-2025-05-09"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-fortanix-unknown-sgx", "x86_64-unknown-linux-musl"]
+profile = "minimal"

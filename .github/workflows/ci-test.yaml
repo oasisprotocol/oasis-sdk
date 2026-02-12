@@ -29,7 +29,6 @@ permissions:
 
 jobs:
   test-rust:
-    # NOTE: This name appears in GitHub's Checks API.
     name: test-rust
     runs-on: ubuntu-latest
     steps:
@@ -56,10 +55,49 @@ jobs:
       - name: Test Rust code
         uses: ./.github/actions/test-rust
 
+  test-rust-rofl-appd-localnet:
+    name: test-rust-rofl-appd-localnet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Test rofl-appd-localnet code
+        uses: ./.github/actions/test-rust
+        with:
+          manifest_path: rofl-appd-localnet/Cargo.toml
+
+  test-rust-hello-contract:
+    name: test-rust-hello-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup show
+
+      - name: Build test contracts
+        working-directory: tests/contracts/hello
+        run: cargo build --target wasm32-unknown-unknown --release
+
       - name: Test Hello contract code
         uses: ./.github/actions/test-rust
         with:
           manifest_path: tests/contracts/hello/Cargo.toml
+
+  test-rust-oas20-contract:
+    name: test-rust-oas20-contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup show
 
       - name: Test OAS-20 contract
         uses: ./.github/actions/test-rust
@@ -67,7 +105,6 @@ jobs:
           manifest_path: contract-sdk/specs/token/oas20/Cargo.toml
 
   test-rust-sgx:
-    # NOTE: This name appears in GitHub's Checks API.
     name: test-rust-sgx
     runs-on: ubuntu-latest
     steps:
@@ -94,7 +131,6 @@ jobs:
           CC_x86_64_fortanix_unknown_sgx: clang-18
 
   check-core-versions:
-    # NOTE: This name appears in GitHub's Checks API.
     name: check-core-versions
     runs-on: ubuntu-latest
     steps:
@@ -105,7 +141,6 @@ jobs:
         run: ./tests/check-core-versions.sh
 
   test-go:
-    # NOTE: This name appears in GitHub's Checks API.
     name: test-go
     runs-on: ubuntu-latest
     steps:
@@ -128,7 +163,6 @@ jobs:
           use_oidc: true  # Upload authentication to avoid rate-limiting
 
   test-go-tools:
-    # NOTE: This name appears in GitHub's Checks API.
     name: test-tools
     runs-on: ubuntu-latest
     steps:
@@ -149,7 +183,6 @@ jobs:
         run: go build
 
   typecheck:
-    # NOTE: This name appears in GitHub's Checks API.
     name: typecheck
     runs-on: ubuntu-latest
     steps:
@@ -204,7 +237,6 @@ jobs:
         run: npx typedoc
 
   e2e-ts-web-core:
-    # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-core
     runs-on: ubuntu-latest
     steps:
@@ -279,7 +311,6 @@ jobs:
             /tmp/oasis-net-runner-sdk-core/**/*.log
 
   e2e-ts-web-ext-utils:
-    # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-ext-utils
     runs-on: ubuntu-latest
     steps:
@@ -317,7 +348,6 @@ jobs:
           path: client-sdk/ts-web/ext-utils/cypress/screenshots
 
   e2e-ts-web-rt:
-    # NOTE: This name appears in GitHub's Checks API.
     name: e2e-ts-web-rt
     runs-on: ubuntu-latest
     env:
@@ -407,7 +437,6 @@ jobs:
             /tmp/fixture.json
 
   e2e-rt:
-    # NOTE: This name appears in GitHub's Checks API.
     name: e2e-rt
     runs-on: ubuntu-latest
     steps:
@@ -521,7 +550,6 @@ jobs:
         run: npx typedoc
 
   ts-web-core-reflect:
-    # NOTE: This name appears in GitHub's Checks API.
     name: ts-web-core-reflect
     runs-on: ubuntu-latest
     steps:
@@ -548,7 +576,6 @@ jobs:
           diff -u --color=always /tmp/current.ts /tmp/reflect-out.ts || true
 
   ts-web-rt-reflect:
-    # NOTE: This name appears in GitHub's Checks API.
     name: ts-web-rt-reflect
     runs-on: ubuntu-latest
     steps:
@@ -562,7 +589,6 @@ jobs:
           npm run-script check-missing-methods
 
   benchmark-rt:
-    # NOTE: This name appears in GitHub's Checks API.
     name: benchmark-rt
     runs-on: ubuntu-latest
     timeout-minutes: 30

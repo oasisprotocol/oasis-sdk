@@ -38,6 +38,7 @@ jobs:
         uses: ./.github/actions/lint-rust
         with:
           features: debug-logging,test,unsafe-allow-debug
+          exclude: rofl-appd-localnet
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Rust code (mock TEE)
@@ -51,6 +52,7 @@ jobs:
         uses: ./.github/actions/lint-rust
         with:
           features: tdx
+          exclude: rofl-appd-localnet
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Lint Hello contract code
