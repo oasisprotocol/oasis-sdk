@@ -6,9 +6,9 @@ edition = "2021"
 [dependencies]
 # Oasis SDK.
 cbor = { version = "0.5.1", package = "oasis-cbor" }
-oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
+oasis-runtime-sdk = { path = "../runtime-sdk" }
 oasis-runtime-sdk-evm = { path = "../runtime-sdk/modules/evm" }
-rofl-app-core = { path = "../rofl-app-core", features = ["tdx"] }
+rofl-app-core = { path = "../rofl-app-core" }
 
 # Third party.
 anyhow = "1.0.86"
@@ -37,5 +37,7 @@ serde_json = "1.0"
 
 [features]
 default = ["tx"]
+# TDX build.
+tdx = ["oasis-runtime-sdk/tdx", "rofl-app-core/tdx"]
 # Add routes for transaction submission.
 tx = []

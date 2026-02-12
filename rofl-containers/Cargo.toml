@@ -8,7 +8,7 @@ edition = "2021"
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../runtime-sdk", features = ["tdx"] }
 rofl-app-core = { path = "../rofl-app-core", features = ["tdx"] }
-rofl-appd = { path = "../rofl-appd" }
+rofl-appd = { path = "../rofl-appd", features = ["tdx"] }
 rofl-proxy = { path = "../rofl-proxy" }
 
 # Third party.
