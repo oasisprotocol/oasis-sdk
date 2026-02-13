@@ -8,9 +8,9 @@ resources:
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
 deployments:
-  default:
+  localnet:
     app_id: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
-    network: localnet
+    network: testnet
     paratime: sapphire
     admin: test:bob
     debug: true
@@ -23,7 +23,7 @@ deployments:
         - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
         - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
         - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-        - id: 0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLfu9sEAM4YYOxuEEWz5Z2/ZqfP9VseOA/ePkrmOanTdpQ==
+        - id: 0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLdOPdSOjtlloBWDuG9YL6TzIL975QTZJ8zMhMUdWMkR8A==
       endorsements:
         - any: {}
       fees: endorsing_node
