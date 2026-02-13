@@ -68,11 +68,12 @@ impl From<u64> for InstanceId {
 }
 
 /// Format used for encoding the call (and output) information.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, cbor::Encode, cbor::Decode)]
 #[repr(u8)]
 #[cbor(with_default)]
 pub enum CallFormat {
     /// Plain text call data.
+    #[default]
     Plain = 0,
     /// Encrypted call data using X25519 for key exchange and Deoxys-II for symmetric encryption.
     EncryptedX25519DeoxysII = 1,
@@ -81,12 +82,6 @@ pub enum CallFormat {
 impl CallFormat {
     fn is_plain(&self) -> bool {
         matches!(self, CallFormat::Plain)
-    }
-}
-
-impl Default for CallFormat {
-    fn default() -> Self {
-        Self::Plain
     }
 }
 

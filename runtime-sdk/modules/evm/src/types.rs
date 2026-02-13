@@ -114,6 +114,7 @@ pub struct Leash {
     clippy::assign_op_pattern,
     clippy::non_canonical_clone_impl,
     clippy::manual_div_ceil,
+    clippy::infallible_try_from,
     unexpected_cfgs
 )]
 mod eth {
@@ -122,7 +123,8 @@ mod eth {
     use thiserror::Error;
 
     #[derive(Error, Debug)]
-    pub enum NoError {}
+    #[error("conversion error")]
+    pub struct ConversionError;
 
     macro_rules! construct_fixed_hash {
         ($name:ident($num_bytes:literal)) => {
@@ -156,9 +158,12 @@ mod eth {
             }
 
             impl TryFrom<&[u8]> for $name {
-                type Error = NoError;
+                type Error = ConversionError;
 
                 fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+                    if bytes.len() != $num_bytes {
+                        return Err(ConversionError);
+                    }
                     Ok(Self::from_slice(bytes))
                 }
             }

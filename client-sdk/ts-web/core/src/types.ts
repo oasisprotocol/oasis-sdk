@@ -217,14 +217,6 @@ export interface ConsensusGenesis {
 }
 
 /**
- * GetSignerNonceRequest is a GetSignerNonce request.
- */
-export interface ConsensusGetSignerNonceRequest {
-    account_address: Uint8Array;
-    height: longnum;
-}
-
-/**
  * LightBlock is a light consensus block suitable for syncing light clients.
  */
 export interface ConsensusLightBlock {

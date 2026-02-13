@@ -61,7 +61,7 @@ pub fn call_bn128_mul(handle: &mut impl PrecompileHandle) -> PrecompileResult {
 /// Pairing check on the alt-bn128 elliptic curve.
 pub fn call_bn128_pairing(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     let length = handle.input().len();
-    if length % 192 > 0 {
+    if !length.is_multiple_of(192) {
         return Err(PrecompileFailure::Error {
             exit_status: ExitError::Other("bad elliptic curve pairing size".into()),
         });

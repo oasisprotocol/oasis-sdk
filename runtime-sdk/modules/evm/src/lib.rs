@@ -1,6 +1,7 @@
 //! EVM module.
-#![feature(array_chunks)]
 #![feature(test)]
+// NOTE: Needed due to the buggy fixed-hash macros used in types.
+#![allow(unexpected_cfgs)]
 
 extern crate substrate_bn as bn;
 

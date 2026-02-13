@@ -650,7 +650,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
 
     #[handler(message_result = CONSENSUS_TRANSFER_HANDLER)]
     fn message_result_transfer<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         me: MessageEvent,
         context: types::ConsensusTransferContext,
     ) {
@@ -694,7 +694,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
 
     #[handler(message_result = CONSENSUS_WITHDRAW_HANDLER)]
     fn message_result_withdraw<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         me: MessageEvent,
         context: types::ConsensusWithdrawContext,
     ) {
@@ -729,7 +729,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
 
     #[handler(message_result = CONSENSUS_DELEGATE_HANDLER)]
     fn message_result_delegate<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         me: MessageEvent,
         context: types::ConsensusDelegateContext,
     ) {
@@ -810,7 +810,7 @@ impl<Consensus: modules::consensus::API> Module<Consensus> {
 
     #[handler(message_result = CONSENSUS_UNDELEGATE_HANDLER)]
     fn message_result_undelegate<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         me: MessageEvent,
         context: types::ConsensusUndelegateContext,
     ) {

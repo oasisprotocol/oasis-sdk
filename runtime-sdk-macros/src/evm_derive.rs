@@ -370,6 +370,7 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
 
     quote! {
         #[automatically_derived]
+        #[allow(clippy::cloned_ref_to_slice_refs)]
         impl #evm_crate::precompile::contract::EvmEvent for #event_ty {
             fn emit<C: #evm_crate::precompile::contract::StaticContract>(&self, handle: &mut impl ::evm::executor::stack::PrecompileHandle) -> Result<(), ::evm::ExitError> {
                 let address = C::address();
