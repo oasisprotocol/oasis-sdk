@@ -97,8 +97,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Process an observation by an oracle.
     #[handler(call = "oracle.Observe")]
-    fn tx_observe<C: Context>(ctx: &C, body: types::Observation) -> Result<(), Error> {
-        let params = Self::params();
+    fn tx_observe<C: Context>(_ctx: &C, body: types::Observation) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_OBSERVE)?;
 
         // Ensure that the observation was processed by the configured ROFL application.

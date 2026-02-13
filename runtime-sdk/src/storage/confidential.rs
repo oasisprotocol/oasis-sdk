@@ -3,7 +3,6 @@ use std::convert::TryInto as _;
 use anyhow;
 use hmac::{Hmac, Mac as _};
 use sha2::Sha512_256;
-use slog::error;
 use thiserror::Error;
 use zeroize::{Zeroize, Zeroizing};
 
