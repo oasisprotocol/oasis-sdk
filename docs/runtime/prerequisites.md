@@ -73,8 +73,8 @@ present) and output something similar to:
 active toolchain
 ----------------
 
-nightly-2022-08-22-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain')
-rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
+nightly-2025-05-09-x86_64-unknown-linux-gnu (overridden by '/code/rust-toolchain.toml')
+rustc 1.88.0-nightly (50aa04180 2025-05-08)
 ```
 
 <!-- markdownlint-disable line-length -->
@@ -90,19 +90,19 @@ rustc 1.65.0-nightly (c0941dfb5 2022-08-21)
 
 _Required if you want to use the Go Client SDK._
 
-At least version **1.22.5** is required. If your distribution provides a
+At least version **1.25.3** is required. If your distribution provides a
 new-enough version of Go, just use that.
 
 Otherwise:
 
 * install the Go version provided by your distribution,
 * [ensure `$GOPATH/bin` is in your `PATH`],
-* [install the desired version of Go], e.g. 1.22.5, with:
+* [install the desired version of Go], e.g. 1.25.7, with:
 
   ```
-  go get golang.org/dl/go1.22.5
-  go1.22.5 download
-    ```
+  go install golang.org/dl/go1.25.7@latest
+  go1.25.7 download
+  ```
 
 <!-- markdownlint-disable line-length -->
 [Go]: https://golang.org
@@ -116,16 +116,16 @@ The SDK requires utilities provided by [Oasis Core] in order to be able to run
 a local test network for development purposes.
 
 The recommended way is to download a pre-built release (at least version
-24.2) from the [Oasis Core releases] page. After downloading the binary
-release (e.g. into `~/Downloads/oasis_core_24.2_linux_amd64.tar.gz`), unpack
+25.9) from the [Oasis Core releases] page. After downloading the binary
+release (e.g. into `~/Downloads/oasis_core_25.9_linux_amd64.tar.gz`), unpack
 it as follows:
 
 ```bash
 cd ~/Downloads
-tar xf ~/Downloads/oasis_core_24.2_linux_amd64.tar.gz --strip-components=1
+tar xf ~/Downloads/oasis_core_25.9_linux_amd64.tar.gz --strip-components=1
 
 # This environment variable will be used throughout this guide.
-export OASIS_CORE_PATH=~/Downloads/oasis_core_24.2_linux_amd64
+export OASIS_CORE_PATH=~/Downloads/oasis_core_25.9_linux_amd64
 ```
 
 [Oasis Core]: https://github.com/oasisprotocol/oasis-core
