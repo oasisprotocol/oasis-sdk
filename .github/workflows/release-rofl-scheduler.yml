@@ -22,11 +22,11 @@ jobs:
 
       - name: Build rofl-scheduler for Testnet
         working-directory: rofl-scheduler
-        run: ../oasis rofl build --deployment testnet --offline --verify
+        run: oasis rofl build --deployment testnet --offline --verify
 
       - name: Build rofl-scheduler for Mainnet
         working-directory: rofl-scheduler
-        run: ../oasis rofl build --deployment mainnet --offline --verify
+        run: oasis rofl build --deployment mainnet --offline --verify
 
       - name: Publish the release
         uses: ncipollo/release-action@v1
