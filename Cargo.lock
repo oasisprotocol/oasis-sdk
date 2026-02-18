@@ -5089,6 +5089,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rofl-appd-localnet"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "oasis-runtime-sdk",
+ "rofl-app-core",
+ "rofl-appd",
+ "tokio",
+]
+
+[[package]]
 name = "rofl-containers"
 version = "0.0.0"
 dependencies = [

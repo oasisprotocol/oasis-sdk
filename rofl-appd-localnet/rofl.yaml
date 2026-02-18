@@ -1,0 +1,32 @@
+name: rofl-appd-localnet
+version: 0.1.0
+tee: sgx
+kind: raw
+resources:
+  memory: 512
+  cpus: 1
+artifacts:
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
+deployments:
+  localnet:
+    app_id: rofl1qqn9xndja7e2pnxhttktmecvwzz0yqwxsquqyxdf
+    network: testnet
+    paratime: sapphire
+    admin: test:bob
+    debug: true
+    policy:
+      quotes:
+        pcs:
+          tcb_validity_period: 30
+          min_tcb_evaluation_data_number: 18
+      enclaves:
+        - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: 0+tTmlVjUvP0eIHXH7Dld3svPppCUdKDwYxnzplndLdOPdSOjtlloBWDuG9YL6TzIL975QTZJ8zMhMUdWMkR8A==
+      endorsements:
+        - any: {}
+      fees: endorsing_node
+      max_expiration: 3
+tooling:
+  version: 0.18.5
