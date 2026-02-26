@@ -6,13 +6,16 @@ common is [Sapphire][sapphire] which implements all ROFL functionalities.
 [sapphire]: https://github.com/oasisprotocol/docs/blob/main/docs/build/sapphire/network.mdx
 
 Your app will be deployed to a [ROFL node]. This is a light Oasis Node with
-support for TEE and configured Sapphire ParaTime. There are two ways to deploy
-your app:
+support for TEE and configured Sapphire ParaTime. There are several ways to
+deploy your app:
 
 1. The preferred option is to rent a ROFL node using the [ROFL
    marketplace](#deploy-on-rofl-marketplace) and deploy your app
    directly via the [Oasis CLI].
-2. Alternatively, you can copy over the ROFL bundle to your ROFL node manually
+2. For CI/CD pipelines, use the [build-deploy-rofl-action] GitHub Action to
+   automate building, verifying and deploying your app. See the
+   [GitHub Actions](#github-actions) section below.
+3. Alternatively, you can copy over the ROFL bundle to your ROFL node manually
    and configure it. In this case, consult the [ROFL node &rightarrow; Hosting
    the ROFL bundle directly][rofl-node-hosting] section.
 
@@ -124,6 +127,57 @@ the standard or error outputs!
 
 [rofl-marketplace]: ../features/marketplace.mdx
 [oasis-rofl-deploy]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#deploy
+
+## GitHub Actions
+
+The [build-deploy-rofl-action] GitHub Action automates building, verifying and
+deploying ROFL apps from CI/CD pipelines.
+
+### Validate
+
+Catch configuration errors on every push and pull request without running a full
+build:
+
+```yaml
+- uses: oasisprotocol/build-deploy-rofl-action@master
+  with:
+    network: testnet
+    only_validate: true
+```
+
+### Build and Verify
+
+Verify that your build is reproducible and that enclave IDs match the on-chain
+state. The build will fail if there is a mismatch:
+
+```yaml
+- uses: oasisprotocol/build-deploy-rofl-action@master
+  with:
+    network: mainnet
+    skip_update: true
+    skip_deploy: true
+```
+
+### Full Deployment
+
+Build, update the on-chain app configuration and deploy to a ROFL node:
+
+```yaml
+- uses: oasisprotocol/build-deploy-rofl-action@master
+  with:
+    network: mainnet
+    wallet_account: deployer
+    wallet_import: true
+    wallet_secret: ${{ secrets.WALLET_SECRET }}
+    wallet_algorithm: secp256k1-raw
+```
+
+The action also supports [Safe multisig deployments][safe], unsigned transaction
+generation for hardware wallets, and scheduled update checks. See the
+[build-deploy-rofl-action] repository for the full list of options.
+
+[build-deploy-rofl-action]: https://github.com/oasisprotocol/build-deploy-rofl-action
+[safe]: https://safe.oasis.io/
 
 ## Check That the App is Running
 
