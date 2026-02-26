@@ -1199,6 +1199,33 @@ fn test_instance_accept_timeout() {
     assert_eq!(balance, 0);
     let balance = Accounts::get_balance(keys::charlie::address(), Denomination::NATIVE).unwrap();
     assert_eq!(balance, 1_000_000);
+
+    // Instance should be removed.
+    let instances: Vec<types::Instance> = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Instances",
+            types::ProviderQuery {
+                provider: keys::alice::address(),
+            },
+        )
+        .unwrap();
+    assert_eq!(instances.len(), 0, "instance should be removed");
+
+    // Provider should have no instances.
+    let provider: types::Provider = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.Provider",
+            types::ProviderQuery {
+                provider: keys::alice::address(),
+            },
+        )
+        .unwrap();
+    assert_eq!(
+        provider.instances_count, 0,
+        "provider should have no instances"
+    );
 }
 
 #[test]
