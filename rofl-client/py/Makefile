@@ -1,4 +1,4 @@
-.PHONY: help install dev lint format format-check test test-verbose build clean all check
+.PHONY: help install dev lint format format-check test test-verbose build clean all check docs
 
 # Default target
 .DEFAULT_GOAL := help
@@ -104,3 +104,17 @@ typecheck: ## Run type checking with mypy (if installed)
 	else \
 		echo "$(YELLOW)mypy not installed. Run 'uv add --dev mypy' to enable type checking.$(NC)"; \
 	fi
+
+# Documentation
+docs: ## Generate API documentation with Sphinx
+	@rm -rf docs; mkdir docs
+	@cd docs && sphinx-quickstart --quiet --sep --project=oasis-rofl-client --author='Oasis Protocol Foundation' --ext-autodoc --ext-viewcode
+	@sed -i "s/^copyright = .*/copyright = '$$(date +%Y), Oasis Protocol Foundation'/" docs/source/conf.py
+	@pip install furo
+	@sed -i "s/^html_theme = 'alabaster'/html_theme = 'furo'/" docs/source/conf.py
+	@sed -i "s/^extensions = \[/extensions = [\n    'myst_parser',/" docs/source/conf.py
+	@echo "source_suffix = {'.rst': 'restructuredtext', '.md': 'markdown'}" >> docs/source/conf.py
+	@sed -i '/Add your content/,/details/c\\n.. automodule:: oasis_rofl_client\n   :members:\n   :undoc-members:\n   :show-inheritance:\n\n.. include:: ../../README.md\n   :parser: markdown' docs/source/index.rst
+	@echo "\n   modules" >> docs/source/index.rst
+	@sphinx-apidoc -o docs/source/ $$(pip show oasis-rofl-client | grep Location | cut -d' ' -f2)/oasis_rofl_client
+	@$(MAKE) html -C docs
