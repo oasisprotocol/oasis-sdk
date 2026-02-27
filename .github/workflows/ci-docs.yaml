@@ -42,7 +42,8 @@ jobs:
             --package oasis-contract-sdk \
             --package oasis-contract-sdk-types \
             --package oasis-contract-sdk-storage \
-            --package rofl-utils
+            --package rofl-utils \
+            --package oasis-rofl-client
 
       - name: Deploy rust to api-reference branch
         uses: peaceiris/actions-gh-pages@v4
@@ -52,6 +53,42 @@ jobs:
           publish_branch: api-reference
           destination_dir: rust
           commit_message: Deploy rust API reference ${{ github.event.head_commit.message }}
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com
+
+  py-docs:
+    name: py-docs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./rofl-client/py
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install sphinx myst-parser
+
+      - name: Build docs
+        run: |
+          make docs
+
+      - name: Deploy py to api-reference branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: rofl-client/py/docs/build/html
+          publish_branch: api-reference
+          destination_dir: py/rofl-client
+          commit_message: Deploy py API reference ${{ github.event.head_commit.message }}
           user_name: github-actions[bot]
           user_email: 41898282+github-actions[bot]@users.noreply.github.com
 
@@ -89,6 +126,16 @@ jobs:
         working-directory: client-sdk/ts-web/signer-ledger
         run: npx typedoc
 
+      - name: Install ROFL client dependencies
+        working-directory: rofl-client/ts
+        run: npm ci
+
+      - name: Build and generate ROFL client docs
+        working-directory: rofl-client/ts
+        run: |
+          npm run build
+          npx typedoc
+
       - name: Merge docs
         working-directory: client-sdk/ts-web
         run: |
@@ -97,6 +144,7 @@ jobs:
           mv rt/docs/api docs/client-rt
           mv ext-utils/docs/api docs/client-ext-utils
           mv signer-ledger/docs/api docs/client-signer-ledger
+          mv ../../rofl-client/ts/docs/api docs/rofl-client
 
       - name: Deploy js to api-reference branch
         uses: peaceiris/actions-gh-pages@v4
