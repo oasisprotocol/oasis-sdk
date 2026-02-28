@@ -677,7 +677,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(());
         }
 
-        let provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
+        let mut provider = state::get_provider(body.provider).ok_or(Error::ProviderNotFound)?;
         let mut instance =
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
@@ -693,6 +693,14 @@ impl<Cfg: Config> Module<Cfg> {
 
                 // We can also directly remove the instance.
                 state::remove_instance(body.provider, body.id);
+
+                // Update provider metadata.
+                provider.instances_count = provider
+                    .instances_count
+                    .checked_sub(1)
+                    .ok_or(Error::InvalidArgument)?;
+                provider.updated_at = ctx.now();
+                state::set_provider(provider);
 
                 CurrentState::with(|state| {
                     state.emit_event(Event::InstanceRemoved {
