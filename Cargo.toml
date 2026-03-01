@@ -35,6 +35,8 @@ members = [
     "tests/runtimes/components-rofl",
 ]
 exclude = [
+    # Localnet-only ROFL. Conflicts with production TDX flags.
+    "rofl-appd-localnet",
     # Test contracts.
     "tests/contracts",
     # Example contracts and runtimes.

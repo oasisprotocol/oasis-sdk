@@ -1,0 +1,18 @@
+[package]
+name = "rofl-appd-localnet"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Oasis SDK.
+oasis-runtime-sdk = { path = "../runtime-sdk", features = ["debug-mock-sgx"] }
+rofl-app-core = { path = "../rofl-app-core" }
+rofl-appd = { path = "../rofl-appd" }
+
+# Third-party dependencies.
+async-trait = "0.1.77"
+tokio = { version = "1.38", features = ["rt", "rt-multi-thread"] }
+
+[features]
+# Mock SGX in non-SGX builds.
+debug-mock-sgx = []
