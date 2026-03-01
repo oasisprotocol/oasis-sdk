@@ -1,5 +1,4 @@
 //! EVM module.
-#![feature(array_chunks)]
 #![feature(test)]
 
 extern crate substrate_bn as bn;
