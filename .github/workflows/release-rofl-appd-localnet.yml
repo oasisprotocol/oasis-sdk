@@ -1,0 +1,32 @@
+name: release-rofl-appd-localnet
+
+on:
+  push:
+    tags:
+      - "rofl-appd-localnet/v[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-rofl-appd-localnet:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Oasis CLI
+        uses: oasisprotocol/setup-cli-action@0.0.2
+        with:
+          version: '0.18.5'
+
+      - name: Build rofl-appd-localnet for Localnet
+        working-directory: rofl-appd-localnet
+        run: oasis rofl build --deployment localnet --offline
+
+      - name: Publish the release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: rofl-appd-localnet/rofl-appd-localnet.localnet.orc
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifactErrorsFailBuild: true
