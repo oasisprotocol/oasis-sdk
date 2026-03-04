@@ -1,5 +1,7 @@
 # Oasis SDK
 
+debug
+
 [![CI lint status][github-ci-lint-badge]][github-ci-lint-link]
 [![CI audit status][github-ci-audit-badge]][github-ci-audit-link]
 [![CI test status][github-ci-test-badge]][github-ci-test-link]

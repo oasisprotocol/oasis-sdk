@@ -19,19 +19,27 @@ if [ -n "${OASIS_CORE_VERSION:-}" ]; then
             cd "$TESTS_DIR/untracked"
             echo "### Downloading release $OASIS_CORE_VERSION..."
             curl -fLO "https://github.com/oasisprotocol/oasis-core/releases/download/v$OASIS_CORE_VERSION/oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+	    echo "m1"
+	    echo "df"
+	    df -h
             tar -xf "oasis_core_${OASIS_CORE_VERSION}_linux_amd64.tar.gz"
+	    echo "m2"
         )
     fi
     HAVE_RELEASE_PACKAGE=1
 fi
-
+echo "m3"
 if [ -n "$GITHUB_ARTIFACT" ]; then
+    echo "m4"
     if [ ! -x "$TESTS_DIR/untracked/github-$GITHUB_ARTIFACT/oasis_core_${GITHUB_ARTIFACT_VERSION}_linux_amd64/oasis-node" ]; then
+	echo "m5"
         # Authentication is required to download the artifacts, although those are public.
         if [ -z "${GITHUB_TOKEN-}" ]; then
+    	    echo "m7"
             echo "Need GitHub artifact, but GITHUB_TOKEN environment variable is not set."
             exit 1
         fi
+	echo "m8"
         (
             cd "$TESTS_DIR/untracked"
             echo "### Downloading GitHub artifact $GITHUB_ARTIFACT..."
@@ -44,7 +52,7 @@ if [ -n "$GITHUB_ARTIFACT" ]; then
     fi
     HAVE_RELEASE_PACKAGE=1
 fi
-
+echo "m9"
 if [ -n "$BUILD_NUMBER" ]; then
     ORGANIZATION=oasisprotocol
     PIPELINE=oasis-core-ci
@@ -90,7 +98,10 @@ if [ -n "$BUILD_NUMBER" ]; then
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
             KEY_MANAGER_RUNTIME_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build runtimes") | .id')
+	    echo "m100"
+	    echo "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts"
             KEY_MANAGER_RUNTIME_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts")
+	    echo "m101"
             SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.mocksgx") | .url')
             SIMPLE_KEYMANAGER_SGXS_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.sgxs") | .url')
 
