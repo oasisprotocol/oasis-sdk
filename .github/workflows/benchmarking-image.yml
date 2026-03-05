@@ -57,6 +57,8 @@ jobs:
       - name: Build benchmarks
         working-directory: tests/benchmark
         run: ./build-benchmarks.sh
+        env:
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       # Build and push benchmarks docker image.
       - name: Set up Docker Buildx

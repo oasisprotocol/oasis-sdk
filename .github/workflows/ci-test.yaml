@@ -276,6 +276,7 @@ jobs:
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       - name: "testnet: Start"
         working-directory: client-sdk/ts-web/core/playground
@@ -398,6 +399,7 @@ jobs:
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       - name: "testnet: Build runtime"
         working-directory: client-sdk/ts-web/rt/playground
@@ -467,9 +469,12 @@ jobs:
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       - name: Run end-to-end tests
         run: ./tests/run-e2e.sh
+        env:
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       - name: Upload logs
         if: failure()
@@ -618,6 +623,8 @@ jobs:
       - name: Run end-to-end benchmarks
         working-directory: tests/benchmark
         run: ./run-benchmarks.sh
+        env:
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
   test-python-rofl-client:
     name: test-python-rofl-client
