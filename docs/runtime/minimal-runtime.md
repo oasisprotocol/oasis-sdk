@@ -137,11 +137,11 @@ following:
 
 <!-- markdownlint-disable line-length -->
 ```
-    Finished dev [unoptimized + debuginfo] target(s) in 0.08s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
      Running `target/debug/minimal-runtime`
-{"msg":"Runtime is starting","level":"INFO","ts":"2021-06-09T10:35:10.913154095+02:00","module":"runtime"}
-{"msg":"Establishing connection with the worker host","level":"INFO","ts":"2021-06-09T10:35:10.913654559+02:00","module":"runtime"}
-{"msg":"Failed to connect with the worker host","level":"ERRO","ts":"2021-06-09T10:35:10.913723541+02:00","module":"runtime","err":"Invalid argument (os error 22)"}
+{"msg":"Runtime is starting","level":"INFO","ts":"2025-06-09T10:35:10.913154095+02:00","module":"runtime"}
+{"msg":"Establishing connection with the worker host","level":"INFO","ts":"2025-06-09T10:35:10.913654559+02:00","module":"runtime"}
+{"msg":"Failed to connect with the worker host","level":"ERRO","ts":"2025-06-09T10:35:10.913723541+02:00","module":"runtime","err":"Invalid argument (os error 22)"}
 ```
 <!-- markdownlint-enable line-length -->
 
@@ -172,7 +172,7 @@ displayed:
 
 <!-- markdownlint-disable line-length -->
 ```
-level=info module=net-runner caller=root.go:152 ts=2021-06-14T08:42:47.219513806Z msg="client node socket available" path=/tmp/minimal-runtime-test/net-runner/network/client-0/internal.sock
+level=info ts=2025-06-14T08:42:47.219513806Z caller=root.go:156 module=net-runner msg="client node socket available" path=/tmp/minimal-runtime-test/net-runner/network/client-0/internal.sock
 ```
 <!-- markdownlint-enable line-length -->
 
@@ -204,19 +204,21 @@ is ready:
 oasis network status --network localhost
 ```
 
-If everything is working correctly, you should see the `"status": "ready"`
-under the runtime's `"committee"` field after a while and an increasing
-`"latest_round"` value:
+If everything is working correctly, you should see `Status: ready` and an
+increasing `Latest round` value under the ParaTimes section after a while:
 
 ```
-      "committee": {
-        "status": "ready",
-        "active_version": {
-          "minor": 1
-        },
-        "latest_round": 19,
-        "latest_height": 302,
-        "executor_roles": null,
+==== ParaTimes ====
+minimal (8000000000000000000000000000000000000000000000000000000000000000):
+  Kind:                 compute
+  Is confidential:      false
+  Status:               ready
+  Latest round:         19 (2025-06-14 08:43:02 +0000 UTC)
+  Last finalized round: 19
+  Storage status:       ready
+  Active version:       0.1.0
+  Available version(s): 0.1.0
+  Number of peers:      3
 ```
 
 :::info
@@ -252,18 +254,21 @@ oasis account show test:alice --network localhost
 ```
 
 ```
-Address: oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve
-Nonce: 0
+Name:             test:alice
+Native address:   oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve
 
 === CONSENSUS LAYER (localhost) ===
+  Nonce: 0
+
   Total: 0.0 TEST
   Available: 0.0 TEST
 
-
-
 === minimal PARATIME ===
-Balances for all denominations:
-  1.0 TEST
+  Nonce: 0
+
+  Balances for all denominations:
+  - Amount: 1.0
+    Symbol: TEST
 ```
 
 Sending some TEST in your runtime should also work. Let's send 0.1 TEST to
@@ -275,38 +280,24 @@ oasis account transfer 0.1 test:bob --network localhost --account test:alice
 
 ```
 Unlock your account.
-? Passphrase: 
+? Passphrase:
 You are about to sign the following transaction:
-{
-  "v": 1,
-  "call": {
-    "method": "accounts.Transfer",
-    "body": "omJ0b1UAyND0Wds45cwxynfmbSxEVty+tQJmYW1vdW50gkQF9eEAQA=="
-  },
-  "ai": {
-    "si": [
-      {
-        "address_spec": {
-          "signature": {
-            "ed25519": "NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE="
-          }
-        },
-        "nonce": 0
-      }
-    ],
-    "fee": {
-      "amount": {
-        "Amount": "0",
-        "Denomination": ""
-      },
-      "gas": 100
-    }
-  }
-}
+Format: plain
+Method: accounts.Transfer
+Body:
+  To: test:bob (oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx)
+  Amount: 0.1 TEST
+Authorized signer(s):
+  1. NcPzNW3YU2T+ugNUtUWtoQnRvbOL9dYSaBfbjHLP1pE= (ed25519)
+     Nonce: 0
+Fee:
+  Amount: 0.0 TEST
+  Gas limit: 100
+  (gas price: 0.0 TEST per gas unit)
 
-Account:  test:alice
 Network:  localhost (localhost)
-Paratime: minimal (minimal)
+ParaTime: minimal (minimal)
+Account:  test:alice
 ? Sign this transaction? Yes
 (In case you are using a hardware-based signer you may need to confirm on device.)
 Broadcasting transaction...
@@ -371,16 +362,16 @@ The output should be something like the following:
 
 <!-- markdownlint-disable line-length -->
 ```
-level=info ts=2022-06-28T14:08:02.834961397Z caller=test.go:81 module=minimal-runtime-client msg="connecting to local node"
-level=info ts=2022-06-28T14:08:02.836059713Z caller=test.go:103 module=minimal-runtime-client msg="dumping initial balances"
+level=info ts=2025-06-28T14:08:02.834961397Z caller=test.go:76 module=minimal-runtime-client msg="connecting to local node"
+level=info ts=2025-06-28T14:08:02.836059713Z caller=test.go:96 module=minimal-runtime-client msg="dumping initial balances"
 === Balances for oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve ===
 <native>: 1000000000
 
 === Balances for oasis1qrydpazemvuwtnp3efm7vmfvg3tde044qg6cxwzx ===
 <native>: 2000000000
 
-level=info ts=2022-06-28T14:08:02.864348758Z caller=test.go:117 module=minimal-runtime-client msg="performing transfer" nonce=0
-level=info ts=2022-06-28T14:08:18.515842571Z caller=test.go:146 module=minimal-runtime-client msg="dumping final balances"
+level=info ts=2025-06-28T14:08:02.864348758Z caller=test.go:111 module=minimal-runtime-client msg="performing transfer" nonce=0
+level=info ts=2025-06-28T14:08:18.515842571Z caller=test.go:134 module=minimal-runtime-client msg="dumping final balances"
 === Balances for oasis1qrec770vrek0a9a5lcrv0zvt22504k68svq7kzve ===
 <native>: 999999990
 
