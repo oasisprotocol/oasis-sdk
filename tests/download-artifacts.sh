@@ -51,11 +51,19 @@ if [ -n "$BUILD_NUMBER" ]; then
 
     type jq >/dev/null
 
+    if [ -z "${BUILDKITE_API_TOKEN-}" ]; then
+        echo "Need Buildkite artifacts, but BUILDKITE_API_TOKEN environment variable is not set."
+        exit 1
+    fi
+
+    BUILDKITE_API_BASE="https://api.buildkite.com/v2/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER"
+    BK_AUTH=(-H "Authorization: Bearer $BUILDKITE_API_TOKEN")
+
     if [ ! -e "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER/$BUILD_NUMBER.json" ]; then
         mkdir -p "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
-            curl -sfO "https://buildkite.com/$ORGANIZATION/$PIPELINE/builds/$BUILD_NUMBER.json"
+            curl -sf "${BK_AUTH[@]}" "$BUILDKITE_API_BASE" -o "$BUILD_NUMBER.json"
         )
     fi
 
@@ -64,22 +72,22 @@ if [ -n "$BUILD_NUMBER" ]; then
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
             NODE_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build Go") | .id')
-            NODE_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$NODE_JOB_ID/artifacts")
-            OASIS_NODE_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-node") | .url')
-            OASIS_NET_RUNNER_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-net-runner") | .url')
+            NODE_ARTIFACTS_JSON=$(curl -sf "${BK_AUTH[@]}" "$BUILDKITE_API_BASE/jobs/$NODE_JOB_ID/artifacts")
+            OASIS_NODE_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-node") | .download_url')
+            OASIS_NET_RUNNER_URL=$(printf '%s' "$NODE_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-net-runner") | .download_url')
 
             RUNTIME_LOADER_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build Rust runtime loader") | .id')
-            RUNTIME_LOADER_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$RUNTIME_LOADER_JOB_ID/artifacts")
-            OASIS_CORE_RUNTIME_LOADER_URL=$(printf '%s' "$RUNTIME_LOADER_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-core-runtime-loader") | .url')
+            RUNTIME_LOADER_ARTIFACTS_JSON=$(curl -sf "${BK_AUTH[@]}" "$BUILDKITE_API_BASE/jobs/$RUNTIME_LOADER_JOB_ID/artifacts")
+            OASIS_CORE_RUNTIME_LOADER_URL=$(printf '%s' "$RUNTIME_LOADER_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "oasis-core-runtime-loader") | .download_url')
 
             echo "### Downloading oasis-node from Buildkite build $BUILD_NUMBER..."
-            curl -fLo oasis-node "https://buildkite.com$OASIS_NODE_URL"
+            curl -fLo oasis-node "${BK_AUTH[@]}" "$OASIS_NODE_URL"
             chmod +x oasis-node
             echo "### Downloading oasis-net-runner from Buildkite build $BUILD_NUMBER..."
-            curl -fLo oasis-net-runner "https://buildkite.com$OASIS_NET_RUNNER_URL"
+            curl -fLo oasis-net-runner "${BK_AUTH[@]}" "$OASIS_NET_RUNNER_URL"
             chmod +x oasis-net-runner
             echo "### Downloading oasis-runtime-loader from Buildkite build $BUILD_NUMBER..."
-            curl -fLo oasis-runtime-loader "https://buildkite.com$OASIS_CORE_RUNTIME_LOADER_URL"
+            curl -fLo oasis-runtime-loader "${BK_AUTH[@]}" "$OASIS_CORE_RUNTIME_LOADER_URL"
             chmod +x oasis-runtime-loader
         )
 
@@ -90,14 +98,14 @@ if [ -n "$BUILD_NUMBER" ]; then
         (
             cd "$TESTS_DIR/untracked/buildkite-$BUILD_NUMBER"
             KEY_MANAGER_RUNTIME_JOB_ID=$(jq <"$BUILD_NUMBER.json" -r '.jobs[] | select(.name == "Build runtimes") | .id')
-            KEY_MANAGER_RUNTIME_ARTIFACTS_JSON=$(curl -sf "https://buildkite.com/organizations/$ORGANIZATION/pipelines/$PIPELINE/builds/$BUILD_NUMBER/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts")
-            SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.mocksgx") | .url')
-            SIMPLE_KEYMANAGER_SGXS_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.sgxs") | .url')
+            KEY_MANAGER_RUNTIME_ARTIFACTS_JSON=$(curl -sf "${BK_AUTH[@]}" "$BUILDKITE_API_BASE/jobs/$KEY_MANAGER_RUNTIME_JOB_ID/artifacts")
+            SIMPLE_KEYMANAGER_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.mocksgx") | .download_url')
+            SIMPLE_KEYMANAGER_SGXS_URL=$(printf '%s' "$KEY_MANAGER_RUNTIME_ARTIFACTS_JSON" | jq -r '.[] | select(.path == "simple-keymanager.sgxs") | .download_url')
 
             echo "### Downloading simple-keymanager from Buildkite build $BUILD_NUMBER..."
-            curl -fLo simple-keymanager "https://buildkite.com$SIMPLE_KEYMANAGER_URL"
+            curl -fLo simple-keymanager "${BK_AUTH[@]}" "$SIMPLE_KEYMANAGER_URL"
             chmod +x simple-keymanager
-            curl -fLo simple-keymanager.sgxs "https://buildkite.com$SIMPLE_KEYMANAGER_SGXS_URL"
+            curl -fLo simple-keymanager.sgxs "${BK_AUTH[@]}" "$SIMPLE_KEYMANAGER_SGXS_URL"
         )
     fi
 fi

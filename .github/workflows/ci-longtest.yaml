@@ -34,6 +34,7 @@ jobs:
         run: ./download-artifacts.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
 
       - name: Run long end-to-end tests
         run: |
@@ -41,3 +42,5 @@ jobs:
             --e2e/test-runtime-simple-keyvalue.txgen.coins_per_acct=100000 \
             --e2e/test-runtime-simple-keyvalue.txgen.num_accounts=100 \
             --e2e/test-runtime-simple-keyvalue.txgen.duration=15m
+        env:
+          BUILDKITE_API_TOKEN: ${{ secrets.BUILDKITE_API_TOKEN }}
