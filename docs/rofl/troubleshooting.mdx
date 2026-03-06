@@ -35,7 +35,7 @@ rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
 
 ### Environment variables defined are not considered
 
-Due to an upstream [`podman-compose` bug][podman-compose-env-var-bug] assigning
+Due to an upstream [`podman compose` bug][podman-compose-env-var-bug] assigning
 environment variables inside the compose file and using it directly in the
 commands afterwards do not work:
 
@@ -62,7 +62,7 @@ services:
 
 ### `depends_on` is ignored
 
-Due to an upstream [`podman-compose` bug][podman-compose-depends-on-bug] waiting
+Due to an upstream [`podman compose` bug][podman-compose-depends-on-bug] waiting
 for containers to spin up in the correct order with `depends_on` directive
 doesn't work. For example, this `oracle` should spin up once the `contracts`
 service successfully deploys the contracts and finishes:
