@@ -1,0 +1,37 @@
+oasis\_rofl\_client package
+===========================
+
+Submodules
+----------
+
+oasis\_rofl\_client.async\_rofl\_client module
+----------------------------------------------
+
+.. automodule:: oasis_rofl_client.async_rofl_client
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+oasis\_rofl\_client.common module
+---------------------------------
+
+.. automodule:: oasis_rofl_client.common
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+oasis\_rofl\_client.rofl\_client module
+---------------------------------------
+
+.. automodule:: oasis_rofl_client.rofl_client
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
+Module contents
+---------------
+
+.. automodule:: oasis_rofl_client
+   :members:
+   :show-inheritance:
+   :undoc-members:
