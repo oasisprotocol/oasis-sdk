@@ -640,7 +640,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     #[handler(call = "contracts.ChangeUpgradePolicy")]
     pub fn tx_change_upgrade_policy<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         body: types::ChangeUpgradePolicy,
     ) -> Result<(), Error> {
         let params = Self::params();
