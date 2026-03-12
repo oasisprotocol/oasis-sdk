@@ -1,21 +1,22 @@
 //! Implements sha512_256 precompile.
 use evm::{
-    executor::stack::{PrecompileHandle, PrecompileOutput},
-    ExitSucceed,
+    interpreter::{ExitError, ExitSucceed},
+    GasMutState,
 };
 
-use super::{record_linear_cost, PrecompileResult};
+use super::record_linear_cost;
 
 macro_rules! make_hasher {
     ($name:ident, $hasher:ident) => {
-        pub(super) fn $name(handle: &mut impl PrecompileHandle) -> PrecompileResult {
+        pub(super) fn $name<G: GasMutState>(
+            input: &[u8],
+            gasometer: &mut G,
+        ) -> Result<(ExitSucceed, Vec<u8>), ExitError> {
             // Costs were computed by benchmarking and comparing to SHA256 and using the SHA256 costs (defined by EVM spec).
             // See benches/criterion_benchmark.rs for the benchmarks.
-            record_linear_cost(handle, handle.input().len() as u64, 115, 13)?;
-            Ok(PrecompileOutput {
-                exit_status: ExitSucceed::Returned,
-                output: <sha2::$hasher as sha2::Digest>::digest(handle.input()).to_vec(),
-            })
+            record_linear_cost(gasometer, input.len() as u64, 115, 13)?;
+            let output = <sha2::$hasher as sha2::Digest>::digest(input).to_vec();
+            Ok((ExitSucceed::Returned, output))
         }
     };
 }
@@ -40,11 +41,10 @@ mod test {
                         1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, $ix,
                     ]),
                     &input_bytes,
-                    3000,
-                )
-                .unwrap();
+                    30_000,
+                ).unwrap();
                 assert_eq!(
-                    hex::encode(ret.unwrap().output),
+                    hex::encode(ret),
                     hex::encode(<sha2::$hasher as sha2::Digest>::digest(&input_bytes)),
                 );
             }

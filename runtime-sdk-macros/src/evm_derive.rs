@@ -100,7 +100,7 @@ fn get_method(f: &ImplItemFn) -> Option<(Signature, EvmMethod, TokenStream)> {
             },
         }
     }
-    if signature.convert && signature.args.len() != f.sig.inputs.len() - 1 {
+    if signature.convert && signature.args.len() != f.sig.inputs.len() - 2 {
         signature
             .name
             .span()
@@ -136,9 +136,7 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
                 arg_decls.push(quote! {
                     let #temp_name = decoded_args.#field_index.clone();
                     if *#temp_name.high() != 0 {
-                        return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
-                            exit_status: ::evm::ExitError::Other("integer overflow".into()),
-                        }));
+                        return Err(::evm::interpreter::ExitError::Exception(::evm::interpreter::ExitException::Other("integer overflow".into())).into());
                     }
                     let #arg_name = #temp_name.as_u128();
                 });
@@ -163,14 +161,12 @@ fn generate_method_call(attr: &EvmMethod, sig: &Signature) -> Option<TokenStream
     };
 
     Some(quote! { {
-        let decoded_args: #decode_type = match ::solabi::decode(&handle.input()[#SELECTOR_LENGTH..]) {
-            Err(e) => return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
-                exit_status: ::evm::ExitError::Other("invalid argument".into()),
-            })),
+        let decoded_args: #decode_type = match ::solabi::decode(&input[#SELECTOR_LENGTH..]) {
+            Err(e) => return Err(::evm::interpreter::ExitError::Exception(::evm::interpreter::ExitException::Other("invalid argument".into())).into()),
             Ok(tokens) => tokens,
         };
         #(#arg_decls)*
-        Some(Self::#method_name(handle, #(#call_args),*))
+        Self::#method_name(gasometer, handler, #(#call_args),*)
     } })
 }
 
@@ -213,15 +209,27 @@ pub fn derive_evm_contract(input: ItemImpl) -> TokenStream {
             } else {
                 let method_name = sig.name.clone();
                 quote! {
-                    &[#keccak] => Some(Self::#method_name(handle, #SELECTOR_LENGTH)),
+                    &[#keccak] => Self::#method_name(gasometer, handler, #SELECTOR_LENGTH),
                 }
             }
         })
         .collect();
 
-    let impl_generics = &input.generics;
+    let (impl_generics, _, _) = input.generics.split_for_impl();
+
+    // Add custom G and H type parameters for use in the PrecompileSet impl.
+    let mut extended_generics = input.generics.clone();
+    extended_generics.params.push(
+        syn::parse_quote!(G: AsRef<::evm::interpreter::runtime::RuntimeState> + ::evm::GasMutState),
+    );
+    extended_generics
+        .params
+        .push(syn::parse_quote!(H: ::evm::interpreter::runtime::RuntimeBackend));
+    let (impl_generics_gh, _, _) = extended_generics.split_for_impl();
+
     let self_ty = input.self_ty.clone();
     let evm_crate = evm_crate_path();
+
     quote! {
         #input
 
@@ -231,62 +239,48 @@ pub fn derive_evm_contract(input: ItemImpl) -> TokenStream {
                 Self::#address_fn()
             }
 
-            fn dispatch_call(
-                handle: &mut impl ::evm::executor::stack::PrecompileHandle,
-            ) -> Option<Result<::evm::executor::stack::PrecompileOutput, ::evm::executor::stack::PrecompileFailure>> {
-                if handle.context().address != handle.code_address() {
-                    return Some(Err(::evm::executor::stack::PrecompileFailure::Error {
-                        exit_status: ::evm::ExitError::Other("invalid call".into()),
-                    }));
-                }
-                let selector = match handle.input().get(..#SELECTOR_LENGTH) {
+            fn dispatch_call<G, H>(
+                input: &[u8],
+                gasometer: &mut G,
+                handler: &mut H,
+            ) -> #evm_crate::precompile::PrecompileResult
+            where
+                G: AsRef<::evm::interpreter::runtime::RuntimeState> + ::evm::GasMutState,
+                H: ::evm::interpreter::runtime::RuntimeBackend,
+            {
+                let selector = match input.get(..#SELECTOR_LENGTH) {
                     Some(slice) => slice,
-                    None => return Some(Err(::evm::executor::stack::PrecompileFailure::Revert {
-                        exit_status: ::evm::ExitRevert::Reverted,
-                        output: vec![],
-                    })),
+                    None => return Err(::evm::interpreter::ExitError::Reverted.into()),
                 };
                 match selector {
                     #(#method_arms)*
-                    _ => Some(Err(::evm::executor::stack::PrecompileFailure::Revert {
-                        exit_status: ::evm::ExitRevert::Reverted,
-                        output: vec![],
-                    })),
+                    _ => Err(::evm::interpreter::ExitError::Reverted.into()),
                 }
             }
         }
 
         #[automatically_derived]
-        impl #impl_generics ::evm::executor::stack::PrecompileSet for #self_ty {
-            fn execute(&self, handle: &mut impl ::evm::executor::stack::PrecompileHandle) -> Option<Result<::evm::executor::stack::PrecompileOutput, ::evm::executor::stack::PrecompileFailure>> {
-                match self.is_precompile(handle.code_address(), handle.remaining_gas()) {
-                    ::evm::executor::stack::IsPrecompileResult::Answer {
-                        is_precompile: true,
-                        extra_cost,
-                    } => {
-                        if let Err(e) = handle.record_cost(extra_cost) {
-                            return Some(Err(e.into()));
-                        }
-                    }
-                    ::evm::executor::stack::IsPrecompileResult::OutOfGas => {
-                        return Some(Err(::evm::ExitError::OutOfGas.into()));
-                    }
-                    _ => {
-                        return None;
-                    }
+        impl #impl_generics_gh ::evm::standard::PrecompileSet<G, H> for #self_ty {
+            fn execute(
+                &self,
+                code_address: H160,
+                input: &[u8],
+                gasometer: &mut G,
+                handler: &mut H,
+            ) -> Option<(::evm::interpreter::ExitResult, Vec<u8>)> {
+                if code_address != Self::address() {
+                    return None;
                 }
 
-                <Self as #evm_crate::precompile::contract::StaticContract>::dispatch_call(handle)
-            }
+                let result = <Self as #evm_crate::precompile::contract::StaticContract>::dispatch_call(
+                    input,
+                    gasometer,
+                    handler,
+                );
 
-            fn is_precompile(
-                &self,
-                address: ::primitive_types::H160,
-                _remaining_gas: u64,
-            ) -> ::evm::executor::stack::IsPrecompileResult {
-                ::evm::executor::stack::IsPrecompileResult::Answer {
-                    is_precompile: Self::address() == address,
-                    extra_cost: 0,
+                match result {
+                    Ok(success) => Some((success.status.into(), success.output)),
+                    Err(err) => Some((err.error.into(), err.output)),
                 }
             }
         }
@@ -372,14 +366,26 @@ pub fn derive_evm_event(input: DeriveInput) -> TokenStream {
         #[automatically_derived]
         #[allow(clippy::cloned_ref_to_slice_refs)]
         impl #evm_crate::precompile::contract::EvmEvent for #event_ty {
-            fn emit<C: #evm_crate::precompile::contract::StaticContract>(&self, handle: &mut impl ::evm::executor::stack::PrecompileHandle) -> Result<(), ::evm::ExitError> {
+            fn emit<C, H>(
+                &self,
+                handler: &mut H,
+            ) -> Result<(), #evm_crate::precompile::PrecompileError>
+            where
+                C: #evm_crate::precompile::contract::StaticContract,
+                H: ::evm::interpreter::runtime::RuntimeBackend,
+            {
                 let address = C::address();
                 let topics = vec![
                     ::primitive_types::H256::from_slice(&[#(#signature_tokens ,)*]),
                     #(#topics ,)*
                 ];
                 let data = #data_tokens;
-                handle.log(address, topics, data)
+                handler.log(::evm::interpreter::runtime::Log {
+                    address,
+                    topics,
+                    data,
+                })?;
+                Ok(())
             }
         }
     }
@@ -404,6 +410,8 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
         Ok(error) => error,
         Err(e) => return e.write_errors(),
     };
+
+    let evm_crate = evm_crate_path();
 
     let mut variant_encoders: Vec<TokenStream> = Vec::new();
     for variant in error.data.as_ref().take_enum().unwrap().iter() {
@@ -458,21 +466,20 @@ pub fn derive_evm_error(input: DeriveInput) -> TokenStream {
                 let mut output = Vec::new();
                 output.extend(&[#(#hash_bytes,)*]);
                 #encode_expr
-                ::evm::executor::stack::PrecompileFailure::Revert {
-                    exit_status: ::evm::ExitRevert::Reverted,
+                #evm_crate::precompile::PrecompileError::new(
+                    ::evm::interpreter::ExitError::Reverted,
                     output,
-                }
+                )
             }
         });
     }
 
-    let evm_crate = evm_crate_path();
     let error_ty = &error.ident;
 
     quote! {
         #[automatically_derived]
         impl #evm_crate::precompile::contract::EvmError for #error_ty {
-            fn encode(&self) -> ::evm::executor::stack::PrecompileFailure {
+            fn encode(&self) -> #evm_crate::precompile::PrecompileError {
                 match self {
                     #(#variant_encoders)*
                 }

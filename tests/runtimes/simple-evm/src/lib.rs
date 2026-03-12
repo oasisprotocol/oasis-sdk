@@ -12,11 +12,11 @@ pub struct Runtime;
 /// Runtime configuration.
 pub struct Config;
 
-impl modules::core::Config for Config {}
+impl modules::core::Config for Config {
+    const DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = 25;
+}
 
 impl evm::Config for Config {
-    type AdditionalPrecompileSet = ();
-
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;

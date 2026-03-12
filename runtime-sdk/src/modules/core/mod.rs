@@ -745,11 +745,28 @@ impl<Cfg: Config> Module<Cfg> {
 
         // Count iterations, and remember if fast path was tried.
         let (mut iters, mut fast_path_tried) = (0, false);
-        // The following two variables are used to control the special case where a transaction fails
+        // The following variables are used to control the special case where a transaction fails
         // and we check if the error is due to out-of-gas by re-simulating the transaction with maximum
         // gas limit. This is needed due to EVM transactions failing with a "reverted" error when
         // not having enough gas for EIP-150 (and not with "out-of-gas").
+        //
+        // `max_gas_failure` records the (module, code, message) of the failure observed at the
+        // maximum gas limit. If the transaction fails with a *different* error at a lower gas
+        // limit, that means the lower limit was insufficient to reach the expected failure path —
+        // typically because EIP-150's 63/64 rule starved a nested call into running out of gas
+        // before the outer call could reach the real failure site. In that case the binary search
+        // must continue (lo = mid) rather than exiting early. When the failure at mid gas matches
+        // the max-gas failure, the gas is sufficient for the expected failure path and the binary
+        // search tries lower gas.
+        //
+        // The message is included in the comparison in addition to (module, code) because two
+        // distinct failure modes can share the same code. For example, an outer call that runs out
+        // of gas before reaching a nested call produces ExecutionFailed("out of gas") (code 2),
+        // while a nested call blocked by backend.apply() produces ExecutionFailed("SELFDESTRUCT
+        // not supported") (also code 2). Without the message the binary search cannot distinguish
+        // between these and would converge to the wrong (lower) gas boundary.
         let (mut has_succeeded, mut tried_with_max_gas) = (false, false);
+        let mut max_gas_failure: Option<(String, u32, String)> = None;
         while (lo + 1 < hi) && iters < bs_max_iters {
             iters += 1;
 
@@ -794,34 +811,83 @@ impl<Cfg: Config> Module<Cfg> {
                     // Estimate failed due to insufficient gas limit. Try with higher gas.
                     lo = mid
                 }
-                r @ Err(_) => {
-                    let mut res = r;
+                Err(Error::TxSimulationFailed(mid_failure)) => {
+                    // Non-gas, non-out-of-gas failure at `mid` gas. Extract the full identity of
+                    // this failure (module, code, message) so we can compare it with the max-gas
+                    // failure without holding a borrow across the subsequent simulate() call.
+                    let mid_module = mid_failure.module_name().to_string();
+                    let mid_code = mid_failure.code();
+                    let mid_message = mid_failure.to_string();
+
+                    // Ensure we know what the expected failure looks like at max gas.
                     if !tried_with_max_gas {
                         tried_with_max_gas = true;
-                        // Transaction failed and simulation with max gas was not yet tried.
-                        // Try simulating with maximum gas once:
-                        //  - if fails, the transaction will always fail, stop the binary search.
-                        //  - if succeeds, remember that transaction is failing due to insufficient gas
-                        //    and continue the search.
-                        res = simulate(&args.tx, cap, true)
+                        match simulate(&args.tx, cap, true) {
+                            Ok(_) => {
+                                // Transaction can succeed with more gas.
+                                has_succeeded = true;
+                                lo = mid;
+                                continue;
+                            }
+                            err if propagate_failures => return err,
+                            Err(Error::TxSimulationFailed(cap_failure)) => {
+                                max_gas_failure = Some((
+                                    cap_failure.module_name().to_string(),
+                                    cap_failure.code(),
+                                    cap_failure.to_string(),
+                                ));
+                            }
+                            _ => break,
+                        }
                     }
-                    match res {
-                        Ok(_) => {
-                            has_succeeded = true;
-                            // Transaction can succeed. Try with higher gas.
-                            lo = mid
+
+                    if let Some((ref exp_module, exp_code, ref exp_message)) = max_gas_failure {
+                        if mid_module == *exp_module
+                            && mid_code == exp_code
+                            && mid_message == *exp_message
+                        {
+                            // Same failure as at max gas: `mid` gas is sufficient to reach the
+                            // expected failure path. Try lower gas to find the minimum. This is
+                            // necessary because the raw EVM gas-used figure (from a simulation with
+                            // a large gas limit) does not account for EIP-150's 63/64 forwarding
+                            // overhead on nested CALLs — using it directly as the gas limit would
+                            // starve inner calls and produce a different failure (e.g. Reverted
+                            // instead of ExecutionFailed). Converging hi downward ensures the
+                            // returned estimate is the true minimum gas at which the expected
+                            // failure is reachable.
+                            hi = mid;
+                        } else {
+                            // Different failure from max gas: `mid` gas is insufficient to reach
+                            // the expected failure path. This is typically caused by EIP-150's
+                            // 63/64 rule starving a nested call of gas (the outer call then sees
+                            // a different revert instead of the real failure). Increase gas and
+                            // continue the binary search.
+                            lo = mid;
                         }
-                        err if propagate_failures => {
-                            // Estimate failed (not with out-of-gas) and caller wants error propagation -> early exit and return the error.
-                            return err;
+                    } else {
+                        // Max-gas simulation did not produce a TxSimulationFailed result
+                        // (e.g. it returned a fatal/other error). Nothing to compare against;
+                        // exit the loop and fall back to the max-gas estimate.
+                        break;
+                    }
+                }
+                r @ Err(_) => {
+                    // Non-TxSimulationFailed error (e.g. fatal runtime error).
+                    if !tried_with_max_gas {
+                        tried_with_max_gas = true;
+                        match simulate(&args.tx, cap, true) {
+                            Ok(_) => {
+                                has_succeeded = true;
+                                lo = mid;
+                            }
+                            err if propagate_failures => return err,
+                            _ => break,
                         }
-                        _ => {
-                            // Estimate failed (not with out-of-gas) but caller wants to know the gas usage.
-                            // Exit loop and do one final estimate without error propagation.
-                            // NOTE: don't continue the binary search for failing transactions as the convergence
-                            // for these could take somewhat long and the estimate with default max gas is likely good.
-                            break;
+                    } else {
+                        if propagate_failures {
+                            return r;
                         }
+                        break;
                     }
                 }
             }

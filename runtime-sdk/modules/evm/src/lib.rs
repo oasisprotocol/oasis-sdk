@@ -5,8 +5,8 @@
 
 extern crate substrate_bn as bn;
 
-pub mod backend;
 pub mod derive_caller;
+pub mod engine;
 pub mod precompile;
 pub mod raw_tx;
 mod signed_call;
@@ -16,12 +16,9 @@ pub mod types;
 use std::collections::HashSet;
 
 use base64::prelude::*;
-use evm::{
-    executor::stack::{StackExecutor, StackSubstateMetadata},
-    Config as EVMConfig,
-};
+use evm::interpreter::ExitError;
 use hex::FromHex;
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
 use thiserror::Error;
 
 use oasis_runtime_sdk::{
@@ -45,7 +42,7 @@ use oasis_runtime_sdk::{
 
 use types::{H160, H256, U256};
 
-use crate as oasis_runtime_sdk_evm;
+use crate::{self as oasis_runtime_sdk_evm, precompile::Precompiles};
 
 #[cfg(any(test, feature = "test"))]
 pub mod mock;
@@ -57,10 +54,6 @@ const MODULE_NAME: &str = "evm";
 
 /// Module configuration.
 pub trait Config: 'static {
-    /// AdditionalPrecompileSet is the type used for the additional precompiles.
-    /// Use `()` if unused.
-    type AdditionalPrecompileSet: evm::executor::stack::PrecompileSet;
-
     /// The chain ID to supply when a contract requests it. Ethereum-format transactions must use
     /// this chain ID.
     const CHAIN_ID: u64;
@@ -77,6 +70,9 @@ pub trait Config: 'static {
     /// Maximum result size in bytes.
     const MAX_RESULT_SIZE: usize = 1024;
 
+    /// EVM config.
+    const EVM_CONFIG: evm::standard::Config = evm::standard::Config::cancun();
+
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
         Address::new(
@@ -91,34 +87,14 @@ pub trait Config: 'static {
     /// If any of the precompile addresses returned is the same as for one of
     /// the builtin precompiles, then the returned implementation will
     /// overwrite the builtin implementation.
-    fn additional_precompiles() -> Option<Self::AdditionalPrecompileSet> {
-        None
-    }
-
-    /// Returns the config used by the EVM (in the hardfork sense).
-    // In some cases, the config may be runtime config dependent (e.g., constant
-    // timeness when confidential), so this is made part of the trait.
-    fn evm_config(estimation: bool) -> &'static EVMConfig {
-        static EVM_CONFIG: OnceCell<EVMConfig> = OnceCell::new();
-        static EVM_CONFIG_ESTIMATE: OnceCell<EVMConfig> = OnceCell::new();
-
-        if estimation {
-            EVM_CONFIG_ESTIMATE.get_or_init(|| {
-                // The estimate mode overestimates transaction costs and returns a gas costs
-                // that should be sufficient to execute a transaction, but likely overestimated.
-                // The "proper" EVM-way to estimate exact gas is to disable this estimation and
-                // do a binary search over all possible gas costs to find the minimum gas cost
-                // with which the transaction succeeds. This mode should only be used when the
-                // caller wants to avoid the expensive binary search and is ok with a possible
-                // overestimation of gas costs.
-                EVMConfig {
-                    estimate: true,
-                    ..Self::evm_config(false).clone()
-                }
-            })
-        } else {
-            EVM_CONFIG.get_or_init(EVMConfig::shanghai)
-        }
+    fn additional_precompiles<G, H>() -> Option<impl evm::standard::PrecompileSet<G, H>>
+    where
+        G: AsRef<evm::interpreter::runtime::RuntimeState>
+            + AsRef<evm::standard::Config>
+            + evm::GasMutState,
+        H: evm::interpreter::runtime::RuntimeBackend,
+    {
+        None::<()>
     }
 }
 
@@ -174,9 +150,9 @@ pub enum Error {
     Core(#[from] CoreError),
 }
 
-impl From<evm::ExitError> for Error {
-    fn from(e: evm::ExitError) -> Error {
-        use evm::ExitError::*;
+impl From<evm::interpreter::ExitException> for Error {
+    fn from(e: evm::interpreter::ExitException) -> Error {
+        use evm::interpreter::ExitException::*;
         let msg = match e {
             StackUnderflow => "stack underflow",
             StackOverflow => "stack overflow",
@@ -186,32 +162,47 @@ impl From<evm::ExitError> for Error {
             CallTooDeep => "call too deep",
             CreateCollision => "create collision",
             CreateContractLimit => "create contract limit",
-            InvalidCode(..) => "invalid code",
-
+            InvalidOpcode(_) => "invalid opcode",
             OutOfOffset => "out of offset",
             OutOfGas => "out of gas",
-            OutOfFund => "out of funds",
-
-            #[allow(clippy::upper_case_acronyms)]
-            PCUnderflow => "PC underflow",
-
+            OutOfFund => "out of fund",
+            PCUnderflow => "pc underflow",
             CreateEmpty => "create empty",
             MaxNonce => "nonce overflow",
-
+            NotEOA => "not eoa",
             Other(msg) => return Error::ExecutionFailed(msg.to_string()),
+            _ => "unknown error",
         };
         Error::ExecutionFailed(msg.to_string())
     }
 }
 
-impl From<evm::ExitFatal> for Error {
-    fn from(e: evm::ExitFatal) -> Error {
-        use evm::ExitFatal::*;
+impl From<evm::interpreter::ExitFatal> for Error {
+    fn from(e: evm::interpreter::ExitFatal) -> Error {
+        use evm::interpreter::ExitFatal::*;
         let msg = match e {
             NotSupported => "not supported",
             UnhandledInterrupt => "unhandled interrupt",
-            CallErrorAsFatal(err) => return err.into(),
+            ExceptionAsFatal(e) => return e.into(),
+            AlreadyExited => "already exited",
+            Unfinished => "unfinished",
+            UnevenSubstate => "uneven substate",
+            InvalidFeedback => "invalid feedback",
             Other(msg) => return Error::ExecutionFailed(msg.to_string()),
+            _ => "unknown error",
+        };
+        Error::ExecutionFailed(msg.to_string())
+    }
+}
+
+impl From<evm::interpreter::ExitError> for Error {
+    fn from(e: evm::interpreter::ExitError) -> Error {
+        use evm::interpreter::ExitError;
+
+        let msg = match e {
+            ExitError::Reverted => "reverted",
+            ExitError::Exception(e) => return e.into(),
+            ExitError::Fatal(e) => return e.into(),
         };
         Error::ExecutionFailed(msg.to_string())
     }
@@ -325,9 +316,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (tx_call_format, tx_index, is_simulation) = CurrentState::with_env(|env| {
-            (env.tx_call_format(), env.tx_index(), env.is_simulation())
-        });
+        let (tx_call_format, tx_index) =
+            CurrentState::with_env(|env| (env.tx_call_format(), env.tx_index()));
 
         // Create output (the contract address) does not need to be encrypted because it's
         // trivially computable by anyone who can observe the create tx and receipt status.
@@ -336,12 +326,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             Self::decode_call_data(ctx, init_code, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
-        // If in simulation, this must be EstimateGas query.
-        // Use estimate mode if not doing binary search for exact gas costs.
-        let estimate_gas =
-            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0;
-
-        Self::evm_create(ctx, caller, value, init_code, estimate_gas)
+        Self::evm_create(ctx, caller, value, init_code)
     }
 
     fn call<C: Context>(
@@ -357,20 +342,14 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (tx_call_format, tx_index, is_simulation) = CurrentState::with_env(|env| {
-            (env.tx_call_format(), env.tx_index(), env.is_simulation())
-        });
+        let (tx_call_format, tx_index) =
+            CurrentState::with_env(|env| (env.tx_call_format(), env.tx_index()));
 
         let (data, tx_metadata) =
             Self::decode_call_data(ctx, data, tx_call_format, tx_index, true)?
                 .expect("processing always proceeds");
 
-        // If in simulation, this must be EstimateGas query.
-        // Use estimate mode if not doing binary search for exact gas costs.
-        let estimate_gas =
-            is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0;
-
-        let evm_result = Self::evm_call(ctx, caller, address, value, data, estimate_gas);
+        let evm_result = Self::evm_call(ctx, caller, address, value, data);
         Self::encode_evm_result(ctx, evm_result, tx_metadata)
     }
 
@@ -428,7 +407,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                         value,
                         data: data.clone(),
                     }),
-                    Box::new(move || Self::evm_call(ctx, caller, address, value, data, false)),
+                    Box::new(move || Self::evm_call(ctx, caller, address, value, data)),
                 )
             }
             None => {
@@ -439,7 +418,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                         value,
                         init_code: data.clone(),
                     }),
-                    Box::new(|| Self::evm_create(ctx, caller, value, data, false)),
+                    Box::new(|| Self::evm_create(ctx, caller, value, data)),
                 )
             }
         };
@@ -491,22 +470,15 @@ impl<Cfg: Config> Module<Cfg> {
         address: H160,
         value: U256,
         data: Vec<u8>,
-        estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
         Self::evm_execute(
             ctx,
             caller,
-            |exec, gas_limit| {
-                exec.transact_call(
-                    caller.into(),
-                    address.into(),
-                    value.into(),
-                    data,
-                    gas_limit,
-                    vec![],
-                )
+            value,
+            evm::standard::TransactArgsCallCreate::Call {
+                address: address.into(),
+                data,
             },
-            estimate_gas,
         )
     }
 
@@ -515,64 +487,66 @@ impl<Cfg: Config> Module<Cfg> {
         caller: H160,
         value: U256,
         init_code: Vec<u8>,
-        estimate_gas: bool,
     ) -> Result<Vec<u8>, Error> {
         Self::evm_execute(
             ctx,
             caller,
-            |exec, gas_limit| {
-                // Precompute the address as execution can modify state such that the subsequent
-                // address derivation would be incorrect (e.g. due to nonce increments).
-                let address = exec.create_address(evm::CreateScheme::Legacy {
-                    caller: caller.into(),
-                });
-                let (exit_reason, exit_value) =
-                    exec.transact_create(caller.into(), value.into(), init_code, gas_limit, vec![]);
-                if exit_reason.is_succeed() {
-                    // If successful return the contract deployed address.
-                    (exit_reason, address.as_bytes().to_vec())
-                } else {
-                    // Otherwise propagate the exit value.
-                    (exit_reason, exit_value)
-                }
+            value,
+            evm::standard::TransactArgsCallCreate::Create {
+                init_code,
+                salt: None, // Regular CREATE.
             },
-            estimate_gas,
         )
     }
 
-    fn evm_execute<C, F>(ctx: &C, source: H160, f: F, estimate_gas: bool) -> Result<Vec<u8>, Error>
+    fn evm_execute<C>(
+        ctx: &C,
+        caller: H160,
+        value: U256,
+        args: evm::standard::TransactArgsCallCreate,
+    ) -> Result<Vec<u8>, Error>
     where
         C: Context,
-        F: FnOnce(
-            &mut StackExecutor<
-                'static,
-                '_,
-                backend::OasisStackState<'_, '_, 'static, C, Cfg>,
-                precompile::Precompiles<Cfg, backend::OasisBackend<'_, C, Cfg>>,
-            >,
-            u64,
-        ) -> (evm::ExitReason, Vec<u8>),
     {
         let is_query = CurrentState::with_env(|env| !env.is_execute());
-        let cfg = Cfg::evm_config(estimate_gas);
         let gas_limit: u64 = <C::Runtime as Runtime>::Core::remaining_tx_gas();
         let gas_price: primitive_types::U256 =
             CurrentState::with_env(|env| env.tx_auth_info().fee.gas_price().into());
 
-        let vicinity = backend::Vicinity {
-            gas_price,
-            origin: source.into(),
+        let precompiles = Precompiles::<'_, Cfg, C>::new(ctx);
+        let gas_etable = evm::interpreter::etable::Single::new(evm::standard::eval_gasometer);
+        // Use WrappedState as the machine state type so that every execution
+        // frame carries `parent_used_gas`, giving precompiles exact visibility
+        // into total gas consumed at any call-stack depth.
+        let exec_etable: evm::interpreter::etable::DispatchEtable<
+            engine::WrappedState<'_>,
+            engine::OasisBackend<'_, C, Cfg>,
+            evm::interpreter::trap::CallCreateTrap,
+        > = evm::interpreter::etable::DispatchEtable::runtime();
+        let etable = evm::interpreter::etable::Chained(gas_etable, exec_etable);
+        let resolver = evm::standard::EtableResolver::new(&precompiles, &etable);
+        let invoker = engine::CapturingInvoker::new(evm::standard::Invoker::new(&resolver));
+
+        let args = evm::standard::TransactArgs {
+            call_create: args,
+            caller: caller.into(),
+            value: value.into(),
+            gas_limit: gas_limit.into(),
+            gas_price: evm::standard::TransactGasPrice::Legacy(gas_price),
+            access_list: vec![], // TODO
+            config: &Cfg::EVM_CONFIG,
         };
 
-        let backend = backend::OasisBackend::<'_, C, Cfg>::new(ctx, vicinity);
-        let metadata = StackSubstateMetadata::new(gas_limit, cfg);
-        let stackstate = backend::OasisStackState::new(metadata, &backend);
-        let precompiles = precompile::Precompiles::new(&backend);
-        let mut executor = StackExecutor::new_with_precompiles(stackstate, cfg, &precompiles);
+        let mut backend = engine::OasisBackend::<'_, C, Cfg>::new(ctx, caller.into());
 
-        // Run EVM and process the result.
-        let (exit_reason, exit_value) = f(&mut executor, gas_limit);
-        let gas_used = executor.used_gas();
+        // TODO: Stack/heap split should be part of Cfg.
+        let result = evm::transact(args, Some(4), &mut backend, &invoker);
+
+        let capture = invoker.take_capture();
+        let (exit_value, used_gas) = capture
+            .map(|c| (c.retval, c.used_gas))
+            .unwrap_or_else(|| (Vec::new(), gas_limit.into()));
+        let used_gas: u64 = used_gas.try_into().unwrap_or(u64::MAX);
 
         // Clamp data based on maximum allowed result size.
         let exit_value = if !is_query && exit_value.len() > Cfg::MAX_RESULT_SIZE {
@@ -581,31 +555,31 @@ impl<Cfg: Config> Module<Cfg> {
             exit_value
         };
 
-        let exit_value = match exit_reason {
-            evm::ExitReason::Succeed(_) => exit_value,
-            err => {
-                let err = match err {
-                    evm::ExitReason::Revert(_) => {
-                        Error::Reverted(BASE64_STANDARD.encode(exit_value))
-                    }
-                    evm::ExitReason::Error(err) => err.into(),
-                    evm::ExitReason::Fatal(err) => err.into(),
-                    _ => unreachable!("already handled above"),
-                };
-
-                <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+        let exit_value = match result {
+            Ok(transact_value) => match transact_value.call_create {
+                evm::standard::TransactValueCallCreate::Create { address, .. } => {
+                    address.as_bytes().to_vec()
+                }
+                evm::standard::TransactValueCallCreate::Call { .. } => exit_value,
+            },
+            Err(ExitError::Reverted) => {
+                <C::Runtime as Runtime>::Core::use_tx_gas(used_gas)?;
                 <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
-                return Err(err);
+                return Err(Error::Reverted(BASE64_STANDARD.encode(&exit_value)));
+            }
+            Err(err) => {
+                <C::Runtime as Runtime>::Core::use_tx_gas(used_gas)?;
+                return Err(err.into());
             }
         };
 
-        // Apply can fail in case of unsupported actions.
-        if let Err(err) = executor.into_state().apply() {
-            <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+        // Apply final backend state.
+        if let Err(err) = backend.apply() {
+            <C::Runtime as Runtime>::Core::use_tx_gas(used_gas)?;
             return Err(err); // Do not refund unused fee.
-        };
+        }
 
-        <C::Runtime as Runtime>::Core::use_tx_gas(gas_used)?;
+        <C::Runtime as Runtime>::Core::use_tx_gas(used_gas)?;
         <C::Runtime as Runtime>::Accounts::set_refund_unused_tx_fee(Cfg::REFUND_UNUSED_FEE);
 
         Ok(exit_value)

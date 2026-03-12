@@ -1,55 +1,68 @@
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
-    ExitError, ExitSucceed,
+    interpreter::{ExitError, ExitException, ExitSucceed},
+    standard::GasometerState,
+    GasMutState,
 };
 
-use super::PrecompileResult;
+use crate::engine::state::ParentGasInfo;
 
 const GAS_USED_COST: u64 = 10;
 const PAD_GAS_COST: u64 = 10;
 
-pub(super) fn call_gas_used(handle: &mut impl PrecompileHandle) -> PrecompileResult {
-    handle.record_cost(GAS_USED_COST)?;
+pub(super) fn call_gas_used<G>(
+    _input: &[u8],
+    gasometer: &mut G,
+) -> Result<(ExitSucceed, Vec<u8>), ExitError>
+where
+    G: GasMutState + AsRef<GasometerState> + ParentGasInfo,
+{
+    gasometer.record_gas(GAS_USED_COST.into())?;
 
-    let used_gas: u64 = handle.used_gas();
+    let used_gas: u64 = total_used_gas(gasometer);
+    let output = solabi::encode(&(used_gas,));
 
-    Ok(PrecompileOutput {
-        exit_status: ExitSucceed::Returned,
-        output: solabi::encode(&(used_gas,)),
-    })
+    Ok((ExitSucceed::Returned, output))
 }
 
-pub(super) fn call_pad_gas(handle: &mut impl PrecompileHandle) -> PrecompileResult {
-    handle.record_cost(PAD_GAS_COST)?;
+pub(super) fn call_pad_gas<G>(
+    input: &[u8],
+    gasometer: &mut G,
+) -> Result<(ExitSucceed, Vec<u8>), ExitError>
+where
+    G: GasMutState + AsRef<GasometerState> + ParentGasInfo,
+{
+    gasometer.record_gas(PAD_GAS_COST.into())?;
 
     // Decode args.
-    let gas_amount_big: u128 =
-        solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
-            exit_status: ExitError::Other(e.to_string().into()),
-        })?;
+    let gas_amount_big: u128 = solabi::decode(input)
+        .map_err(|e| ExitError::Exception(ExitException::Other(e.to_string().into())))?;
     let gas_amount = gas_amount_big.try_into().unwrap_or(u64::MAX);
 
-    // Obtain total used gas so far.
-    let used_gas = handle.used_gas();
+    let used_gas: u64 = total_used_gas(gasometer);
 
-    // Fail if more gas that the desired padding was already used.
+    // Fail if more gas than the desired padding was already used.
     if gas_amount < used_gas {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other(
-                "gas pad amount less than already used gas"
-                    .to_string()
-                    .into(),
-            ),
-        });
+        return Err(ExitError::Exception(ExitException::Other(
+            "gas pad amount less than already used gas"
+                .to_string()
+                .into(),
+        )));
     }
 
     // Record the remainder so that the gas use is padded to the desired amount.
-    handle.record_cost(gas_amount - used_gas)?;
+    gasometer.record_gas((gas_amount - used_gas).into())?;
 
-    Ok(PrecompileOutput {
-        exit_status: ExitSucceed::Returned,
-        output: Vec::new(),
-    })
+    Ok((ExitSucceed::Returned, Vec::new()))
+}
+
+fn total_used_gas<G>(gasometer: &G) -> u64
+where
+    G: AsRef<GasometerState> + ParentGasInfo,
+{
+    let gs: &GasometerState = gasometer.as_ref();
+    let frame_used: u64 = gs.total_used_gas();
+    let parent_used: u64 = gasometer.parent_used_gas().try_into().unwrap_or(u64::MAX);
+    parent_used.saturating_add(frame_used)
 }
 
 #[cfg(test)]
@@ -69,22 +82,32 @@ mod test {
         include_str!("../../../../../tests/e2e/evm/contracts/use_gas/evm_use_gas.hex");
 
     #[test]
-    fn test_call_gas_used() {
+    fn test_call_gas_used_basic() {
         // Test basic.
         let ret = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x09,
             ]),
             &solabi::encode(&(solabi::Bytes(Vec::new()),)),
-            10_560,
+            30_000,
         )
         .unwrap();
 
-        let gas_usage_big: u128 =
-            solabi::decode(&ret.unwrap().output).expect("call should return gas usage");
+        let expected_gas_usage: u64 =
+            21_000 /* base call transaction cost */ +
+            4*63 /* zero data cost */ +
+            16 /* non-zero data cost */ +
+            10 /* precompile cost */;
+        let gas_usage_big: u128 = solabi::decode(&ret).expect("call should return gas usage");
         let gas_usage: u64 = gas_usage_big.try_into().unwrap_or(u64::max_value());
-        assert_eq!(gas_usage, 10, "call should return gas usage");
+        assert_eq!(
+            gas_usage, expected_gas_usage,
+            "call should return gas usage"
+        );
+    }
 
+    #[test]
+    fn test_call_gas_used_contract() {
         // Test use gas in contract.
         let mut mock = Mock::default();
         let ctx = mock.create_ctx_for_runtime::<TestRuntime>(false);
@@ -93,7 +116,7 @@ mod test {
         // Create contract.
         let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
-        let expected_gas_used = 22_659;
+        let expected_gas_used = 25_164;
 
         // Call into the test contract.
         let dispatch_result = signer.call_evm(
@@ -126,30 +149,28 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
             &solabi::encode(&(1_u64,)),
-            10_560,
+            40_000,
         )
-        .expect("call should return something")
         .expect_err("call should fail as the input gas amount is to small");
 
         let ret = call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
-            &solabi::encode(&(20_u64,)),
-            10_560,
+            &solabi::encode(&(30_000u64,)),
+            40_000,
         )
         .unwrap();
-        assert_eq!(ret.unwrap().output.len(), 0);
+        assert_eq!(ret.len(), 0);
 
         // Test out of gas.
         call_contract(
             H160([
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xa,
             ]),
-            &solabi::encode(&(20_000_u64,)),
-            10_560,
+            &solabi::encode(&(50_000_u64,)),
+            40_000,
         )
-        .expect("call should return something")
         .expect_err("call should fail as the gas limit is reached");
 
         // Test gas padding.
@@ -160,7 +181,7 @@ mod test {
         // Create contract.
         let contract_address = init_and_deploy_contract(&ctx, &mut signer, TEST_CONTRACT_CODE_HEX);
 
-        let expected_gas = 41_359;
+        let expected_gas = 50_156;
 
         // Call into the test contract path for `if param > 10`.
         let dispatch_result = signer.call_evm(
