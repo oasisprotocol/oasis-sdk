@@ -570,10 +570,6 @@ const methodDescriptorConsensusGetParameters = createMethodDescriptorUnary<
     types.longnum,
     types.ConsensusLightParameters
 >('Consensus', 'GetParameters');
-const methodDescriptorConsensusGetSignerNonce = createMethodDescriptorUnary<
-    types.ConsensusGetSignerNonceRequest,
-    types.longnum
->('Consensus', 'GetSignerNonce');
 const methodDescriptorConsensusGetStatus = createMethodDescriptorUnary<void, types.ConsensusStatus>(
     'Consensus',
     'GetStatus',
@@ -1500,14 +1496,6 @@ export class NodeInternal extends GRPCWrapper {
      */
     consensusGetParameters(height: types.longnum) {
         return this.callUnary(methodDescriptorConsensusGetParameters, height);
-    }
-
-    /**
-     * GetSignerNonce returns the nonce that should be used by the given
-     * signer for transmitting the next transaction.
-     */
-    consensusGetSignerNonce(req: types.ConsensusGetSignerNonceRequest) {
-        return this.callUnary(methodDescriptorConsensusGetSignerNonce, req);
     }
 
     /**

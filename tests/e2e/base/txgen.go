@@ -27,7 +27,7 @@ var DefaultKVTxGenerators = []txgen.GenerateTx{
 func randBytes(rng *rand.Rand, n int) []byte {
 	b := make([]byte, n)
 	for i := range b {
-		b[i] = byte(rng.Intn(256))
+		b[i] = byte(rng.Intn(256)) //nolint:gosec
 	}
 	return b
 }

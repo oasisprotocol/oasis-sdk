@@ -348,7 +348,7 @@ impl<Cfg: Config> Module<Cfg> {
 
     /// Remove a ROFL application.
     #[handler(call = "rofl.Remove")]
-    fn tx_remove<C: Context>(ctx: &C, body: types::Remove) -> Result<(), Error> {
+    fn tx_remove<C: Context>(_ctx: &C, body: types::Remove) -> Result<(), Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_REMOVE)?;
 
         let cfg = state::get_app(body.id).ok_or(Error::UnknownApp)?;
@@ -687,7 +687,7 @@ impl<Cfg: Config> Module<Cfg> {
     /// Returns the minimum stake thresholds for managing ROFL.
     #[handler(call = "rofl.StakeThresholds", internal)]
     fn internal_query_stake_thresholds<C: Context>(
-        ctx: &C,
+        _ctx: &C,
         _args: (),
     ) -> Result<types::StakeThresholds, Error> {
         <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_STAKE_THRESHOLDS)?;
@@ -712,7 +712,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn resolve_payer_from_tx<C: Context>(
         ctx: &C,
         tx: &Transaction,
-        app_policy: &policy::AppAuthPolicy,
+        _app_policy: &policy::AppAuthPolicy,
     ) -> Result<Option<Address>, anyhow::Error> {
         let caller_pk = tx
             .auth_info

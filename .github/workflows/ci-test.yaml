@@ -24,7 +24,7 @@ env:
   CMAKE_POLICY_VERSION_MINIMUM: 3.5
 
 permissions:
-  id-token: write  # Needed for "use_oidc" in codecov
+  id-token: write # Needed for "use_oidc" in codecov
   contents: read
 
 jobs:
@@ -150,7 +150,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.x"
+          go-version: "1.26.x"
 
       - name: Unit tests with coverage
         working-directory: client-sdk/go
@@ -160,7 +160,7 @@ jobs:
         uses: codecov/codecov-action@v5.5.1
         with:
           directory: client-sdk/go
-          use_oidc: true  # Upload authentication to avoid rate-limiting
+          use_oidc: true # Upload authentication to avoid rate-limiting
 
   test-go-tools:
     name: test-tools
@@ -172,7 +172,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.x"
+          go-version: "1.26.x"
 
       - name: Test build orc
         working-directory: tools/orc
@@ -457,7 +457,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.x"
+          go-version: "1.26.x"
 
       - name: Install Oasis dependencies
         run: |
@@ -564,7 +564,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.x"
+          go-version: "1.26.x"
 
       - name: Generate
         working-directory: client-sdk/ts-web/core/reflect-go
@@ -613,7 +613,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25.x"
+          go-version: "1.26.x"
 
       - name: Install Oasis dependencies
         run: |

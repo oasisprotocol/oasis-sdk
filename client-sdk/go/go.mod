@@ -1,10 +1,10 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
-go 1.25.3
+go 1.26.0
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
-	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.15-oasis1
+	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.18-oasis1
 	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20251114093237-2ab5a27a1729
 	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20251114093237-2ab5a27a1729
 )
@@ -15,9 +15,9 @@ require (
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20251114093237-2ab5a27a1729
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2509.0
+	github.com/oasisprotocol/oasis-core/go v0.2600.0
 	github.com/shopspring/decimal v1.4.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.45.0
 	google.golang.org/grpc v1.68.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -31,7 +31,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cometbft/cometbft v0.37.16 // indirect
+	github.com/cometbft/cometbft v0.37.18 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
@@ -62,7 +62,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.44.0 // indirect
+	github.com/libp2p/go-libp2p v0.47.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect

@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tools/gen_runtime_vectors
 
-go 1.25.3
+go 1.26.0
 
 replace github.com/oasisprotocol/oasis-sdk/client-sdk/go => ../../client-sdk/go
 
@@ -13,7 +13,7 @@ replace (
 
 require (
 	github.com/ethereum/go-ethereum v1.14.0
-	github.com/oasisprotocol/oasis-core/go v0.2509.0
+	github.com/oasisprotocol/oasis-core/go v0.2600.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.1.0
 )
 
@@ -26,7 +26,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/cometbft/cometbft v0.37.16 // indirect
+	github.com/cometbft/cometbft v0.37.18 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
 	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
@@ -92,7 +92,7 @@ require (
 	github.com/spf13/cobra v1.8.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
