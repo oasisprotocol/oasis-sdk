@@ -1,9 +1,9 @@
 (function() {
-    var implementors = Object.fromEntries([["oasis_runtime_sdk",[]],["oasis_runtime_sdk_contracts",[["impl&lt;Cfg: <a class=\"trait\" href=\"oasis_runtime_sdk_contracts/trait.Config.html\" title=\"trait oasis_runtime_sdk_contracts::Config\">Config</a>&gt; <a class=\"trait\" href=\"oasis_runtime_sdk/module/trait.MethodHandler.html\" title=\"trait oasis_runtime_sdk::module::MethodHandler\">MethodHandler</a> for <a class=\"struct\" href=\"oasis_runtime_sdk_contracts/struct.Module.html\" title=\"struct oasis_runtime_sdk_contracts::Module\">Module</a>&lt;Cfg&gt;"]]]]);
+    const implementors = Object.fromEntries([["oasis_runtime_sdk",[]],["oasis_runtime_sdk_contracts",[["impl&lt;Cfg: <a class=\"trait\" href=\"oasis_runtime_sdk_contracts/trait.Config.html\" title=\"trait oasis_runtime_sdk_contracts::Config\">Config</a>&gt; <a class=\"trait\" href=\"oasis_runtime_sdk/module/trait.MethodHandler.html\" title=\"trait oasis_runtime_sdk::module::MethodHandler\">MethodHandler</a> for <a class=\"struct\" href=\"oasis_runtime_sdk_contracts/struct.Module.html\" title=\"struct oasis_runtime_sdk_contracts::Module\">Module</a>&lt;Cfg&gt;",0]]]]);
     if (window.register_implementors) {
         window.register_implementors(implementors);
     } else {
         window.pending_implementors = implementors;
     }
 })()
-//{"start":57,"fragment_lengths":[24,500]}
+//{"start":59,"fragment_lengths":[24,502]}

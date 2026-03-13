@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk-macros/src/module_derive/method_handler.rs`."><title>method_handler.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (50aa04180 2025-05-08)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../../static.files/storage-4e99c027.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">oasis_runtime_sdk_macros/module_derive/</div>method_handler.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>proc_macro2::TokenStream;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `runtime-sdk-macros/src/module_derive/method_handler.rs`."><title>method_handler.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_runtime_sdk_macros" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0-nightly (9e79395f9 2026-02-10)" data-channel="nightly" data-search-js="search-fb33671b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-f9617a14.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12f88f4f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">oasis_runtime_sdk_macros/module_derive/</div>method_handler.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>proc_macro2::TokenStream;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>quote::quote;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>syn::parse_quote;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -85,7 +85,7 @@
 <a href=#85 id=85 data-nosnippet>85</a>                            <span class="comment">// "Real", user-defined prefetch handlers.
 <a href=#86 id=86 data-nosnippet>86</a>                            </span>#(
 <a href=#87 id=87 data-nosnippet>87</a>                              #handler_names =&gt; module::DispatchResult::Handled(
-<a href=#88 id=88 data-nosnippet>88</a>                                <span class="self">Self</span>::#handler_idents(<span class="kw-2">&amp;mut </span>add_prefix, body, auth_info)
+<a href=#88 id=88 data-nosnippet>88</a>                                Self::#handler_idents(<span class="kw-2">&amp;mut </span>add_prefix, body, auth_info)
 <a href=#89 id=89 data-nosnippet>89</a>                              ),
 <a href=#90 id=90 data-nosnippet>90</a>                            )*
 <a href=#91 id=91 data-nosnippet>91</a>                            <span class="comment">// No-op prefetch handlers.
@@ -114,11 +114,11 @@
 <a href=#114 id=114 data-nosnippet>114</a>                                    <span class="kw">if </span>!sdk::state::CurrentState::with_env(|env| env.is_internal()) {
 <a href=#115 id=115 data-nosnippet>115</a>                                        <span class="kw">return </span><span class="prelude-val">Err</span>(sdk::modules::core::Error::Forbidden.into());
 <a href=#116 id=116 data-nosnippet>116</a>                                    }
-<a href=#117 id=117 data-nosnippet>117</a>                                    <span class="self">Self</span>::#ident(ctx, body)
+<a href=#117 id=117 data-nosnippet>117</a>                                    Self::#ident(ctx, body)
 <a href=#118 id=118 data-nosnippet>118</a>                                }
 <a href=#119 id=119 data-nosnippet>119</a>                            }
 <a href=#120 id=120 data-nosnippet>120</a>                        } <span class="kw">else </span>{
-<a href=#121 id=121 data-nosnippet>121</a>                            <span class="macro">quote!</span> { <span class="self">Self</span>::#ident }
+<a href=#121 id=121 data-nosnippet>121</a>                            <span class="macro">quote!</span> { Self::#ident }
 <a href=#122 id=122 data-nosnippet>122</a>                        }
 <a href=#123 id=123 data-nosnippet>123</a>                    })
 <a href=#124 id=124 data-nosnippet>124</a>                })
@@ -177,7 +177,7 @@
 <a href=#177 id=177 data-nosnippet>177</a>                    ) -&gt; DispatchResult&lt;cbor::Value, <span class="prelude-ty">Result</span>&lt;cbor::Value, sdk::error::RuntimeError&gt;&gt; {
 <a href=#178 id=178 data-nosnippet>178</a>                        <span class="kw">match </span>method {
 <a href=#179 id=179 data-nosnippet>179</a>                            #(
-<a href=#180 id=180 data-nosnippet>180</a>                              #handler_names =&gt; module::dispatch_query(ctx, args, <span class="self">Self</span>::#handler_idents),
+<a href=#180 id=180 data-nosnippet>180</a>                              #handler_names =&gt; module::dispatch_query(ctx, args, Self::#handler_idents),
 <a href=#181 id=181 data-nosnippet>181</a>                            )*
 <a href=#182 id=182 data-nosnippet>182</a>                            q <span class="kw">if </span>q == <span class="macro">format!</span>(<span class="string">"{}.Parameters"</span>, <span class="self">Self</span>::NAME) =&gt; module::dispatch_query(ctx, args, <span class="self">Self</span>::query_parameters),
 <a href=#183 id=183 data-nosnippet>183</a>                            <span class="kw">_ </span>=&gt; DispatchResult::Unhandled(args),
@@ -203,7 +203,7 @@
 <a href=#203 id=203 data-nosnippet>203</a>                        <span class="kw">match </span>handler_name {
 <a href=#204 id=204 data-nosnippet>204</a>                            #(
 <a href=#205 id=205 data-nosnippet>205</a>                              #handler_names =&gt; {
-<a href=#206 id=206 data-nosnippet>206</a>                                  <span class="self">Self</span>::#handler_idents(
+<a href=#206 id=206 data-nosnippet>206</a>                                  Self::#handler_idents(
 <a href=#207 id=207 data-nosnippet>207</a>                                      ctx,
 <a href=#208 id=208 data-nosnippet>208</a>                                      result.event,
 <a href=#209 id=209 data-nosnippet>209</a>                                      cbor::from_value(result.context).expect(<span class="string">"invalid message handler context"</span>),
@@ -223,7 +223,7 @@
 <a href=#223 id=223 data-nosnippet>223</a>                .iter()
 <a href=#224 id=224 data-nosnippet>224</a>                .filter_map(|h| h.handler.as_ref())
 <a href=#225 id=225 data-nosnippet>225</a>                <span class="comment">// `prefetch` is an implementation detail of `call` handlers, so we don't list them
-<a href=#226 id=226 data-nosnippet>226</a>                </span>.filter(|h| h.attrs.kind != HandlerKind::Prefetch)
+<a href=#226 id=226 data-nosnippet>226</a>                </span>.filter(|h| h.attrs.<span class="macro">kind !</span>= HandlerKind::Prefetch)
 <a href=#227 id=227 data-nosnippet>227</a>                .map(|h| (h.attrs.rpc_name.clone(), h.attrs.kind.as_sdk_ident()))
 <a href=#228 id=228 data-nosnippet>228</a>                .unzip();
 <a href=#229 id=229 data-nosnippet>229</a>            <span class="kw">if </span>handler_names.is_empty() {
@@ -395,7 +395,7 @@
 <a href=#395 id=395 data-nosnippet>395</a>            <span class="kw">let </span>tag: syn::Ident = input.parse()<span class="question-mark">?</span>;
 <a href=#396 id=396 data-nosnippet>396</a>
 <a href=#397 id=397 data-nosnippet>397</a>            <span class="kw">if </span>tag == <span class="string">"expensive" </span>{
-<a href=#398 id=398 data-nosnippet>398</a>                <span class="kw">if </span>kind != HandlerKind::Query {
+<a href=#398 id=398 data-nosnippet>398</a>                <span class="kw">if </span><span class="macro">kind !</span>= HandlerKind::Query {
 <a href=#399 id=399 data-nosnippet>399</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
 <a href=#400 id=400 data-nosnippet>400</a>                        tag.span(),
 <a href=#401 id=401 data-nosnippet>401</a>                        <span class="string">"`expensive` tag is only allowed on `query` handlers"</span>,
@@ -403,7 +403,7 @@
 <a href=#403 id=403 data-nosnippet>403</a>                }
 <a href=#404 id=404 data-nosnippet>404</a>                is_expensive = <span class="bool-val">true</span>;
 <a href=#405 id=405 data-nosnippet>405</a>            } <span class="kw">else if </span>tag == <span class="string">"allow_private_km" </span>{
-<a href=#406 id=406 data-nosnippet>406</a>                <span class="kw">if </span>kind != HandlerKind::Query {
+<a href=#406 id=406 data-nosnippet>406</a>                <span class="kw">if </span><span class="macro">kind !</span>= HandlerKind::Query {
 <a href=#407 id=407 data-nosnippet>407</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
 <a href=#408 id=408 data-nosnippet>408</a>                        tag.span(),
 <a href=#409 id=409 data-nosnippet>409</a>                        <span class="string">"`allow_private_km` tag is only allowed on `query` handlers"</span>,
@@ -411,7 +411,7 @@
 <a href=#411 id=411 data-nosnippet>411</a>                }
 <a href=#412 id=412 data-nosnippet>412</a>                allow_private_km = <span class="bool-val">true</span>;
 <a href=#413 id=413 data-nosnippet>413</a>            } <span class="kw">else if </span>tag == <span class="string">"allow_interactive" </span>{
-<a href=#414 id=414 data-nosnippet>414</a>                <span class="kw">if </span>kind != HandlerKind::Call {
+<a href=#414 id=414 data-nosnippet>414</a>                <span class="kw">if </span><span class="macro">kind !</span>= HandlerKind::Call {
 <a href=#415 id=415 data-nosnippet>415</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
 <a href=#416 id=416 data-nosnippet>416</a>                        tag.span(),
 <a href=#417 id=417 data-nosnippet>417</a>                        <span class="string">"`allow_interactive` tag is only allowed on `call` handlers"</span>,
@@ -419,7 +419,7 @@
 <a href=#419 id=419 data-nosnippet>419</a>                }
 <a href=#420 id=420 data-nosnippet>420</a>                allow_interactive = <span class="bool-val">true</span>;
 <a href=#421 id=421 data-nosnippet>421</a>            } <span class="kw">else if </span>tag == <span class="string">"internal" </span>{
-<a href=#422 id=422 data-nosnippet>422</a>                <span class="kw">if </span>kind != HandlerKind::Call {
+<a href=#422 id=422 data-nosnippet>422</a>                <span class="kw">if </span><span class="macro">kind !</span>= HandlerKind::Call {
 <a href=#423 id=423 data-nosnippet>423</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(syn::Error::new(
 <a href=#424 id=424 data-nosnippet>424</a>                        tag.span(),
 <a href=#425 id=425 data-nosnippet>425</a>                        <span class="string">"`internal` tag is only allowed on `call` handlers"</span>,
@@ -458,4 +458,5 @@
 <a href=#458 id=458 data-nosnippet>458</a>            </span>))
 <a href=#459 id=459 data-nosnippet>459</a>        })
 <a href=#460 id=460 data-nosnippet>460</a>        .ok()
-<a href=#461 id=461 data-nosnippet>461</a>}</code></pre></div></section></main></body></html>
+<a href=#461 id=461 data-nosnippet>461</a>}
+</code></pre></div></section></main></body></html>

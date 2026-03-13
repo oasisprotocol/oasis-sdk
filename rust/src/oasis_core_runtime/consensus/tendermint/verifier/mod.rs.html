@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/2374b21/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (50aa04180 2025-05-08)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../../../../static.files/storage-4e99c027.js"></script><script defer src="../../../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/consensus/tendermint/verifier/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Tendermint consensus layer verification logic.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/76002fa/runtime/src/consensus/tendermint/verifier/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0-nightly (9e79395f9 2026-02-10)" data-channel="nightly" data-search-js="search-fb33671b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../../static.files/storage-f9617a14.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-12f88f4f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/consensus/tendermint/verifier/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Tendermint consensus layer verification logic.
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span>std::{convert::TryInto, str::FromStr, sync::Arc, time::Duration};
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>anyhow::anyhow;
@@ -21,7 +21,7 @@
 <a href=#21 id=21 data-nosnippet>21</a>    verifier::{predicates::ProdPredicates, Verdict, Verifier <span class="kw">as </span>TMVerifier},
 <a href=#22 id=22 data-nosnippet>22</a>};
 <a href=#23 id=23 data-nosnippet>23</a>
-<a href=#24 id=24 data-nosnippet>24</a><span class="kw">use crate</span>::{
+<a href=#24 id=24 data-nosnippet>24</a><span class="kw">use </span>crate::{
 <a href=#25 id=25 data-nosnippet>25</a>    common::{logger::get_logger, namespace::Namespace, process, time, version::Version},
 <a href=#26 id=26 data-nosnippet>26</a>    consensus::{
 <a href=#27 id=27 data-nosnippet>27</a>        beacon::EpochTime,
@@ -49,7 +49,7 @@
 <a href=#49 id=49 data-nosnippet>49</a>    types::{Body, EventKind, HostFetchConsensusEventsRequest, HostFetchConsensusEventsResponse},
 <a href=#50 id=50 data-nosnippet>50</a>};
 <a href=#51 id=51 data-nosnippet>51</a>
-<a href=#52 id=52 data-nosnippet>52</a><span class="kw">use </span><span class="self">self</span>::{
+<a href=#52 id=52 data-nosnippet>52</a><span class="kw">use </span>self::{
 <a href=#53 id=53 data-nosnippet>53</a>    cache::Cache,
 <a href=#54 id=54 data-nosnippet>54</a>    handle::Handle,
 <a href=#55 id=55 data-nosnippet>55</a>    store::{TrustedState, TrustedStateStore},
@@ -155,7 +155,7 @@
 <a href=#155 id=155 data-nosnippet>155</a>    }
 <a href=#156 id=156 data-nosnippet>156</a>
 <a href=#157 id=157 data-nosnippet>157</a>    <span class="kw">fn </span>sync(<span class="kw-2">&amp;</span><span class="self">self</span>, cache: <span class="kw-2">&amp;mut </span>Cache, instance: <span class="kw-2">&amp;mut </span>Instance, height: u64) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#158 id=158 data-nosnippet>158</a>        <span class="kw">if </span>height != HEIGHT_LATEST
+<a href=#158 id=158 data-nosnippet>158</a>        <span class="kw">if </span><span class="macro">height !</span>= HEIGHT_LATEST
 <a href=#159 id=159 data-nosnippet>159</a>            &amp;&amp; (height &lt; cache.last_verified_height
 <a href=#160 id=160 data-nosnippet>160</a>                || height &lt; cache.latest_known_height().unwrap_or(<span class="number">0</span>))
 <a href=#161 id=161 data-nosnippet>161</a>        {
@@ -225,7 +225,7 @@
 <a href=#225 id=225 data-nosnippet>225</a>        <span class="comment">// Verify up to the block at current height.
 <a href=#226 id=226 data-nosnippet>226</a>        // Only does forward verification and fails if height is lower than the last trust height.
 <a href=#227 id=227 data-nosnippet>227</a>        </span><span class="kw">let </span>height = untrusted_header.header().height.value();
-<a href=#228 id=228 data-nosnippet>228</a>        <span class="kw">if </span>height != lb_height {
+<a href=#228 id=228 data-nosnippet>228</a>        <span class="kw">if </span><span class="macro">height !</span>= lb_height {
 <a href=#229 id=229 data-nosnippet>229</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::VerificationFailed(<span class="macro">anyhow!</span>(
 <a href=#230 id=230 data-nosnippet>230</a>                <span class="string">"inconsistent light block/header height"
 <a href=#231 id=231 data-nosnippet>231</a>            </span>)));
@@ -294,7 +294,7 @@
 <a href=#294 id=294 data-nosnippet>294</a>        </span><span class="kw">let </span>tx = <span class="self">self</span>.verify_transaction(cache, instance, <span class="kw-2">&amp;</span>stwp.signed_tx, <span class="kw-2">&amp;</span>stwp.proof)<span class="question-mark">?</span>;
 <a href=#295 id=295 data-nosnippet>295</a>
 <a href=#296 id=296 data-nosnippet>296</a>        <span class="comment">// Verify the method name and the nonce.
-<a href=#297 id=297 data-nosnippet>297</a>        </span><span class="kw">if </span>tx.method != METHOD_PROVE_FRESHNESS {
+<a href=#297 id=297 data-nosnippet>297</a>        </span><span class="kw">if </span>tx.<span class="macro">method !</span>= METHOD_PROVE_FRESHNESS {
 <a href=#298 id=298 data-nosnippet>298</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::FreshnessVerificationFailed(<span class="macro">anyhow!</span>(
 <a href=#299 id=299 data-nosnippet>299</a>                <span class="string">"invalid method name"
 <a href=#300 id=300 data-nosnippet>300</a>            </span>)));
@@ -399,7 +399,7 @@
 <a href=#399 id=399 data-nosnippet>399</a>        <span class="comment">// Verify the transaction and the proof.
 <a href=#400 id=400 data-nosnippet>400</a>        </span><span class="kw">let </span>tx = <span class="self">self</span>.verify_transaction(cache, instance, <span class="kw-2">&amp;</span>stwp.signed_tx, <span class="kw-2">&amp;</span>stwp.proof)<span class="question-mark">?</span>;
 <a href=#401 id=401 data-nosnippet>401</a>
-<a href=#402 id=402 data-nosnippet>402</a>        <span class="kw">if </span>tx.method != METHOD_META {
+<a href=#402 id=402 data-nosnippet>402</a>        <span class="kw">if </span>tx.<span class="macro">method !</span>= METHOD_META {
 <a href=#403 id=403 data-nosnippet>403</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::StateRoot(<span class="macro">anyhow!</span>(<span class="string">"invalid method name"</span>)));
 <a href=#404 id=404 data-nosnippet>404</a>        }
 <a href=#405 id=405 data-nosnippet>405</a>
@@ -472,7 +472,7 @@
 <a href=#472 id=472 data-nosnippet>472</a>
 <a href=#473 id=473 data-nosnippet>473</a>        <span class="comment">// Verify our own RAK is published in registry once per epoch.
 <a href=#474 id=474 data-nosnippet>474</a>        // This ensures consensus state is recent enough.
-<a href=#475 id=475 data-nosnippet>475</a>        </span><span class="kw">if </span>cache.last_verified_epoch != epoch {
+<a href=#475 id=475 data-nosnippet>475</a>        </span><span class="kw">if </span>cache.<span class="macro">last_verified_epoch !</span>= epoch {
 <a href=#476 id=476 data-nosnippet>476</a>            <span class="kw">let </span>latest_state = <span class="self">self</span>.latest_consensus_state(cache, instance)<span class="question-mark">?</span>;
 <a href=#477 id=477 data-nosnippet>477</a>            <span class="self">self</span>.verify_freshness_with_rak(<span class="kw-2">&amp;</span>latest_state, cache)<span class="question-mark">?</span>;
 <a href=#478 id=478 data-nosnippet>478</a>        }
@@ -924,4 +924,5 @@
 <a href=#924 id=924 data-nosnippet>924</a>            trusted_blocks: <span class="macro">vec!</span>[untrusted_block.into()],
 <a href=#925 id=925 data-nosnippet>925</a>        })
 <a href=#926 id=926 data-nosnippet>926</a>    }
-<a href=#927 id=927 data-nosnippet>927</a>}</code></pre></div></section></main></body></html>
+<a href=#927 id=927 data-nosnippet>927</a>}
+</code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/2374b21/runtime/src/consensus/registry.rs`."><title>registry.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1a91846b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.88.0-nightly (50aa04180 2025-05-08)" data-channel="nightly" data-search-js="search-f7877310.js" data-settings-js="settings-5514c975.js" ><script src="../../../static.files/storage-4e99c027.js"></script><script defer src="../../../static.files/src-script-63605ae7.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-7ef8a74a.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-893ab5e7.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer"></div><main><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/consensus/</div>registry.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Registry structures.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/76002fa/runtime/src/consensus/registry.rs`."><title>registry.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0-nightly (9e79395f9 2026-02-10)" data-channel="nightly" data-search-js="search-fb33671b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-f9617a14.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-12f88f4f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/consensus/</div>registry.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Registry structures.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! # Note
 <a href=#4 id=4 data-nosnippet>4</a>//!
@@ -10,7 +10,7 @@
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>num_traits::Zero;
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>tiny_keccak::{Hasher, TupleHash};
 <a href=#12 id=12 data-nosnippet>12</a>
-<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use crate</span>::{
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use </span>crate::{
 <a href=#14 id=14 data-nosnippet>14</a>    common::{
 <a href=#15 id=15 data-nosnippet>15</a>        crypto::{
 <a href=#16 id=16 data-nosnippet>16</a>            hash::Hash,
@@ -400,10 +400,10 @@
 <a href=#400 id=400 data-nosnippet>400</a>    </span><span class="kw">pub fn </span>has_tee(<span class="kw-2">&amp;</span><span class="self">self</span>, identity: <span class="kw-2">&amp;</span>Identity, runtime_id: <span class="kw-2">&amp;</span>Namespace, version: <span class="kw-2">&amp;</span>Version) -&gt; bool {
 <a href=#401 id=401 data-nosnippet>401</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(rts) = <span class="kw-2">&amp;</span><span class="self">self</span>.runtimes {
 <a href=#402 id=402 data-nosnippet>402</a>            <span class="kw">for </span>rt <span class="kw">in </span>rts {
-<a href=#403 id=403 data-nosnippet>403</a>                <span class="kw">if </span>runtime_id != <span class="kw-2">&amp;</span>rt.id {
+<a href=#403 id=403 data-nosnippet>403</a>                <span class="kw">if </span><span class="macro">runtime_id !</span>= <span class="kw-2">&amp;</span>rt.id {
 <a href=#404 id=404 data-nosnippet>404</a>                    <span class="kw">continue</span>;
 <a href=#405 id=405 data-nosnippet>405</a>                }
-<a href=#406 id=406 data-nosnippet>406</a>                <span class="kw">if </span>version != <span class="kw-2">&amp;</span>rt.version {
+<a href=#406 id=406 data-nosnippet>406</a>                <span class="kw">if </span><span class="macro">version !</span>= <span class="kw-2">&amp;</span>rt.version {
 <a href=#407 id=407 data-nosnippet>407</a>                    <span class="kw">continue</span>;
 <a href=#408 id=408 data-nosnippet>408</a>                }
 <a href=#409 id=409 data-nosnippet>409</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(tee) = <span class="kw-2">&amp;</span>rt.capabilities.tee {
@@ -421,10 +421,10 @@
 <a href=#421 id=421 data-nosnippet>421</a>    </span><span class="kw">pub fn </span>get_runtime(<span class="kw-2">&amp;</span><span class="self">self</span>, runtime_id: <span class="kw-2">&amp;</span>Namespace, version: <span class="kw-2">&amp;</span>Version) -&gt; <span class="prelude-ty">Option</span>&lt;NodeRuntime&gt; {
 <a href=#422 id=422 data-nosnippet>422</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(rts) = <span class="kw-2">&amp;</span><span class="self">self</span>.runtimes {
 <a href=#423 id=423 data-nosnippet>423</a>            <span class="kw">for </span>rt <span class="kw">in </span>rts {
-<a href=#424 id=424 data-nosnippet>424</a>                <span class="kw">if </span>runtime_id != <span class="kw-2">&amp;</span>rt.id {
+<a href=#424 id=424 data-nosnippet>424</a>                <span class="kw">if </span><span class="macro">runtime_id !</span>= <span class="kw-2">&amp;</span>rt.id {
 <a href=#425 id=425 data-nosnippet>425</a>                    <span class="kw">continue</span>;
 <a href=#426 id=426 data-nosnippet>426</a>                }
-<a href=#427 id=427 data-nosnippet>427</a>                <span class="kw">if </span>version != <span class="kw-2">&amp;</span>rt.version {
+<a href=#427 id=427 data-nosnippet>427</a>                <span class="kw">if </span><span class="macro">version !</span>= <span class="kw-2">&amp;</span>rt.version {
 <a href=#428 id=428 data-nosnippet>428</a>                    <span class="kw">continue</span>;
 <a href=#429 id=429 data-nosnippet>429</a>                }
 <a href=#430 id=430 data-nosnippet>430</a>                <span class="kw">return </span><span class="prelude-val">Some</span>(rt.clone());
@@ -959,7 +959,7 @@
 <a href=#959 id=959 data-nosnippet>959</a>
 <a href=#960 id=960 data-nosnippet>960</a>    <span class="kw">use </span><span class="kw">crate</span>::common::quantity::Quantity;
 <a href=#961 id=961 data-nosnippet>961</a>
-<a href=#962 id=962 data-nosnippet>962</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#962 id=962 data-nosnippet>962</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
 <a href=#963 id=963 data-nosnippet>963</a>
 <a href=#964 id=964 data-nosnippet>964</a>    <span class="doccomment">/// Constructs a BTreeMap using a `btreemap! { key =&gt; value, ... }` syntax.
 <a href=#965 id=965 data-nosnippet>965</a>    </span><span class="macro">macro_rules!</span> btreemap {
@@ -1493,4 +1493,5 @@
 <a href=#1493 id=1493 data-nosnippet>1493</a>        <span class="macro">assert!</span>(!node.has_roles(RolesMask::ROLE_KEY_MANAGER));
 <a href=#1494 id=1494 data-nosnippet>1494</a>        <span class="macro">assert!</span>(!node.has_roles(RolesMask::ROLE_STORAGE_RPC));
 <a href=#1495 id=1495 data-nosnippet>1495</a>    }
-<a href=#1496 id=1496 data-nosnippet>1496</a>}</code></pre></div></section></main></body></html>
+<a href=#1496 id=1496 data-nosnippet>1496</a>}
+</code></pre></div></section></main></body></html>

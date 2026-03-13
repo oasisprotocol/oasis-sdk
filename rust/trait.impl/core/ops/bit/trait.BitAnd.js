@@ -1,9 +1,9 @@
 (function() {
-    var implementors = Object.fromEntries([["oasis_core_runtime",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/bit/trait.BitAnd.html\" title=\"trait core::ops::bit::BitAnd\">BitAnd</a> for <a class=\"struct\" href=\"oasis_core_runtime/common/sgx/pcs/struct.TdAttributes.html\" title=\"struct oasis_core_runtime::common::sgx::pcs::TdAttributes\">TdAttributes</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/bit/trait.BitAnd.html\" title=\"trait core::ops::bit::BitAnd\">BitAnd</a> for <a class=\"struct\" href=\"oasis_core_runtime/consensus/registry/struct.RolesMask.html\" title=\"struct oasis_core_runtime::consensus::registry::RolesMask\">RolesMask</a>"]]]]);
+    const implementors = Object.fromEntries([["oasis_core_runtime",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/bit/trait.BitAnd.html\" title=\"trait core::ops::bit::BitAnd\">BitAnd</a> for <a class=\"struct\" href=\"oasis_core_runtime/common/sgx/pcs/struct.TdAttributes.html\" title=\"struct oasis_core_runtime::common::sgx::pcs::TdAttributes\">TdAttributes</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/ops/bit/trait.BitAnd.html\" title=\"trait core::ops::bit::BitAnd\">BitAnd</a> for <a class=\"struct\" href=\"oasis_core_runtime/consensus/registry/struct.RolesMask.html\" title=\"struct oasis_core_runtime::consensus::registry::RolesMask\">RolesMask</a>",0]]]]);
     if (window.register_implementors) {
         window.register_implementors(implementors);
     } else {
         window.pending_implementors = implementors;
     }
 })()
-//{"start":57,"fragment_lengths":[680]}
+//{"start":59,"fragment_lengths":[684]}
