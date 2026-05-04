@@ -25,7 +25,11 @@ chrono = "0.4.41"
 cmd_lib = "1.9.5"
 futures-util = "0.3.31"
 hex = "0.4.3"
-hickory-resolver = { version = "0.25.2", features = ["https-aws-lc-rs", "dnssec-aws-lc-rs", "webpki-roots"] }
+hickory-resolver = { version = "0.26.1", features = [
+    "https-aws-lc-rs",
+    "dnssec-aws-lc-rs",
+    "webpki-roots",
+] }
 jsonwebtoken = "9"
 nix = { version = "0.29.0", features = ["signal"] }
 oci-client = "0.15.0"
