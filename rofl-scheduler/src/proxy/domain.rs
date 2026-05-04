@@ -2,7 +2,10 @@ use std::{collections::BinaryHeap, sync::Weak, time::Duration};
 
 use anyhow::{anyhow, Result};
 use backoff::backoff::Backoff;
-use hickory_resolver::config::NameServerConfigGroup;
+use hickory_resolver::{
+    config::{ServerGroup, CLOUDFLARE, GOOGLE, QUAD9},
+    net::runtime::TokioRuntimeProvider,
+};
 use tokio::{sync::mpsc, task::JoinSet, time::Instant};
 
 use oasis_runtime_sdk_rofl_market::types::InstanceId;
@@ -199,16 +202,17 @@ impl CustomDomainVerifier {
         ));
 
         // Prepare DNS resolver.
-        let mut name_servers = NameServerConfigGroup::google_https();
-        name_servers.merge(NameServerConfigGroup::cloudflare_https());
-        name_servers.merge(NameServerConfigGroup::quad9_https());
+        let mut name_servers = Vec::new();
+        name_servers.extend(ServerGroup::https(&GOOGLE));
+        name_servers.extend(ServerGroup::https(&CLOUDFLARE));
+        name_servers.extend(ServerGroup::https(&QUAD9));
 
         let mut builder = hickory_resolver::Resolver::builder_with_config(
             hickory_resolver::config::ResolverConfig::from_parts(None, vec![], name_servers),
-            hickory_resolver::name_server::TokioConnectionProvider::default(),
+            TokioRuntimeProvider::default(),
         );
         builder.options_mut().validate = true; // Enable DNSSEC validation.
-        let resolver = builder.build();
+        let resolver = builder.build().unwrap();
 
         // Spawn domain verification workers.
         for _ in 0..workers {
@@ -335,13 +339,10 @@ impl CustomDomainVerifier {
     ) -> Result<()> {
         let expected_token = format!("oasis-rofl-verification={}", verification.token);
 
-        let txt_records = resolver.txt_lookup(&verification.domain).await?;
-        for record in txt_records {
-            for txt_data in record.txt_data() {
-                let txt_string = String::from_utf8_lossy(txt_data);
-                if txt_string.contains(&expected_token) {
-                    return Ok(());
-                }
+        let lookup = resolver.txt_lookup(&verification.domain).await?;
+        for record in lookup.answers() {
+            if record.data.to_string().contains(&expected_token) {
+                return Ok(());
             }
         }
 
