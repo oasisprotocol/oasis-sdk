@@ -190,15 +190,24 @@ pub fn transfer<C: sdk::Context>(
         return Err(Error::ZeroAmount);
     }
 
-    let mut from_balance = balances.get(ctx.public_store(), from).unwrap_or_default();
-    let mut to_balance = balances.get(ctx.public_store(), to).unwrap_or_default();
+    if from == to {
+        let from_balance = balances.get(ctx.public_store(), from).unwrap_or_default();
+        if from_balance < amount {
+            return Err(Error::InsufficientFunds);
+        }
+        return Ok(());
+    }
 
+    // Remove from account balance.
+    let mut from_balance = balances.get(ctx.public_store(), from).unwrap_or_default();
     from_balance = from_balance
         .checked_sub(amount)
         .ok_or(Error::InsufficientFunds)?;
-    to_balance += amount;
-
     balances.insert(ctx.public_store(), from, from_balance);
+
+    // Add to account balance. Shouldn't ever overflow.
+    let mut to_balance = balances.get(ctx.public_store(), to).unwrap_or_default();
+    to_balance = to_balance.checked_add(amount).unwrap();
     balances.insert(ctx.public_store(), to, to_balance);
 
     Ok(())
