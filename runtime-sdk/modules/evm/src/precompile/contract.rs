@@ -1,9 +1,9 @@
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileHandle},
-    ExitError,
+    interpreter::runtime::{RuntimeBackend, RuntimeState},
+    GasMutState,
 };
 
-use crate::precompile::PrecompileResult;
+use super::{PrecompileError, PrecompileResult};
 
 /// A static contract is a contract whose implementation is provided by the
 /// runtime, much like the runtime provides function implementations at
@@ -14,7 +14,11 @@ pub trait StaticContract {
 
     /// Dispatch a contract method call to a particular method of the
     /// implementing struct.
-    fn dispatch_call(handle: &mut impl PrecompileHandle) -> Option<PrecompileResult>;
+    fn dispatch_call<G: AsRef<RuntimeState> + GasMutState, H: RuntimeBackend>(
+        input: &[u8],
+        gasometer: &mut G,
+        handler: &mut H,
+    ) -> PrecompileResult;
 }
 
 /// Helper trait for emitting EVM events.
@@ -24,7 +28,10 @@ pub trait StaticContract {
 /// automatically encode event parameters into the format required by the EVM.
 pub trait EvmEvent {
     /// Encode the event's data into the required EVM log format end emit it.
-    fn emit<C: StaticContract>(&self, handle: &mut impl PrecompileHandle) -> Result<(), ExitError>;
+    fn emit<C: StaticContract, H: RuntimeBackend>(
+        &self,
+        handler: &mut H,
+    ) -> Result<(), PrecompileError>;
 }
 
 /// Helper trait for raising errors.
@@ -35,5 +42,5 @@ pub trait EvmEvent {
 pub trait EvmError {
     /// Encode the error's type and parameters into the format specified by the
     /// EVM ABI and wrap it into a failure sruct used by the executor.
-    fn encode(&self) -> PrecompileFailure;
+    fn encode(&self) -> PrecompileError;
 }

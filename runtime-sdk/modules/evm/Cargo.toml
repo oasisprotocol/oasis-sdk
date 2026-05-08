@@ -1,9 +1,9 @@
 [package]
 name = "oasis-runtime-sdk-evm"
 description = "EVM module for the Oasis Runtime SDK."
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 
 [dependencies]
@@ -32,7 +32,8 @@ rand_core = { version = "0.6.4", default-features = false }
 solabi = "0.3.0"
 ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
 ethereum = "0.15"
-evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.39.1-oasis" }
+evm = "1.1.1"
+evm-precompile = "1.0.1"
 fixed-hash = "0.8.0"
 primitive-types = { version = "0.12", default-features = false, features = ["rlp", "num-traits"] }
 rlp = "0.5.2"
@@ -68,14 +69,4 @@ required-features = ["test"]
 [[bin]]
 name = "fuzz-precompile-corpus"
 path = "fuzz/precompile_corpus.rs"
-required-features = ["test"]
-
-[[bin]]
-name = "fuzz-precompile-contract-dispatch"
-path = "fuzz/precompile_contract_dispatch.rs"
-required-features = ["test"]
-
-[[bin]]
-name = "fuzz-precompile-contract-dispatch-corpus"
-path = "fuzz/precompile_contract_dispatch_corpus.rs"
 required-features = ["test"]

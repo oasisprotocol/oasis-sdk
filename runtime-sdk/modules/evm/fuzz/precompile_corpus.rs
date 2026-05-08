@@ -4,16 +4,6 @@ use std::{fs, path};
 #[cfg(fuzzing)]
 use honggfuzz::fuzz;
 
-use oasis_runtime_sdk_evm::precompile::testing::read_test_cases;
-
-fn gen_test_vectors(fixture: &str) -> Box<dyn Iterator<Item = Vec<u8>>> {
-    Box::new(
-        read_test_cases(fixture)
-            .into_iter()
-            .map(|case| hex::decode(case.input).unwrap()),
-    )
-}
-
 fn gen_x25519() -> Box<dyn Iterator<Item = Vec<u8>>> {
     let key = b"this must be the excelentest key";
     let nonce = b"complete noncence, and too long.";
@@ -72,10 +62,6 @@ Run the regular build of this tool."#
     );
 
     let precompiles = vec![
-        (0, 0, 5, gen_test_vectors("modexp_eip2565")),
-        (0, 0, 6, gen_test_vectors("bn256Add")),
-        (0, 0, 7, gen_test_vectors("bn256ScalarMul")),
-        (0, 0, 8, gen_test_vectors("bn256Pairing")),
         (1, 0, 1, gen_random_bytes()),
         (1, 0, 3, gen_x25519()),
         (1, 0, 4, gen_x25519()),

@@ -1,14 +1,15 @@
 use evm::{
-    executor::stack::{PrecompileFailure, PrecompileHandle, PrecompileOutput},
-    ExitError, ExitSucceed,
+    interpreter::{runtime::RuntimeState, ExitError, ExitException, ExitSucceed},
+    standard::GasometerState,
+    GasMutState,
 };
+use primitive_types::H160;
 
-use crate::backend::EVMBackendExt;
 use oasis_runtime_sdk::{
-    module::CallResult, modules::core::Error, subcall, types::transaction::CallerAddress,
+    module::CallResult, modules::core::Error, subcall, types::transaction::CallerAddress, Context,
 };
 
-use super::{record_linear_cost, PrecompileResult};
+use super::record_linear_cost;
 
 /// A subcall validator which prevents any subcalls from re-entering the EVM module.
 struct ForbidReentrancy;
@@ -25,87 +26,93 @@ impl subcall::Validator for ForbidReentrancy {
 const SUBCALL_BASE_COST: u64 = 10;
 const SUBCALL_WORD_COST: u64 = 1;
 
-pub(super) fn call_subcall<B: EVMBackendExt>(
-    handle: &mut impl PrecompileHandle,
-    backend: &B,
-) -> PrecompileResult {
+pub(super) fn call_subcall<C, G>(
+    code_address: H160,
+    input: &[u8],
+    gasometer: &mut G,
+    ctx: &C,
+) -> Result<(ExitSucceed, Vec<u8>), ExitError>
+where
+    C: Context,
+    G: AsRef<RuntimeState> + AsRef<GasometerState> + GasMutState,
+{
     record_linear_cost(
-        handle,
-        handle.input().len() as u64,
+        gasometer,
+        input.len() as u64,
         SUBCALL_BASE_COST,
         SUBCALL_WORD_COST,
     )?;
 
+    let state: &RuntimeState = gasometer.as_ref();
+
     // Ensure that the precompile is called using a regular call (and not a delegatecall) so the
     // caller is actually the address of the calling contract.
-    if handle.context().address != handle.code_address() {
-        return Err(PrecompileFailure::Error {
-            exit_status: ExitError::Other("invalid call".into()),
-        });
+    if state.context.address != code_address {
+        return Err(ExitError::Exception(ExitException::Other(
+            "invalid call".into(),
+        )));
     }
 
     // Decode arguments.
-    let (method, body): (solabi::Bytes<Vec<u8>>, solabi::Bytes<Vec<u8>>) =
-        solabi::decode(handle.input()).map_err(|e| PrecompileFailure::Error {
-            exit_status: ExitError::Other(e.to_string().into()),
-        })?;
+    let (method, body): (solabi::Bytes<Vec<u8>>, solabi::Bytes<Vec<u8>>) = solabi::decode(input)
+        .map_err(|e| ExitError::Exception(ExitException::Other(e.to_string().into())))?;
 
     // Parse body as CBOR.
-    let body = cbor::from_slice(body.as_bytes()).map_err(|_| PrecompileFailure::Error {
-        exit_status: ExitError::Other("body is malformed".into()),
-    })?;
+    let body = cbor::from_slice(body.as_bytes())
+        .map_err(|_| ExitError::Exception(ExitException::Other("body is malformed".into())))?;
 
     // Parse method.
-    let method = String::from_utf8(method.to_vec()).map_err(|_| PrecompileFailure::Error {
-        exit_status: ExitError::Other("method is malformed".into()),
-    })?;
+    let method = String::from_utf8(method.to_vec())
+        .map_err(|_| ExitError::Exception(ExitException::Other("method is malformed".into())))?;
 
     // Cap maximum amount of gas that can be used.
-    let max_gas = handle.remaining_gas();
+    let max_gas = gasometer
+        .gas()
+        .try_into()
+        .map_err(|_| ExitError::Exception(ExitException::Other("invalid gas".into())))?;
 
     // Ensure that the subcall is read-only and cannot modify state when
     // the precompile is called using a static call.
-    let read_only = handle.is_static();
+    let gasometer_state: &GasometerState = gasometer.as_ref();
+    let read_only = gasometer_state.is_static;
 
-    let result = backend
-        .subcall(
-            subcall::SubcallInfo {
-                caller: CallerAddress::EthAddress(handle.context().caller.into()),
-                method,
-                body,
-                max_depth: 8,
-                max_gas,
-                read_only,
-            },
-            ForbidReentrancy,
-        )
-        .map_err(|_| PrecompileFailure::Error {
-            exit_status: ExitError::Other("subcall failed".into()),
-        })?;
+    let result = subcall::call(
+        ctx,
+        subcall::SubcallInfo {
+            caller: CallerAddress::EthAddress(state.context.caller.into()),
+            method,
+            body,
+            max_depth: 8,
+            max_gas,
+            read_only,
+        },
+        ForbidReentrancy,
+    )
+    .map_err(|_| ExitError::Exception(ExitException::Other("subcall failed".into())))?;
 
     // Charge gas (this shouldn't fail given that we set the limit appropriately).
-    handle.record_cost(result.gas_used)?;
+    gasometer.record_gas(result.gas_used.into())?;
 
     match result.call_result {
-        CallResult::Ok(value) => Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            output: solabi::encode(&(
+        CallResult::Ok(value) => Ok((
+            ExitSucceed::Returned,
+            solabi::encode(&(
                 0_u64,                              // status_code
                 solabi::Bytes(cbor::to_vec(value)), // response
             )),
-        }),
-        CallResult::Failed { code, module, .. } => Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            output: solabi::encode(&(
+        )),
+        CallResult::Failed { code, module, .. } => Ok((
+            ExitSucceed::Returned,
+            solabi::encode(&(
                 code,                             // status_code
                 solabi::Bytes(module.as_bytes()), // response
             )),
-        }),
+        )),
         CallResult::Aborted(_) => {
             // TODO: Should propagate abort.
-            Err(PrecompileFailure::Error {
-                exit_status: ExitError::Other("subcall failed".into()),
-            })
+            Err(ExitError::Exception(ExitException::Other(
+                "subcall failed".into(),
+            )))
         }
     }
 }
@@ -238,7 +245,7 @@ mod test {
 
         let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
         assert_eq!(events.len(), 1); // Just one gas used event.
-        assert_eq!(events[0].amount, 25738);
+        assert_eq!(events[0].amount, 28238);
     }
 
     #[test]
@@ -501,7 +508,7 @@ mod test {
             ),
             CallOptions {
                 fee: Fee {
-                    gas: 127_710,
+                    gas: 128_700,
                     ..Default::default()
                 },
                 ..Default::default()

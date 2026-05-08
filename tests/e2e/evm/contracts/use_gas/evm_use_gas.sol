@@ -22,7 +22,7 @@ contract Test {
 
     function test_pad_gas(
         uint128 input
-    ) public padGas(20_000) returns (uint128) {
+    ) public padGas(50_000) returns (uint128) {
         if (input > 10) {
             input = (input / 2) - 5;
             return input;

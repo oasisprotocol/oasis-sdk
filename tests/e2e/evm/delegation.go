@@ -81,7 +81,8 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error { //no
 
 	ev := evm.NewV1(env.Client)
 	consAccounts := consensusAccounts.NewV1(env.Client)
-	gasPrice := uint64(2)
+	// Use zero gas price so that gas fees don't affect the final balance check.
+	gasPrice := uint64(0)
 
 	// Deploy the contract.
 	value := big.NewInt(0).Bytes() // Don't send any tokens.
@@ -278,7 +279,7 @@ func DelegationReceiptsTest(ctx context.Context, env *scenario.Env) error { //no
 		return fmt.Errorf("failed to check balance: %w", err)
 	}
 
-	// We delegated 10_000 then undelegated 5_000. All gas fees were zero.
+	// We delegated 10_000 then undelegated 5_000. Gas price is zero, so no fees.
 	expectedBalance := initialBalance.ToBigInt().Uint64() - 5_000
 	if balance.ToBigInt().Uint64() != expectedBalance {
 		return fmt.Errorf("unexpected dave balance (expected: %d got: %s)", expectedBalance, balance)

@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use evm::{
-    executor::stack::{PrecompileHandle, PrecompileOutput},
-    ExitSucceed,
+    backend::RuntimeBackend,
+    interpreter::{runtime::RuntimeState, ExitSucceed},
+    GasMutState,
 };
 use oasis_runtime_sdk::{
     modules::accounts::{Error as AccountsError, API as AccountsAPI},
@@ -13,7 +14,7 @@ use primitive_types::H160;
 
 use crate::precompile::{
     contract::{EvmError as _, EvmEvent as _},
-    PrecompileResult,
+    PrecompileResult, PrecompileSuccess,
 };
 
 const MODULE_NAME: &str = "evm/erc20";
@@ -334,91 +335,125 @@ impl<T: Erc20Token> Erc20Contract<T> {
     }
 
     #[evm_method(signature = "name()")]
-    fn name(handle: &mut impl PrecompileHandle, _input_offset: usize) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.name)?;
-        Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            output: solabi::encode(&[T::NAME.to_string()]),
-        })
+    fn name(
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
+        _input_offset: usize,
+    ) -> PrecompileResult {
+        gasometer.record_gas(T::GAS_COSTS.name.into())?;
+        Ok(PrecompileSuccess::new(
+            ExitSucceed::Returned,
+            solabi::encode(&[T::NAME.to_string()]),
+        ))
     }
 
     #[evm_method(signature = "symbol()")]
-    fn symbol(handle: &mut impl PrecompileHandle, _input_offset: usize) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.symbol)?;
-        Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            output: solabi::encode(&[T::SYMBOL.to_string()]),
-        })
+    fn symbol(
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
+        _input_offset: usize,
+    ) -> PrecompileResult {
+        gasometer.record_gas(T::GAS_COSTS.symbol.into())?;
+        Ok(PrecompileSuccess::new(
+            ExitSucceed::Returned,
+            solabi::encode(&[T::SYMBOL.to_string()]),
+        ))
     }
 
     #[evm_method(signature = "decimals()")]
-    fn decimals(handle: &mut impl PrecompileHandle, _input_offset: usize) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.decimals)?;
-        Ok(PrecompileOutput {
-            exit_status: ExitSucceed::Returned,
-            output: solabi::encode(&[T::DECIMALS as u128]),
-        })
+    fn decimals(
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
+        _input_offset: usize,
+    ) -> PrecompileResult {
+        gasometer.record_gas(T::GAS_COSTS.decimals.into())?;
+        Ok(PrecompileSuccess::new(
+            ExitSucceed::Returned,
+            solabi::encode(&[T::DECIMALS as u128]),
+        ))
     }
 
     #[evm_method(signature = "totalSupply()")]
-    fn total_supply(handle: &mut impl PrecompileHandle, _input_offset: usize) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.total_supply)?;
+    fn total_supply(
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
+        _input_offset: usize,
+    ) -> PrecompileResult {
+        gasometer.record_gas(T::GAS_COSTS.total_supply.into())?;
         match T::total_supply() {
-            Ok(amount) => Ok(PrecompileOutput {
-                exit_status: ExitSucceed::Returned,
-                output: solabi::encode(&amount),
-            }),
+            Ok(amount) => Ok(PrecompileSuccess::new(
+                ExitSucceed::Returned,
+                solabi::encode(&amount),
+            )),
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "balanceOf(address)", convert)]
-    fn balance_of(handle: &mut impl PrecompileHandle, address: H160) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.balace_of)?;
+    fn balance_of(
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
+        address: H160,
+    ) -> PrecompileResult {
+        gasometer.record_gas(T::GAS_COSTS.balace_of.into())?;
         match T::balance_of(&address) {
-            Ok(amount) => Ok(PrecompileOutput {
-                exit_status: ExitSucceed::Returned,
-                output: solabi::encode(&amount),
-            }),
+            Ok(amount) => Ok(PrecompileSuccess::new(
+                ExitSucceed::Returned,
+                solabi::encode(&amount),
+            )),
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "transfer(address,uint256)", convert)]
-    fn transfer(
-        handle: &mut impl PrecompileHandle,
+    fn transfer<G>(
+        gasometer: &mut G,
+        handler: &mut impl RuntimeBackend,
         recipient: H160,
         amount: u128,
-    ) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.transfer)?;
-        let sender = handle.context().caller;
+    ) -> PrecompileResult
+    where
+        G: AsRef<RuntimeState> + GasMutState,
+    {
+        gasometer.record_gas(T::GAS_COSTS.transfer.into())?;
+
+        let state: &RuntimeState = gasometer.as_ref();
+        let sender = state.context.caller;
+
         match T::transfer(&sender, &recipient, amount) {
             Ok(done) => {
                 TransferEvent {
-                    from: solabi::Address(handle.context().caller.into()),
+                    from: solabi::Address(sender.into()),
                     to: solabi::Address(recipient.into()),
                     value: solabi::U256::from(amount),
                 }
-                .emit::<Self>(handle)
+                .emit::<Self, _>(handler)
                 .unwrap();
-                Ok(PrecompileOutput {
-                    exit_status: ExitSucceed::Returned,
-                    output: solabi::encode(&done),
-                })
+                Ok(PrecompileSuccess::new(
+                    ExitSucceed::Returned,
+                    solabi::encode(&done),
+                ))
             }
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "transferFrom(address,address,uint256)", convert)]
-    fn transfer_from(
-        handle: &mut impl PrecompileHandle,
+    fn transfer_from<G>(
+        gasometer: &mut G,
+        handler: &mut impl RuntimeBackend,
         owner: H160,
         recipient: H160,
         amount: u128,
-    ) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.transfer_from)?;
-        let caller = handle.context().caller;
+    ) -> PrecompileResult
+    where
+        G: AsRef<RuntimeState> + GasMutState,
+    {
+        gasometer.record_gas(T::GAS_COSTS.transfer_from.into())?;
+
+        let state: &RuntimeState = gasometer.as_ref();
+        let caller = state.context.caller;
+
         match T::transfer_from(&owner, &caller, &recipient, amount) {
             Ok(done) => {
                 TransferEvent {
@@ -426,25 +461,32 @@ impl<T: Erc20Token> Erc20Contract<T> {
                     to: solabi::Address(recipient.into()),
                     value: solabi::U256::from(amount),
                 }
-                .emit::<Self>(handle)
+                .emit::<Self, _>(handler)
                 .unwrap();
-                Ok(PrecompileOutput {
-                    exit_status: ExitSucceed::Returned,
-                    output: solabi::encode(&[done]),
-                })
+                Ok(PrecompileSuccess::new(
+                    ExitSucceed::Returned,
+                    solabi::encode(&[done]),
+                ))
             }
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "approve(address,uint256)", convert)]
-    fn approve(
-        handle: &mut impl PrecompileHandle,
+    fn approve<G>(
+        gasometer: &mut G,
+        handler: &mut impl RuntimeBackend,
         spender: H160,
         amount: u128,
-    ) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.approve)?;
-        let owner = handle.context().caller;
+    ) -> PrecompileResult
+    where
+        G: AsRef<RuntimeState> + GasMutState,
+    {
+        gasometer.record_gas(T::GAS_COSTS.approve.into())?;
+
+        let state: &RuntimeState = gasometer.as_ref();
+        let owner = state.context.caller;
+
         match T::approve(&owner, &spender, amount) {
             Ok(done) => {
                 ApprovalEvent {
@@ -452,12 +494,12 @@ impl<T: Erc20Token> Erc20Contract<T> {
                     spender: solabi::Address(spender.into()),
                     value: solabi::U256::from(amount),
                 }
-                .emit::<Self>(handle)
+                .emit::<Self, _>(handler)
                 .unwrap();
-                Ok(PrecompileOutput {
-                    exit_status: ExitSucceed::Returned,
-                    output: solabi::encode(&[done]),
-                })
+                Ok(PrecompileSuccess::new(
+                    ExitSucceed::Returned,
+                    solabi::encode(&[done]),
+                ))
             }
             Err(e) => Err(e.encode()),
         }
@@ -465,24 +507,37 @@ impl<T: Erc20Token> Erc20Contract<T> {
 
     #[evm_method(signature = "allowance(address,address)", convert)]
     fn allowance(
-        handle: &mut impl PrecompileHandle,
+        gasometer: &mut impl GasMutState,
+        _handler: &mut impl RuntimeBackend,
         owner: H160,
         spender: H160,
     ) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.allowance)?;
+        gasometer.record_gas(T::GAS_COSTS.allowance.into())?;
+
         match T::allowance(&owner, &spender) {
-            Ok(amount) => Ok(PrecompileOutput {
-                exit_status: ExitSucceed::Returned,
-                output: solabi::encode(&amount),
-            }),
+            Ok(amount) => Ok(PrecompileSuccess::new(
+                ExitSucceed::Returned,
+                solabi::encode(&amount),
+            )),
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "mint(address,uint256)", convert)]
-    fn mint(handle: &mut impl PrecompileHandle, to: H160, amount: u128) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.mint)?;
-        let caller = handle.context().caller;
+    fn mint<G>(
+        gasometer: &mut G,
+        handler: &mut impl RuntimeBackend,
+        to: H160,
+        amount: u128,
+    ) -> PrecompileResult
+    where
+        G: AsRef<RuntimeState> + GasMutState,
+    {
+        gasometer.record_gas(T::GAS_COSTS.mint.into())?;
+
+        let state: &RuntimeState = gasometer.as_ref();
+        let caller = state.context.caller;
+
         match T::mint(&caller, &to, amount) {
             Ok(_) => {
                 TransferEvent {
@@ -490,21 +545,29 @@ impl<T: Erc20Token> Erc20Contract<T> {
                     to: solabi::Address(to.into()),
                     value: solabi::U256::from(amount),
                 }
-                .emit::<Self>(handle)
+                .emit::<Self, _>(handler)
                 .unwrap();
-                Ok(PrecompileOutput {
-                    exit_status: ExitSucceed::Returned,
-                    output: vec![],
-                })
+                Ok(PrecompileSuccess::new(ExitSucceed::Returned, vec![]))
             }
             Err(e) => Err(e.encode()),
         }
     }
 
     #[evm_method(signature = "burn(address,uint256)", convert)]
-    fn burn(handle: &mut impl PrecompileHandle, from: H160, amount: u128) -> PrecompileResult {
-        handle.record_cost(T::GAS_COSTS.burn)?;
-        let caller = handle.context().caller;
+    fn burn<G>(
+        gasometer: &mut G,
+        handler: &mut impl RuntimeBackend,
+        from: H160,
+        amount: u128,
+    ) -> PrecompileResult
+    where
+        G: AsRef<RuntimeState> + GasMutState,
+    {
+        gasometer.record_gas(T::GAS_COSTS.burn.into())?;
+
+        let state: &RuntimeState = gasometer.as_ref();
+        let caller = state.context.caller;
+
         match T::burn(&caller, &from, amount) {
             Ok(_) => {
                 TransferEvent {
@@ -512,12 +575,9 @@ impl<T: Erc20Token> Erc20Contract<T> {
                     to: solabi::Address(H160::zero().into()),
                     value: solabi::U256::from(amount),
                 }
-                .emit::<Self>(handle)
+                .emit::<Self, _>(handler)
                 .unwrap();
-                Ok(PrecompileOutput {
-                    exit_status: ExitSucceed::Returned,
-                    output: vec![],
-                })
+                Ok(PrecompileSuccess::new(ExitSucceed::Returned, vec![]))
             }
             Err(e) => Err(e.encode()),
         }

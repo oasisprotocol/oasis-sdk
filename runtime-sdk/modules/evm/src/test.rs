@@ -10,18 +10,20 @@ use oasis_runtime_sdk::{
     core::transaction::tags::Tag,
     crypto::{self, signature::secp256k1},
     error::Error as _,
-    module::{self, InvariantHandler as _, TransactionHandler as _},
+    module::{self, CallResult, InvariantHandler as _, TransactionHandler as _},
     modules::{
         accounts::{self, Module as Accounts, ADDRESS_FEE_ACCUMULATOR, API as _},
-        core::{self, Module as Core},
+        core::{self, types::EstimateGasQuery, Module as Core},
     },
     state::{self, CurrentState, Mode, Options, TransactionResult},
-    testing::{keys, mock, mock::CallOptions},
+    testing::{
+        keys,
+        mock::{self, CallOptions},
+    },
     types::{
         address::{Address, SignatureAddressSpec},
         token::{self, Denomination},
-        transaction,
-        transaction::Fee,
+        transaction::{self, AuthInfo, Call, CallerAddress, Fee, Transaction},
     },
     Context, Runtime, Version,
 };
@@ -46,13 +48,17 @@ static FAUCET_CONTRACT_CODE_HEX: &str =
 pub(crate) struct EVMConfig;
 
 impl Config for EVMConfig {
-    type AdditionalPrecompileSet = precompile::erc20::Erc20Contract<TestErcToken>;
-
     const CHAIN_ID: u64 = 0xa515;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 
-    fn additional_precompiles() -> Option<Self::AdditionalPrecompileSet> {
+    fn additional_precompiles<G, H>() -> Option<impl evm::standard::PrecompileSet<G, H>>
+    where
+        G: AsRef<evm::interpreter::runtime::RuntimeState>
+            + AsRef<evm::standard::Config>
+            + evm::GasMutState,
+        H: evm::interpreter::runtime::RuntimeBackend,
+    {
         Some(precompile::erc20::Erc20Contract::<TestErcToken>::default())
     }
 }
@@ -60,8 +66,6 @@ impl Config for EVMConfig {
 pub(crate) struct ConfidentialEVMConfig;
 
 impl Config for ConfidentialEVMConfig {
-    type AdditionalPrecompileSet = ();
-
     const CHAIN_ID: u64 = 0x5afe;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
@@ -397,7 +401,9 @@ fn test_c10l_enc_call_identity_decoded() {
 
 struct CoreConfig;
 
-impl core::Config for CoreConfig {}
+impl core::Config for CoreConfig {
+    const DEFAULT_LOCAL_ESTIMATE_GAS_SEARCH_MAX_ITERS: u64 = 25;
+}
 
 /// EVM test runtime.
 struct EVMRuntime<C>(C);
@@ -1806,4 +1812,167 @@ fn test_erc20_allowances() {
         2,
         "allowance should be correct"
     );
+}
+
+#[test]
+fn test_suicide() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(false);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    // Give Dave some tokens.
+    Accounts::mint(
+        keys::dave::address(),
+        &token::BaseUnits::native(1_000_000_000),
+    )
+    .unwrap();
+
+    static SUICIDE_CONTRACT_CODE_HEX: &str =
+        include_str!("../../../../tests/e2e/evm/contracts/evm_suicide_test_compiled.hex");
+    static CALL_SUICIDE_CONTRACT_CODE_HEX: &str =
+        include_str!("../../../../tests/e2e/evm/contracts/evm_call_suicide_test_compiled.hex");
+
+    // Create suicide contract.
+    let dispatch_result = signer.call(
+        &ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: load_contract_bytecode(SUICIDE_CONTRACT_CODE_HEX),
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let suicide_contract_address = H160::from_slice(&result);
+
+    // Create call suicide contract, appending the suicide contract address.
+    let mut init_code = load_contract_bytecode(CALL_SUICIDE_CONTRACT_CODE_HEX);
+    init_code.resize(init_code.len() + 12, 0);
+    init_code.extend_from_slice(suicide_contract_address.as_bytes());
+
+    let dispatch_result = signer.call(
+        &ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code,
+        },
+    );
+    let result = dispatch_result.result.unwrap();
+    let result: Vec<u8> = cbor::from_value(result).unwrap();
+    let call_suicide_contract_address = H160::from_slice(&result);
+
+    // Test gas estimation during this suicide call.
+    let query_result = signer.query(
+        &ctx,
+        "core.EstimateGas",
+        EstimateGasQuery {
+            caller: Some(CallerAddress::EthAddress(signer.address().into())),
+            tx: Transaction {
+                version: 0,
+                call: Call {
+                    method: "evm.Call".to_string(),
+                    body: cbor::to_value(types::Call {
+                        address: call_suicide_contract_address,
+                        data: solabi::selector!("call_suicide()").0.to_vec(),
+                        value: 0.into(),
+                    }),
+                    ..Default::default()
+                },
+                auth_info: AuthInfo {
+                    ..Default::default()
+                },
+            },
+            propagate_failures: false,
+        },
+    );
+    let result: u64 = query_result.unwrap();
+
+    // Call the call_suicide method.
+    let dispatch_result = signer.call_evm_opts(
+        &ctx,
+        call_suicide_contract_address,
+        solabi::selector!("call_suicide()"),
+        &(),
+        CallOptions {
+            fee: Fee {
+                amount: Default::default(),
+                gas: result,
+                consensus_messages: 0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    match dispatch_result.result {
+        CallResult::Ok(_) => panic!("call should fail"),
+        CallResult::Failed {
+            module,
+            code,
+            message,
+        } => {
+            assert_eq!(module, "evm");
+            assert_eq!(code, 2);
+            assert!(message.contains("SELFDESTRUCT not supported"));
+        }
+        CallResult::Aborted(e) => panic!("tx aborted with error: {e}"),
+    }
+
+    // Test gas estimation during the direct suicide call.
+    let query_result = signer.query(
+        &ctx,
+        "core.EstimateGas",
+        EstimateGasQuery {
+            caller: Some(CallerAddress::EthAddress(signer.address().into())),
+            tx: Transaction {
+                version: 0,
+                call: Call {
+                    method: "evm.Call".to_string(),
+                    body: cbor::to_value(types::Call {
+                        address: suicide_contract_address,
+                        data: solabi::selector!("suicide()").0.to_vec(),
+                        value: 0.into(),
+                    }),
+                    ..Default::default()
+                },
+                auth_info: AuthInfo {
+                    ..Default::default()
+                },
+            },
+            propagate_failures: false,
+        },
+    );
+    let result: u64 = query_result.unwrap();
+
+    // Call the suicide method directly.
+    let dispatch_result = signer.call_evm_opts(
+        &ctx,
+        suicide_contract_address,
+        solabi::selector!("suicide()"),
+        &(),
+        CallOptions {
+            fee: Fee {
+                amount: Default::default(),
+                gas: result,
+                consensus_messages: 0,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    match dispatch_result.result {
+        CallResult::Ok(_) => panic!("call should fail"),
+        CallResult::Failed {
+            module,
+            code,
+            message,
+        } => {
+            assert_eq!(module, "evm");
+            assert_eq!(code, 2);
+            assert!(message.contains("SELFDESTRUCT not supported"));
+        }
+        CallResult::Aborted(e) => panic!("tx aborted with error: {e}"),
+    }
 }

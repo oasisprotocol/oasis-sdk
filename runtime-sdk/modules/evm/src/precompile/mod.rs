@@ -1,36 +1,73 @@
 //! EVM precompiles.
 
-use std::{cmp::min, marker::PhantomData};
+use std::marker::PhantomData;
 
 use evm::{
-    executor::stack::{
-        IsPrecompileResult, PrecompileFailure, PrecompileHandle, PrecompileOutput, PrecompileSet,
+    interpreter::{
+        runtime::{RuntimeBackend, RuntimeState},
+        ExitError, ExitSucceed,
     },
-    ExitError,
+    standard::{GasometerState, PrecompileSet},
+    GasMutState,
 };
+use oasis_runtime_sdk::Context;
 use primitive_types::H160;
 
-use crate::{backend::EVMBackendExt, Config};
+use crate::{engine::state::ParentGasInfo, Config};
 
 mod confidential;
 pub mod contract;
 pub mod erc20;
 mod gas;
 mod sha2;
-mod standard;
 mod subcall;
 
 #[cfg(any(test, feature = "test"))]
 pub mod testing;
 
-// Some types matching evm::executor::stack.
-type PrecompileResult = Result<PrecompileOutput, PrecompileFailure>;
+/// An error returned by an EVM precompile, together with the output.
+#[derive(Clone, Debug)]
+pub struct PrecompileError {
+    pub error: ExitError,
+    pub output: Vec<u8>,
+}
+
+impl PrecompileError {
+    pub fn new(error: ExitError, output: Vec<u8>) -> Self {
+        Self { error, output }
+    }
+}
+
+impl From<ExitError> for PrecompileError {
+    fn from(error: ExitError) -> Self {
+        Self {
+            error,
+            output: Vec::new(),
+        }
+    }
+}
+
+/// A successful result returned by an EVM precompile, together with the output.
+#[derive(Clone, Debug)]
+pub struct PrecompileSuccess {
+    pub status: ExitSucceed,
+    pub output: Vec<u8>,
+}
+
+impl PrecompileSuccess {
+    pub fn new(status: ExitSucceed, output: Vec<u8>) -> Self {
+        Self { status, output }
+    }
+}
+
+/// A result returned by an EVM precompile, either success or error.
+pub type PrecompileResult = Result<PrecompileSuccess, PrecompileError>;
 
 macro_rules! ensure_gas {
     ($math:expr) => {
-        $math.ok_or(PrecompileFailure::Error {
-            exit_status: ExitError::OutOfGas,
-        })?
+        $math.ok_or(evm::interpreter::ExitError::Exception(
+            evm::interpreter::ExitException::OutOfGas,
+        ))?
     };
 }
 
@@ -40,154 +77,118 @@ fn bytes_to_words(bytes: u64) -> u64 {
 }
 
 /// Records linear gas cost: base + word*ceil(len/32)
-fn record_linear_cost(
-    handle: &mut impl PrecompileHandle,
+fn record_linear_cost<G: GasMutState>(
+    gasometer: &mut G,
     len: u64,
     base: u64,
     word: u64,
-) -> Result<(), PrecompileFailure> {
-    record_multilinear_cost(handle, len, 0, word, 0, base)
+) -> Result<(), evm::interpreter::ExitError> {
+    record_multilinear_cost(gasometer, len, 0, word, 0, base)
 }
 
 // Records a*ceil(x/32) + b*ceil(y/32) + c, or an error if out of gas.
-fn record_multilinear_cost(
-    handle: &mut impl PrecompileHandle,
+fn record_multilinear_cost<G: GasMutState>(
+    gasometer: &mut G,
     x: u64,
     y: u64,
     a: u64,
     b: u64,
     c: u64,
-) -> Result<(), PrecompileFailure> {
+) -> Result<(), evm::interpreter::ExitError> {
     let cost = c;
     let ax = ensure_gas!(a.checked_mul(bytes_to_words(x)));
     let by = ensure_gas!(b.checked_mul(bytes_to_words(y)));
     let cost = ensure_gas!(cost.checked_add(ax));
     let cost = ensure_gas!(cost.checked_add(by));
-    handle.record_cost(cost)?;
+    gasometer.record_gas(cost.into())?;
     Ok(())
 }
 
-/// Copies bytes from source to target.
-fn read_input(source: &[u8], target: &mut [u8], offset: usize) {
-    if source.len() <= offset {
-        return;
-    }
-
-    let len = min(target.len(), source.len() - offset);
-    target[..len].copy_from_slice(&source[offset..offset + len]);
-}
-
-pub(crate) struct Precompiles<'a, Cfg: Config, B: EVMBackendExt> {
-    backend: &'a B,
+pub(crate) struct Precompiles<'a, Cfg: Config, C: Context> {
+    ctx: &'a C,
     config: PhantomData<Cfg>,
 }
 
-impl<'a, Cfg: Config, B: EVMBackendExt> Precompiles<'a, Cfg, B> {
-    pub(crate) fn new(backend: &'a B) -> Self {
+impl<'a, Cfg: Config, C: Context> Precompiles<'a, Cfg, C> {
+    pub(crate) fn new(ctx: &'a C) -> Self {
         Self {
-            backend,
+            ctx,
             config: PhantomData,
         }
     }
 }
 
-impl<Cfg: Config, B: EVMBackendExt> PrecompileSet for Precompiles<'_, Cfg, B> {
-    fn execute(&self, handle: &mut impl PrecompileHandle) -> Option<PrecompileResult> {
-        let address = handle.code_address();
-        match self.is_precompile(address, handle.remaining_gas()) {
-            IsPrecompileResult::Answer {
-                is_precompile: true,
-                extra_cost,
-            } => {
-                if let Err(e) = handle.record_cost(extra_cost) {
-                    return Some(Err(e.into()));
-                }
-            }
-            IsPrecompileResult::OutOfGas => {
-                return Some(Err(ExitError::OutOfGas.into()));
-            }
-            _ => {
-                return None;
-            }
+impl<Cfg, C, G, H> PrecompileSet<G, H> for Precompiles<'_, Cfg, C>
+where
+    Cfg: Config,
+    C: Context,
+    G: AsRef<RuntimeState>
+        + AsRef<evm::standard::Config>
+        + AsRef<GasometerState>
+        + GasMutState
+        + ParentGasInfo,
+    H: RuntimeBackend,
+{
+    fn execute(
+        &self,
+        code_address: H160,
+        input: &[u8],
+        gasometer: &mut G,
+        handler: &mut H,
+    ) -> Option<(evm::interpreter::ExitResult, Vec<u8>)> {
+        // First try the standard Ethereum precompiles.
+        let std_precompiles = evm_precompile::StandardPrecompileSet;
+        if let Some(result) = std_precompiles.execute(code_address, input, gasometer, handler) {
+            return Some(result);
         }
-        Some(match (address[0], address[18], address[19]) {
-            // Ethereum-compatible.
-            // 0x0000000000000000000000000000000000000001
-            (0, 0, 1) => standard::call_ecrecover(handle),
-            // 0x0000000000000000000000000000000000000002
-            (0, 0, 2) => standard::call_sha256(handle),
-            // 0x0000000000000000000000000000000000000003
-            (0, 0, 3) => standard::call_ripemd160(handle),
-            // 0x0000000000000000000000000000000000000004
-            (0, 0, 4) => standard::call_datacopy(handle),
-            // 0x0000000000000000000000000000000000000005
-            (0, 0, 5) => standard::call_bigmodexp(handle),
-            // 0x0000000000000000000000000000000000000006
-            (0, 0, 6) => standard::call_bn128_add(handle),
-            // 0x0000000000000000000000000000000000000007
-            (0, 0, 7) => standard::call_bn128_mul(handle),
-            // 0x0000000000000000000000000000000000000008
-            (0, 0, 8) => standard::call_bn128_pairing(handle),
+
+        // Then try the Oasis-specific precompiles.
+        let result = match (
+            code_address[0],
+            code_address[18],
+            code_address[19],
+            Cfg::CONFIDENTIAL,
+        ) {
             // Oasis-specific, confidential.
             // 0x0100000000000000000000000000000000000001
-            (1, 0, 1) => confidential::call_random_bytes(handle, self.backend),
+            (1, 0, 1, true) => confidential::call_random_bytes(input, gasometer, self.ctx),
             // 0x0100000000000000000000000000000000000002
-            (1, 0, 2) => confidential::call_x25519_derive(handle),
+            (1, 0, 2, true) => confidential::call_x25519_derive(input, gasometer),
             // 0x0100000000000000000000000000000000000003
-            (1, 0, 3) => confidential::call_deoxysii_seal(handle),
+            (1, 0, 3, true) => confidential::call_deoxysii_seal(input, gasometer),
             // 0x0100000000000000000000000000000000000004
-            (1, 0, 4) => confidential::call_deoxysii_open(handle),
+            (1, 0, 4, true) => confidential::call_deoxysii_open(input, gasometer),
             // 0x0100000000000000000000000000000000000005
-            (1, 0, 5) => confidential::call_keypair_generate(handle),
+            (1, 0, 5, true) => confidential::call_keypair_generate(input, gasometer),
             // 0x0100000000000000000000000000000000000006
-            (1, 0, 6) => confidential::call_sign(handle),
+            (1, 0, 6, true) => confidential::call_sign(input, gasometer),
             // 0x0100000000000000000000000000000000000007
-            (1, 0, 7) => confidential::call_verify(handle),
+            (1, 0, 7, true) => confidential::call_verify(input, gasometer),
             // 0x0100000000000000000000000000000000000008
-            (1, 0, 8) => confidential::call_curve25519_compute_public(handle),
+            (1, 0, 8, true) => confidential::call_curve25519_compute_public(input, gasometer),
             // 0x0100000000000000000000000000000000000009
-            (1, 0, 9) => gas::call_gas_used(handle),
+            (1, 0, 9, true) => gas::call_gas_used(input, gasometer),
             // 0x010000000000000000000000000000000000000a
-            (1, 0, 10) => gas::call_pad_gas(handle),
+            (1, 0, 10, true) => gas::call_pad_gas(input, gasometer),
             // Oasis-specific, general.
             // 0x0100000000000000000000000000000000000101
-            (1, 1, 1) => sha2::call_sha512_256(handle),
+            (1, 1, 1, _) => sha2::call_sha512_256(input, gasometer),
             // 0x0100000000000000000000000000000000000102
-            (1, 1, 2) => sha2::call_sha512(handle),
+            (1, 1, 2, _) => sha2::call_sha512(input, gasometer),
             // 0x0100000000000000000000000000000000000103
-            (1, 1, 3) => subcall::call_subcall(handle, self.backend),
+            (1, 1, 3, _) => subcall::call_subcall(code_address, input, gasometer, self.ctx),
             // 0x0100000000000000000000000000000000000104
-            (1, 1, 4) => sha2::call_sha384(handle),
-            _ => return Cfg::additional_precompiles().and_then(|pc| pc.execute(handle)),
-        })
-    }
-
-    fn is_precompile(&self, address: H160, remaining_gas: u64) -> IsPrecompileResult {
-        // See above table in `execute` for matching on what is a valid precompile address.
-        let addr_bytes = address.as_bytes();
-        let (a0, a18, a19) = (address[0], addr_bytes[18], addr_bytes[19]);
-        if address[1..18].iter().all(|b| *b == 0)
-            && matches!(
-                (a0, a18, a19, Cfg::CONFIDENTIAL),
-                // Ethereum-compatible.
-                (0, 0, 1..=8, _) |
-                // Oasis-specific, confidential.
-                (1, 0, 1..=10, true) |
-                // Oasis-specific, general.
-                (1, 1, 1..=4, _)
-            )
-        {
-            IsPrecompileResult::Answer {
-                is_precompile: true,
-                extra_cost: 0,
+            (1, 1, 4, _) => sha2::call_sha384(input, gasometer),
+            _ => {
+                // If nothing matches, try additional precompiles.
+                return Cfg::additional_precompiles()
+                    .and_then(|pc| pc.execute(code_address, input, gasometer, handler));
             }
-        } else {
-            Cfg::additional_precompiles()
-                .map(|pc| pc.is_precompile(address, remaining_gas))
-                .unwrap_or(IsPrecompileResult::Answer {
-                    is_precompile: false,
-                    extra_cost: 0,
-                })
+        };
+
+        match result {
+            Ok((succeed, retval)) => Some((succeed.into(), retval)),
+            Err(err) => Some((err.into(), Vec::new())),
         }
     }
 }

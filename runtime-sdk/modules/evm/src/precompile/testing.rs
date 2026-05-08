@@ -1,17 +1,23 @@
-use evm::{
-    executor::stack::{PrecompileHandle, PrecompileSet},
-    Context, ExitError, ExitReason, Transfer,
-};
 pub use primitive_types::{H160, H256};
 
 use oasis_runtime_sdk::{
     context,
-    module::{self},
-    modules::{accounts, core, core::Error},
-    subcall,
-    testing::keys,
-    types::token::{self, Denomination},
-    Runtime, Version,
+    core::storage::mkvs,
+    module::{self, CallResult},
+    modules::{
+        accounts,
+        core::{self},
+    },
+    storage::MKVSStore,
+    testing::{
+        keys,
+        mock::{CallOptions, Mock},
+    },
+    types::{
+        token::{self, Denomination},
+        transaction::Fee,
+    },
+    CurrentState, Runtime, Version,
 };
 
 use crate::{
@@ -19,145 +25,16 @@ use crate::{
     types::{self},
 };
 
-use super::{PrecompileResult, Precompiles};
 use std::collections::BTreeMap;
 
 pub(crate) struct TestConfig;
 
 impl crate::Config for TestConfig {
-    type AdditionalPrecompileSet = ();
-
     const CHAIN_ID: u64 = 0;
 
     const TOKEN_DENOMINATION: Denomination = Denomination::NATIVE;
 
     const CONFIDENTIAL: bool = true;
-}
-
-struct MockBackend;
-impl crate::backend::EVMBackendExt for MockBackend {
-    fn random_bytes(&self, num_bytes: u64, pers: &[u8]) -> Vec<u8> {
-        pers.iter()
-            .copied()
-            .chain((pers.len()..(num_bytes as usize)).map(|i| i as u8))
-            .collect()
-    }
-
-    fn subcall<V: subcall::Validator + 'static>(
-        &self,
-        _info: subcall::SubcallInfo,
-        _validator: V,
-    ) -> Result<subcall::SubcallResult, Error> {
-        unimplemented!()
-    }
-}
-
-struct MockPrecompileHandle<'a> {
-    address: H160,
-    input: &'a [u8],
-    context: &'a Context,
-    gas_limit: u64,
-    gas_cost: u64,
-    gas_used: u64,
-}
-
-impl PrecompileHandle for MockPrecompileHandle<'_> {
-    fn call(
-        &mut self,
-        _to: H160,
-        _transfer: Option<Transfer>,
-        _input: Vec<u8>,
-        _gas_limit: Option<u64>,
-        _is_static: bool,
-        _context: &Context,
-    ) -> (ExitReason, Vec<u8>) {
-        unimplemented!()
-    }
-
-    fn record_cost(&mut self, cost: u64) -> Result<(), ExitError> {
-        if self.remaining_gas() < cost {
-            return Err(ExitError::OutOfGas);
-        }
-        self.gas_cost = self.gas_cost.saturating_add(cost);
-        self.gas_used = self.gas_used.saturating_add(cost);
-
-        Ok(())
-    }
-
-    fn remaining_gas(&self) -> u64 {
-        self.gas_limit.saturating_sub(self.gas_cost)
-    }
-
-    fn log(&mut self, _address: H160, _topics: Vec<H256>, _data: Vec<u8>) -> Result<(), ExitError> {
-        Ok(())
-    }
-
-    fn code_address(&self) -> H160 {
-        self.address
-    }
-
-    fn input(&self) -> &[u8] {
-        self.input
-    }
-
-    fn context(&self) -> &Context {
-        self.context
-    }
-
-    fn is_static(&self) -> bool {
-        false
-    }
-
-    fn gas_limit(&self) -> Option<u64> {
-        Some(self.gas_limit)
-    }
-
-    fn record_external_cost(
-        &mut self,
-        _ref_time: Option<u64>,
-        _proof_size: Option<u64>,
-        _storage_growth: Option<u64>,
-    ) -> Result<(), ExitError> {
-        unimplemented!()
-    }
-
-    fn refund_external_cost(&mut self, _ref_time: Option<u64>, _proof_size: Option<u64>) {
-        unimplemented!()
-    }
-
-    fn used_gas(&self) -> u64 {
-        self.gas_used
-    }
-}
-
-#[doc(hidden)]
-pub fn call_contract(address: H160, input: &[u8], gas_limit: u64) -> Option<PrecompileResult> {
-    call_contract_with_gas_report(address, input, gas_limit).map(|(result, _)| result)
-}
-
-#[doc(hidden)]
-pub fn call_contract_with_gas_report(
-    address: H160,
-    input: &[u8],
-    gas_limit: u64,
-) -> Option<(PrecompileResult, u64)> {
-    let context: Context = Context {
-        address: Default::default(),
-        caller: Default::default(),
-        apparent_value: From::from(0),
-    };
-    let precompiles: Precompiles<'_, TestConfig, MockBackend> = Precompiles::new(&MockBackend);
-    let mut handle = MockPrecompileHandle {
-        address,
-        input,
-        context: &context,
-        gas_limit,
-        gas_cost: 0,
-        gas_used: 0,
-    };
-    precompiles
-        .execute(&mut handle)
-        .map(|result| (result, handle.gas_cost))
 }
 
 /// Test case for precompiled contract tests.
@@ -261,4 +138,53 @@ pub fn init_and_deploy_contract<C: context::Context>(
     let result = dispatch_result.result.unwrap();
     let result: Vec<u8> = cbor::from_value(result).unwrap();
     H160::from_slice(&result)
+}
+
+#[doc(hidden)]
+pub fn call_contract(address: H160, input: &[u8], gas_limit: u64) -> Result<Vec<u8>, String> {
+    let mut mock = Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    // Ensure we always start with a clean state.
+    let root = mkvs::OverlayTree::new(
+        mkvs::Tree::builder()
+            .with_root_type(mkvs::RootType::State)
+            .build(Box::new(mkvs::sync::NoopReadSyncer)),
+    );
+    let root = MKVSStore::new(root);
+
+    CurrentState::enter(root, || {
+        TestRuntime::migrate(&ctx);
+
+        let dispatch_result = signer.call_opts(
+            &ctx,
+            "evm.Call",
+            types::Call {
+                address: address.into(),
+                value: 0.into(),
+                data: input.to_vec(),
+            },
+            CallOptions {
+                fee: Fee {
+                    gas: gas_limit,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+
+        match dispatch_result.result {
+            CallResult::Ok(result) => {
+                let result: Vec<u8> = cbor::from_value(result).unwrap();
+                Ok(result)
+            }
+            CallResult::Failed {
+                module,
+                code,
+                message,
+            } => Err(format!("module: {module} code: {code} message: {message}")),
+            CallResult::Aborted(err) => Err(format!("aborted: {err}")),
+        }
+    })
 }

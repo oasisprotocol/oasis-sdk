@@ -16,7 +16,7 @@ fn main() {
             address[19] = data[2] % 11;
             let data = &data[3..];
 
-            call_contract(address.into(), data, 1_000_000);
+            let _ = call_contract(address.into(), data, 1_000_000);
         });
     }
 }
