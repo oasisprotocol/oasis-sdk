@@ -124,7 +124,7 @@ impl Term {
         match self {
             Self::Hour => 60 * 60,
             Self::Month => 30 * 24 * 60 * 60,
-            Self::Year => 365 * 30 * 24 * 60 * 60,
+            Self::Year => 365 * 24 * 60 * 60,
         }
     }
 }
