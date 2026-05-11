@@ -16,7 +16,7 @@ fn gen_test_vectors(fixture: &str) -> Box<dyn Iterator<Item = Vec<u8>>> {
 
 fn gen_x25519() -> Box<dyn Iterator<Item = Vec<u8>>> {
     let key = b"this must be the excelentest key";
-    let nonce = b"complete noncence, and too long.";
+    let nonce = b"short nonce\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
     let plaintext = b"0123456789";
     let ad = b"additional data";
 
