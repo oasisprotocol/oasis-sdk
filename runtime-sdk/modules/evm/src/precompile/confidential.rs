@@ -185,6 +185,12 @@ fn decode_deoxysii_call_args(
     let text = text.to_vec();
     let ad = ad.to_vec();
 
+    if nonce_bytes[NONCE_SIZE..].iter().any(|&x| x != 0) {
+        return Err(PrecompileFailure::Error {
+            exit_status: ExitError::Other("invalid nonce size".into()),
+        });
+    }
+
     let mut nonce = [0u8; NONCE_SIZE];
     nonce.copy_from_slice(&nonce_bytes[..NONCE_SIZE]);
     let mut key = [0u8; KEY_SIZE];
@@ -499,7 +505,7 @@ mod test {
     #[test]
     fn test_deoxysii() {
         let key = b"this must be the excelentest key";
-        let nonce = b"complete noncence, and too long.";
+        let nonce = b"short nonce\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
         let plaintext = b"0123456789";
         let ad = b"additional data";
         let ret_ct = call_contract(
@@ -507,8 +513,8 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
             ]),
             &solabi::encode(&(
-                solabi::Bytes(key.to_vec()),
-                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes::<[u8; 32]>(*key),
+                solabi::Bytes::<[u8; 32]>(*nonce),
                 solabi::Bytes(plaintext.to_vec()),
                 solabi::Bytes(ad.to_vec()),
             )),
@@ -523,8 +529,8 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
             ]),
             &solabi::encode(&(
-                solabi::Bytes(key.to_vec()),
-                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes::<[u8; 32]>(*key),
+                solabi::Bytes::<[u8; 32]>(*nonce),
                 solabi::Bytes(ret_ct.output.to_vec()),
                 solabi::Bytes(ad.to_vec()),
             )),
@@ -533,6 +539,28 @@ mod test {
         .expect("call should return something")
         .expect("call should succeed");
         assert_eq!(plaintext.as_slice(), ret_pt.output);
+    }
+
+    #[test]
+    fn test_deoxysii_invalid_nonce() {
+        let key = b"this must be the excelentest key";
+        let nonce = b"invalid nonce, which is too long";
+        let plaintext = b"0123456789";
+        let ad = b"additional data";
+        let _ = call_contract(
+            H160([
+                0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
+            ]),
+            &solabi::encode(&(
+                solabi::Bytes::<[u8; 32]>(*key),
+                solabi::Bytes::<[u8; 32]>(*nonce),
+                solabi::Bytes(plaintext.to_vec()),
+                solabi::Bytes(ad.to_vec()),
+            )),
+            10_000_000,
+        )
+        .expect("call should return something")
+        .expect_err("call should fail");
     }
 
     #[test]
@@ -551,7 +579,7 @@ mod test {
     #[bench]
     fn bench_deoxysii_short(b: &mut Bencher) {
         let key = b"this must be the excelentest key";
-        let nonce = b"complete noncence, and too long.";
+        let nonce = b"short nonce\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
         let plaintext = b"01234567890123456789";
         let ad = b"additional data";
         b.iter(|| {
@@ -560,8 +588,8 @@ mod test {
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
                 &solabi::encode(&(
-                    solabi::Bytes(key.to_vec()),
-                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes::<[u8; 32]>(*key),
+                    solabi::Bytes::<[u8; 32]>(*nonce),
                     solabi::Bytes(plaintext.to_vec()),
                     solabi::Bytes(ad.to_vec()),
                 )),
@@ -575,7 +603,7 @@ mod test {
     #[bench]
     fn bench_deoxysii_long(b: &mut Bencher) {
         let key = b"this must be the excelentest key";
-        let nonce = b"complete noncence, and too long.";
+        let nonce = b"short nonce\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0";
         let plaintext = b"0123456789".repeat(200);
         let ad = b"additional data";
         b.iter(|| {
@@ -584,8 +612,8 @@ mod test {
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
                 &solabi::encode(&(
-                    solabi::Bytes(key.to_vec()),
-                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes::<[u8; 32]>(*key),
+                    solabi::Bytes::<[u8; 32]>(*nonce),
                     solabi::Bytes(plaintext.to_vec()),
                     solabi::Bytes(ad.to_vec()),
                 )),
