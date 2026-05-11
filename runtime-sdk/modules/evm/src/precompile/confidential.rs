@@ -507,8 +507,8 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
             ]),
             &solabi::encode(&(
-                solabi::Bytes(key.to_vec()),
-                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes::<[u8; 32]>(*key),
+                solabi::Bytes::<[u8; 32]>(*nonce),
                 solabi::Bytes(plaintext.to_vec()),
                 solabi::Bytes(ad.to_vec()),
             )),
@@ -523,8 +523,8 @@ mod test {
                 0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x04,
             ]),
             &solabi::encode(&(
-                solabi::Bytes(key.to_vec()),
-                solabi::Bytes(nonce.to_vec()),
+                solabi::Bytes::<[u8; 32]>(*key),
+                solabi::Bytes::<[u8; 32]>(*nonce),
                 solabi::Bytes(ret_ct.output.to_vec()),
                 solabi::Bytes(ad.to_vec()),
             )),
@@ -560,8 +560,8 @@ mod test {
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
                 &solabi::encode(&(
-                    solabi::Bytes(key.to_vec()),
-                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes::<[u8; 32]>(*key),
+                    solabi::Bytes::<[u8; 32]>(*nonce),
                     solabi::Bytes(plaintext.to_vec()),
                     solabi::Bytes(ad.to_vec()),
                 )),
@@ -584,8 +584,8 @@ mod test {
                     0x01, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x03,
                 ]),
                 &solabi::encode(&(
-                    solabi::Bytes(key.to_vec()),
-                    solabi::Bytes(nonce.to_vec()),
+                    solabi::Bytes::<[u8; 32]>(*key),
+                    solabi::Bytes::<[u8; 32]>(*nonce),
                     solabi::Bytes(plaintext.to_vec()),
                     solabi::Bytes(ad.to_vec()),
                 )),
