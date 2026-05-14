@@ -173,7 +173,7 @@ pub enum Payment {
     ///
     /// ```text
     /// rmpPay(uint8 term, uint64 termCount, address from, bytes data)
-    /// rmpRefund(address to, bytes data)
+    /// rmpRefund(bytes data)
     /// rmpClaim(uint64 claimableTime, uint64 paidTime, address to, bytes data)
     /// ```
     ///
@@ -307,6 +307,8 @@ pub struct Instance {
     /// Instance payment address.
     pub payment_address: [u8; 20],
     /// Payment method-specific refund information.
+    ///
+    /// Deprecated: Refunds are always issued to the administrator.
     pub refund_data: Vec<u8>,
 
     /// Next command identifier to use.
