@@ -391,6 +391,14 @@ impl<T: Erc20Token> Erc20Contract<T> {
         amount: u128,
     ) -> PrecompileResult {
         handle.record_cost(T::GAS_COSTS.transfer)?;
+
+        // Ensure that the call is read-only and cannot modify state when
+        // called using a static call.
+        let read_only = handle.is_static();
+        if read_only {
+            return Err(Error::Forbidden.encode());
+        }
+
         let sender = handle.context().caller;
         match T::transfer(&sender, &recipient, amount) {
             Ok(done) => {
@@ -418,6 +426,14 @@ impl<T: Erc20Token> Erc20Contract<T> {
         amount: u128,
     ) -> PrecompileResult {
         handle.record_cost(T::GAS_COSTS.transfer_from)?;
+
+        // Ensure that the call is read-only and cannot modify state when
+        // called using a static call.
+        let read_only = handle.is_static();
+        if read_only {
+            return Err(Error::Forbidden.encode());
+        }
+
         let caller = handle.context().caller;
         match T::transfer_from(&owner, &caller, &recipient, amount) {
             Ok(done) => {
@@ -444,6 +460,14 @@ impl<T: Erc20Token> Erc20Contract<T> {
         amount: u128,
     ) -> PrecompileResult {
         handle.record_cost(T::GAS_COSTS.approve)?;
+
+        // Ensure that the call is read-only and cannot modify state when
+        // called using a static call.
+        let read_only = handle.is_static();
+        if read_only {
+            return Err(Error::Forbidden.encode());
+        }
+
         let owner = handle.context().caller;
         match T::approve(&owner, &spender, amount) {
             Ok(done) => {
@@ -482,6 +506,14 @@ impl<T: Erc20Token> Erc20Contract<T> {
     #[evm_method(signature = "mint(address,uint256)", convert)]
     fn mint(handle: &mut impl PrecompileHandle, to: H160, amount: u128) -> PrecompileResult {
         handle.record_cost(T::GAS_COSTS.mint)?;
+
+        // Ensure that the call is read-only and cannot modify state when
+        // called using a static call.
+        let read_only = handle.is_static();
+        if read_only {
+            return Err(Error::Forbidden.encode());
+        }
+
         let caller = handle.context().caller;
         match T::mint(&caller, &to, amount) {
             Ok(_) => {
@@ -504,6 +536,14 @@ impl<T: Erc20Token> Erc20Contract<T> {
     #[evm_method(signature = "burn(address,uint256)", convert)]
     fn burn(handle: &mut impl PrecompileHandle, from: H160, amount: u128) -> PrecompileResult {
         handle.record_cost(T::GAS_COSTS.burn)?;
+
+        // Ensure that the call is read-only and cannot modify state when
+        // called using a static call.
+        let read_only = handle.is_static();
+        if read_only {
+            return Err(Error::Forbidden.encode());
+        }
+
         let caller = handle.context().caller;
         match T::burn(&caller, &from, amount) {
             Ok(_) => {
