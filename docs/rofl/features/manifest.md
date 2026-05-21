@@ -81,6 +81,21 @@ values currently supported:
 
 The `size` argument defines the amount of storage to provision in megabytes.
 
+## Artifacts (`artifacts`) {#artifacts}
+
+Configures locations of artifacts used during the ROFL build process.
+Unspecified fields use the default artifacts provided by the CLI.
+
+Supported fields are `builder`, `firmware`, `kernel`, `stage2`,
+`container.runtime` and `container.compose`. For containerized apps,
+`container.compose` points to the Compose file included in the ROFL bundle.
+
+```yaml
+artifacts:
+  container:
+    compose: compose.yaml
+```
+
 ## Deployments (`deployments`) {#deployments}
 
 This section contains ROFL deployments on specific networks.
@@ -88,6 +103,21 @@ This section contains ROFL deployments on specific networks.
 ### `<deployment_name>`
 
 User-defined deployment name.
+
+#### `artifacts`
+
+Optional deployment-specific artifact location overrides. Deployment artifacts
+are merged field by field on top of global `artifacts`.
+
+```yaml
+deployments:
+  testnet:
+    network: testnet
+    paratime: sapphire
+    artifacts:
+      container:
+        compose: compose.testnet.yaml
+```
 
 #### `policy`
 
