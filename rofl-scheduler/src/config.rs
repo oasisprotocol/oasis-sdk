@@ -47,7 +47,7 @@ pub struct RawOfferConfig {
 ///         - "oasis1..."
 /// ```
 #[derive(Clone, Debug, Default)]
-struct RawOffersField(BTreeMap<String, RawOfferConfig>);
+pub(crate) struct RawOffersField(BTreeMap<String, RawOfferConfig>);
 
 impl cbor::Decode for RawOffersField {
     fn try_default() -> Result<Self, cbor::DecodeError> {
@@ -91,7 +91,7 @@ pub struct RawLocalConfig {
     /// optional per-offer configuration that overrides the global defaults.
     ///
     /// Accepts the legacy array form `["offer-a"]` (backwards compatible) or the new map form.
-    pub offers: RawOffersField,
+    pub(crate) offers: RawOffersField,
     /// Allowed artifact hashes.
     ///
     /// Key is the artifact kind and value is a list of artifact SHA256 hashes. If a key doesn't

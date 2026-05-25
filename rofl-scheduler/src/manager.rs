@@ -494,9 +494,12 @@ impl Manager {
                             .get(&instance.offer)
                             .cloned()
                             .unwrap_or_default();
-                        local_state
-                            .pending_start
-                            .push((instance, desired, wipe_storage, offer_key));
+                        local_state.pending_start.push((
+                            instance,
+                            desired,
+                            wipe_storage,
+                            offer_key,
+                        ));
                     }
                 }
                 (None, Some(desired)) => {
