@@ -19,6 +19,21 @@ use oasis_runtime_sdk_rofl_market as market;
 /// Local configuration key that contains the ROFL scheduler configuration.
 const ROFL_SCHEDULER_CONFIG_KEY: &str = "rofl_scheduler";
 
+/// Raw per-offer configuration as serialized.
+#[derive(Clone, Debug, Default, cbor::Decode)]
+pub struct RawOfferConfig {
+    /// Allowed instance creator addresses for this offer.
+    ///
+    /// When set, overrides the global `allowed_creators`. An empty list means all creators are
+    /// allowed. When not set (`None`), the global `allowed_creators` is used as a fallback.
+    pub allowed_creators: Option<Vec<String>>,
+    /// Allowed artifact hashes for this offer.
+    ///
+    /// When set, overrides the global `allowed_artifacts` entirely. When not set (`None`), the
+    /// global `allowed_artifacts` is used as a fallback.
+    pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
+}
+
 /// Raw local configuration as serialized.
 #[derive(Clone, Debug, Default, cbor::Decode)]
 pub struct RawLocalConfig {
@@ -26,8 +41,9 @@ pub struct RawLocalConfig {
     pub provider_address: String,
     /// Offers that the scheduler should accept. If no offers are configured, all are accepted.
     ///
-    /// Each offer identifier is the value of the `net.oasis.scheduler.offer` metadata key.
-    pub offers: BTreeSet<String>,
+    /// Each key is the value of the `net.oasis.scheduler.offer` metadata key. The value is an
+    /// optional per-offer configuration that overrides the global defaults.
+    pub offers: BTreeMap<String, RawOfferConfig>,
     /// Allowed artifact hashes.
     ///
     /// Key is the artifact kind and value is a list of artifact SHA256 hashes. If a key doesn't
@@ -135,16 +151,34 @@ impl Resources {
     }
 }
 
+/// Per-offer configuration.
+#[derive(Clone, Debug, Default)]
+pub struct OfferConfig {
+    /// Allowed instance creator addresses.
+    ///
+    /// When `Some`, overrides the global `allowed_creators`. An empty set means all creators are
+    /// allowed. When `None`, the global `allowed_creators` is used as a fallback.
+    pub allowed_creators: Option<BTreeSet<Address>>,
+    /// Allowed artifact hashes.
+    ///
+    /// When `Some`, overrides the global `allowed_artifacts` entirely. When `None`, the global
+    /// `allowed_artifacts` is used as a fallback.
+    pub allowed_artifacts: Option<BTreeMap<String, BTreeSet<Hash>>>,
+}
+
 /// Local scheduler configuration.
 #[derive(Clone, Debug, Default)]
 pub struct LocalConfig {
     /// Address of the provider.
     pub provider_address: Address,
-    /// Offers that the scheduler should accept.
-    pub offers: BTreeSet<String>,
-    /// Allowed artifact hashes.
+    /// Offers that the scheduler should accept, with optional per-offer configuration.
+    ///
+    /// Each key is the value of the `net.oasis.scheduler.offer` metadata key. If the map is
+    /// empty, all offers are accepted using the global defaults.
+    pub offers: BTreeMap<String, OfferConfig>,
+    /// Allowed artifact hashes (global default, may be overridden per offer).
     pub allowed_artifacts: BTreeMap<String, BTreeSet<Hash>>,
-    /// Allowed instance creator addresses.
+    /// Allowed instance creator addresses (global default, may be overridden per offer).
     pub allowed_creators: BTreeSet<Address>,
     /// Resource capacity.
     pub capacity: Resources,
@@ -196,6 +230,48 @@ impl LocalConfig {
             .collect::<Result<BTreeSet<_>, _>>()
             .map_err(|_| anyhow!("bad allowed creators value"))?;
 
+        let offers = cfg
+            .offers
+            .into_iter()
+            .map(|(key, raw_cfg)| -> Result<(String, OfferConfig)> {
+                let offer_creators = raw_cfg
+                    .allowed_creators
+                    .map(|creators| {
+                        creators
+                            .into_iter()
+                            .map(|raw| Address::from_bech32(&raw))
+                            .collect::<Result<BTreeSet<_>, _>>()
+                            .map_err(|_| anyhow!("bad allowed_creators in offer '{key}'"))
+                    })
+                    .transpose()?;
+                let offer_artifacts = raw_cfg
+                    .allowed_artifacts
+                    .map(|artifacts| {
+                        artifacts
+                            .into_iter()
+                            .map(|(kind, hashes)| -> Result<(String, BTreeSet<Hash>)> {
+                                Ok((
+                                    kind,
+                                    hashes
+                                        .into_iter()
+                                        .map(|h| -> Result<Hash> { Ok(h.parse::<Hash>()?) })
+                                        .collect::<Result<BTreeSet<_>>>()?,
+                                ))
+                            })
+                            .collect::<Result<_>>()
+                            .map_err(|_| anyhow!("bad allowed_artifacts in offer '{key}'"))
+                    })
+                    .transpose()?;
+                Ok((
+                    key,
+                    OfferConfig {
+                        allowed_creators: offer_creators,
+                        allowed_artifacts: offer_artifacts,
+                    },
+                ))
+            })
+            .collect::<Result<_>>()?;
+
         let transfer_instances_from = cfg
             .transfer_instances_from
             .into_iter()
@@ -211,7 +287,7 @@ impl LocalConfig {
 
         Ok(LocalConfig {
             provider_address,
-            offers: cfg.offers,
+            offers,
             allowed_artifacts,
             allowed_creators,
             capacity: cfg.capacity,
@@ -229,23 +305,38 @@ impl LocalConfig {
     }
 
     /// Validate the given artifact hash against the set of allowed artifacts.
-    pub fn ensure_artifact_allowed(&self, kind: &str, hash: &Hash) -> Result<()> {
-        let allowed_hashes = match self.allowed_artifacts.get(kind) {
-            None => {
-                // All artifacts of this kind are allowed.
-                return Ok(());
-            }
-            Some(allowed_hashes) => allowed_hashes,
-        };
+    ///
+    /// Uses the per-offer artifact list when the offer has one configured; otherwise falls back
+    /// to the global `allowed_artifacts`.
+    pub fn ensure_artifact_allowed(&self, offer_key: &str, kind: &str, hash: &Hash) -> Result<()> {
+        let artifacts = self
+            .offers
+            .get(offer_key)
+            .and_then(|cfg| cfg.allowed_artifacts.as_ref())
+            .unwrap_or(&self.allowed_artifacts);
 
-        if !allowed_hashes.contains(hash) {
-            return Err(anyhow!("{kind} artifact not allowed"));
+        match artifacts.get(kind) {
+            None => Ok(()), // all artifacts of this kind are allowed
+            Some(allowed_hashes) => {
+                if !allowed_hashes.contains(hash) {
+                    Err(anyhow!("{kind} artifact not allowed"))
+                } else {
+                    Ok(())
+                }
+            }
         }
-        Ok(())
     }
 
-    /// Check whether the given creator is among the allowed creators.
-    pub fn is_creator_allowed(&self, address: &Address) -> bool {
+    /// Check whether the given creator is among the allowed creators for the given offer.
+    ///
+    /// Uses the per-offer creator list when the offer has one configured; otherwise falls back to
+    /// the global `allowed_creators`. An empty list means all creators are allowed.
+    pub fn is_creator_allowed(&self, offer_key: &str, address: &Address) -> bool {
+        if let Some(offer_cfg) = self.offers.get(offer_key) {
+            if let Some(ref creators) = offer_cfg.allowed_creators {
+                return creators.is_empty() || creators.contains(address);
+            }
+        }
         self.allowed_creators.is_empty() || self.allowed_creators.contains(address)
     }
 
