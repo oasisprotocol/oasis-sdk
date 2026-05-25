@@ -34,6 +34,52 @@ pub struct RawOfferConfig {
     pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
 }
 
+/// Backwards-compatible wrapper for the `offers` field in [`RawLocalConfig`].
+///
+/// Each element of the sequence is either a plain string (old format, no overrides) or a
+/// single-key map whose key is the offer name and whose value is a [`RawOfferConfig`]:
+///
+/// ```yaml
+/// offers:
+///   - playground_short             # plain string — global defaults apply
+///   - oasis_internal:              # map entry — per-offer overrides
+///       allowed_creators:
+///         - "oasis1..."
+/// ```
+#[derive(Clone, Debug, Default)]
+struct RawOffersField(BTreeMap<String, RawOfferConfig>);
+
+impl cbor::Decode for RawOffersField {
+    fn try_default() -> Result<Self, cbor::DecodeError> {
+        Ok(Self(BTreeMap::new()))
+    }
+
+    fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
+        let cbor::Value::Array(items) = value else {
+            return Err(cbor::DecodeError::UnexpectedType);
+        };
+        let mut map = BTreeMap::new();
+        for item in items {
+            match item {
+                // Plain string: "offer-name" → empty config (global defaults apply).
+                cbor::Value::TextString(key) => {
+                    map.insert(key, RawOfferConfig::default());
+                }
+                // Single-key map: {"offer-name": {config}} → offer with overrides.
+                cbor::Value::Map(entries) if entries.len() == 1 => {
+                    let (k, v) = entries.into_iter().next().unwrap();
+                    let cbor::Value::TextString(key) = k else {
+                        return Err(cbor::DecodeError::UnexpectedType);
+                    };
+                    map.insert(key, RawOfferConfig::try_from_cbor_value(v)?);
+                }
+                _ => return Err(cbor::DecodeError::UnexpectedType),
+            }
+        }
+        Ok(Self(map))
+    }
+}
+
 /// Raw local configuration as serialized.
 #[derive(Clone, Debug, Default, cbor::Decode)]
 pub struct RawLocalConfig {
@@ -43,7 +89,9 @@ pub struct RawLocalConfig {
     ///
     /// Each key is the value of the `net.oasis.scheduler.offer` metadata key. The value is an
     /// optional per-offer configuration that overrides the global defaults.
-    pub offers: BTreeMap<String, RawOfferConfig>,
+    ///
+    /// Accepts the legacy array form `["offer-a"]` (backwards compatible) or the new map form.
+    pub offers: RawOffersField,
     /// Allowed artifact hashes.
     ///
     /// Key is the artifact kind and value is a list of artifact SHA256 hashes. If a key doesn't
@@ -232,6 +280,7 @@ impl LocalConfig {
 
         let offers = cfg
             .offers
+            .0
             .into_iter()
             .map(|(key, raw_cfg)| -> Result<(String, OfferConfig)> {
                 let offer_creators = raw_cfg
@@ -343,5 +392,89 @@ impl LocalConfig {
     /// Check whether the given node identifier is among the list of nodes to transfer instances from.
     pub fn should_transfer_instance_from(&self, node_id: &PublicKey) -> bool {
         self.transfer_instances_from.contains(node_id)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn make_raw(offers_cbor: cbor::Value) -> RawLocalConfig {
+        let mut raw = RawLocalConfig::default();
+        raw.offers = cbor::Decode::try_from_cbor_value(offers_cbor).unwrap();
+        raw
+    }
+
+    #[test]
+    fn test_offers_legacy_array_format() {
+        // Old format: plain array of strings. Each becomes a key with empty OfferConfig.
+        let raw = make_raw(cbor::Value::Array(vec![
+            cbor::Value::TextString("playground_short".into()),
+            cbor::Value::TextString("playground_short_sgx".into()),
+        ]));
+        assert!(raw.offers.0.contains_key("playground_short"));
+        assert!(raw.offers.0.contains_key("playground_short_sgx"));
+        assert_eq!(raw.offers.0.len(), 2);
+        // No per-offer overrides — both fields are None (global fallback applies).
+        assert!(raw.offers.0["playground_short"].allowed_creators.is_none());
+    }
+
+    #[test]
+    fn test_offers_mixed_format() {
+        // Mixed: plain strings alongside a single-key map entry with overrides.
+        let raw = make_raw(cbor::Value::Array(vec![
+            cbor::Value::TextString("playground_short".into()),
+            cbor::Value::TextString("playground_short_sgx".into()),
+            cbor::Value::Map(vec![(
+                cbor::Value::TextString("oasis_internal".into()),
+                cbor::Value::Map(vec![(
+                    cbor::Value::TextString("allowed_creators".into()),
+                    cbor::Value::Array(vec![cbor::Value::TextString(
+                        "oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7".into(),
+                    )]),
+                )]),
+            )]),
+        ]));
+        assert!(raw.offers.0.contains_key("playground_short"));
+        assert!(raw.offers.0["playground_short"].allowed_creators.is_none());
+        assert!(raw.offers.0.contains_key("oasis_internal"));
+        assert!(raw.offers.0["oasis_internal"].allowed_creators.is_some());
+    }
+
+    #[test]
+    fn test_is_creator_allowed_fallback() {
+        // Per-offer None → global fallback.
+        let cfg = LocalConfig {
+            offers: BTreeMap::from([("public".into(), OfferConfig::default())]),
+            allowed_creators: BTreeSet::new(), // global: allow all
+            ..Default::default()
+        };
+        let addr = Address::from_bech32("oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7").unwrap();
+        assert!(cfg.is_creator_allowed("public", &addr));
+    }
+
+    #[test]
+    fn test_is_creator_allowed_per_offer_override() {
+        let allowed =
+            Address::from_bech32("oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7").unwrap();
+        let blocked =
+            Address::from_bech32("oasis1qrad7s7nqm4gvyzr8yt48jkrjxuqc6d7pvjm4ze").unwrap();
+
+        let cfg = LocalConfig {
+            offers: BTreeMap::from([(
+                "internal".into(),
+                OfferConfig {
+                    allowed_creators: Some(BTreeSet::from([allowed])),
+                    allowed_artifacts: None,
+                },
+            )]),
+            allowed_creators: BTreeSet::new(), // global: allow all (should not apply here)
+            ..Default::default()
+        };
+
+        assert!(cfg.is_creator_allowed("internal", &allowed));
+        assert!(!cfg.is_creator_allowed("internal", &blocked));
+        // Unknown offer key → global fallback (allow all).
+        assert!(cfg.is_creator_allowed("public", &blocked));
     }
 }
