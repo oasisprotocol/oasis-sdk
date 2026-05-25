@@ -35,7 +35,7 @@ pub struct RawOfferConfig {
 }
 
 /// A map entry with an explicit `id` field and optional per-offer config overrides.
-#[derive(Clone, Debug, cbor::Decode)]
+#[derive(Clone, Debug, Default, cbor::Decode)]
 struct RawOfferEntry {
     pub id: String,
     pub allowed_creators: Option<Vec<String>>,
