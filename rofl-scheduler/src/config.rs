@@ -34,17 +34,25 @@ pub struct RawOfferConfig {
     pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
 }
 
+/// A map entry with an explicit `id` field and optional per-offer config overrides.
+#[derive(Clone, Debug, cbor::Decode)]
+struct RawOfferEntry {
+    pub id: String,
+    pub allowed_creators: Option<Vec<String>>,
+    pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
+}
+
 /// Backwards-compatible wrapper for the `offers` field in [`RawLocalConfig`].
 ///
 /// Each element of the sequence is either a plain string (old format, no overrides) or a
-/// single-key map whose key is the offer name and whose value is a [`RawOfferConfig`]:
+/// map with an `id` field and optional per-offer config overrides:
 ///
 /// ```yaml
 /// offers:
 ///   - playground_short             # plain string — global defaults apply
-///   - oasis_internal:              # map entry — per-offer overrides
-///       allowed_creators:
-///         - "oasis1..."
+///   - id: oasis_internal           # map entry — per-offer overrides
+///     allowed_creators:
+///       - "oasis1..."
 /// ```
 #[derive(Clone, Debug, Default)]
 pub(crate) struct RawOffersField(BTreeMap<String, RawOfferConfig>);
@@ -65,13 +73,16 @@ impl cbor::Decode for RawOffersField {
                 cbor::Value::TextString(key) => {
                     map.insert(key, RawOfferConfig::default());
                 }
-                // Single-key map: {"offer-name": {config}} → offer with overrides.
-                cbor::Value::Map(entries) if entries.len() == 1 => {
-                    let (k, v) = entries.into_iter().next().unwrap();
-                    let cbor::Value::TextString(key) = k else {
-                        return Err(cbor::DecodeError::UnexpectedType);
-                    };
-                    map.insert(key, RawOfferConfig::try_from_cbor_value(v)?);
+                // Map with an `id` field and optional overrides.
+                cbor::Value::Map(_) => {
+                    let entry = RawOfferEntry::try_from_cbor_value(item)?;
+                    map.insert(
+                        entry.id,
+                        RawOfferConfig {
+                            allowed_creators: entry.allowed_creators,
+                            allowed_artifacts: entry.allowed_artifacts,
+                        },
+                    );
                 }
                 _ => return Err(cbor::DecodeError::UnexpectedType),
             }
@@ -90,7 +101,7 @@ pub struct RawLocalConfig {
     /// Each key is the value of the `net.oasis.scheduler.offer` metadata key. The value is an
     /// optional per-offer configuration that overrides the global defaults.
     ///
-    /// Accepts the legacy array form `["offer-a"]` (backwards compatible) or the new map form.
+    /// Accepts the legacy plain-string array form (backwards compatible) or the new map-entry form.
     pub(crate) offers: RawOffersField,
     /// Allowed artifact hashes.
     ///
@@ -421,19 +432,22 @@ mod test {
 
     #[test]
     fn test_offers_mixed_format() {
-        // Mixed: plain strings alongside a single-key map entry with overrides.
+        // Mixed: plain strings alongside a map entry with an explicit `id` field and overrides.
         let raw = make_raw(cbor::Value::Array(vec![
             cbor::Value::TextString("playground_short".into()),
             cbor::Value::TextString("playground_short_sgx".into()),
-            cbor::Value::Map(vec![(
-                cbor::Value::TextString("oasis_internal".into()),
-                cbor::Value::Map(vec![(
+            cbor::Value::Map(vec![
+                (
+                    cbor::Value::TextString("id".into()),
+                    cbor::Value::TextString("oasis_internal".into()),
+                ),
+                (
                     cbor::Value::TextString("allowed_creators".into()),
                     cbor::Value::Array(vec![cbor::Value::TextString(
                         "oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7".into(),
                     )]),
-                )]),
-            )]),
+                ),
+            ]),
         ]));
         assert!(raw.offers.0.contains_key("playground_short"));
         assert!(raw.offers.0["playground_short"].allowed_creators.is_none());
