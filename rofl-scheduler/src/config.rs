@@ -20,8 +20,21 @@ use oasis_runtime_sdk_rofl_market as market;
 const ROFL_SCHEDULER_CONFIG_KEY: &str = "rofl_scheduler";
 
 /// Raw per-offer configuration as serialized.
-#[derive(Clone, Debug, Default, cbor::Decode)]
+///
+/// Each element of the `offers` sequence is either a plain string (old format, no overrides) or
+/// a map with an `id` field and optional per-offer config overrides:
+///
+/// ```yaml
+/// offers:
+///   - public               # plain string — global defaults apply
+///   - id: internal         # map entry — per-offer overrides
+///     allowed_creators:
+///       - "oasis1..."
+/// ```
+#[derive(Clone, Debug, Default)]
 pub struct RawOfferConfig {
+    /// Offer identifier (value of the `net.oasis.scheduler.offer` metadata key).
+    pub id: String,
     /// Allowed instance creator addresses for this offer.
     ///
     /// When set, overrides the global `allowed_creators`. An empty list means all creators are
@@ -34,60 +47,52 @@ pub struct RawOfferConfig {
     pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
 }
 
-/// A map entry with an explicit `id` field and optional per-offer config overrides.
-#[derive(Clone, Debug, Default, cbor::Decode)]
-struct RawOfferEntry {
-    pub id: String,
-    pub allowed_creators: Option<Vec<String>>,
-    pub allowed_artifacts: Option<BTreeMap<String, Vec<String>>>,
-}
-
-/// Backwards-compatible wrapper for the `offers` field in [`RawLocalConfig`].
-///
-/// Each element of the sequence is either a plain string (old format, no overrides) or a
-/// map with an `id` field and optional per-offer config overrides:
-///
-/// ```yaml
-/// offers:
-///   - playground_short             # plain string — global defaults apply
-///   - id: oasis_internal           # map entry — per-offer overrides
-///     allowed_creators:
-///       - "oasis1..."
-/// ```
-#[derive(Clone, Debug, Default)]
-pub(crate) struct RawOffersField(BTreeMap<String, RawOfferConfig>);
-
-impl cbor::Decode for RawOffersField {
+impl cbor::Decode for RawOfferConfig {
     fn try_default() -> Result<Self, cbor::DecodeError> {
-        Ok(Self(BTreeMap::new()))
+        Ok(Self::default())
     }
 
     fn try_from_cbor_value(value: cbor::Value) -> Result<Self, cbor::DecodeError> {
-        let cbor::Value::Array(items) = value else {
-            return Err(cbor::DecodeError::UnexpectedType);
-        };
-        let mut map = BTreeMap::new();
-        for item in items {
-            match item {
-                // Plain string: "offer-name" → empty config (global defaults apply).
-                cbor::Value::TextString(key) => {
-                    map.insert(key, RawOfferConfig::default());
+        match value {
+            // Plain string: the offer name with no overrides (global defaults apply).
+            cbor::Value::TextString(id) => Ok(Self {
+                id,
+                allowed_creators: None,
+                allowed_artifacts: None,
+            }),
+            // Map with an `id` field and optional overrides.
+            cbor::Value::Map(entries) => {
+                let mut id = None;
+                let mut allowed_creators = None;
+                let mut allowed_artifacts = None;
+                for (k, v) in entries {
+                    let cbor::Value::TextString(key) = k else {
+                        return Err(cbor::DecodeError::UnexpectedType);
+                    };
+                    match key.as_str() {
+                        "id" => {
+                            id = Some(<String as cbor::Decode>::try_from_cbor_value(v)?);
+                        }
+                        "allowed_creators" => {
+                            allowed_creators =
+                                Some(<Vec<String> as cbor::Decode>::try_from_cbor_value(v)?);
+                        }
+                        "allowed_artifacts" => {
+                            allowed_artifacts = Some(
+                                <BTreeMap<String, Vec<String>> as cbor::Decode>::try_from_cbor_value(v)?,
+                            );
+                        }
+                        _ => {}
+                    }
                 }
-                // Map with an `id` field and optional overrides.
-                cbor::Value::Map(_) => {
-                    let entry = RawOfferEntry::try_from_cbor_value(item)?;
-                    map.insert(
-                        entry.id,
-                        RawOfferConfig {
-                            allowed_creators: entry.allowed_creators,
-                            allowed_artifacts: entry.allowed_artifacts,
-                        },
-                    );
-                }
-                _ => return Err(cbor::DecodeError::UnexpectedType),
+                Ok(Self {
+                    id: id.ok_or(cbor::DecodeError::MissingField)?,
+                    allowed_creators,
+                    allowed_artifacts,
+                })
             }
+            _ => Err(cbor::DecodeError::UnexpectedType),
         }
-        Ok(Self(map))
     }
 }
 
@@ -98,11 +103,9 @@ pub struct RawLocalConfig {
     pub provider_address: String,
     /// Offers that the scheduler should accept. If no offers are configured, all are accepted.
     ///
-    /// Each key is the value of the `net.oasis.scheduler.offer` metadata key. The value is an
-    /// optional per-offer configuration that overrides the global defaults.
-    ///
-    /// Accepts the legacy plain-string array form (backwards compatible) or the new map-entry form.
-    pub(crate) offers: RawOffersField,
+    /// Each entry is either a plain string (legacy form, no overrides) or a map with an `id`
+    /// field and optional per-offer config overrides.
+    pub offers: Vec<RawOfferConfig>,
     /// Allowed artifact hashes.
     ///
     /// Key is the artifact kind and value is a list of artifact SHA256 hashes. If a key doesn't
@@ -291,9 +294,9 @@ impl LocalConfig {
 
         let offers = cfg
             .offers
-            .0
             .into_iter()
-            .map(|(key, raw_cfg)| -> Result<(String, OfferConfig)> {
+            .map(|raw_cfg| -> Result<(String, OfferConfig)> {
+                let key = raw_cfg.id;
                 let offer_creators = raw_cfg
                     .allowed_creators
                     .map(|creators| {
@@ -376,7 +379,7 @@ impl LocalConfig {
             .unwrap_or(&self.allowed_artifacts);
 
         match artifacts.get(kind) {
-            None => Ok(()), // all artifacts of this kind are allowed
+            None => Ok(()), // All artifacts of this kind are allowed.
             Some(allowed_hashes) => {
                 if !allowed_hashes.contains(hash) {
                     Err(anyhow!("{kind} artifact not allowed"))
@@ -408,38 +411,37 @@ impl LocalConfig {
 
 #[cfg(test)]
 mod test {
+    use oasis_runtime_sdk::testing;
+
     use super::*;
 
-    fn make_raw(offers_cbor: cbor::Value) -> RawLocalConfig {
-        let mut raw = RawLocalConfig::default();
-        raw.offers = cbor::Decode::try_from_cbor_value(offers_cbor).unwrap();
-        raw
+    fn decode_offers(cbor: cbor::Value) -> Vec<RawOfferConfig> {
+        <Vec<RawOfferConfig> as cbor::Decode>::try_from_cbor_value(cbor).unwrap()
     }
 
     #[test]
     fn test_offers_legacy_array_format() {
-        // Old format: plain array of strings. Each becomes a key with empty OfferConfig.
-        let raw = make_raw(cbor::Value::Array(vec![
-            cbor::Value::TextString("playground_short".into()),
-            cbor::Value::TextString("playground_short_sgx".into()),
+        // Old format: plain array of strings. Each becomes a RawOfferConfig with no overrides.
+        let offers = decode_offers(cbor::Value::Array(vec![
+            cbor::Value::TextString("small".into()),
+            cbor::Value::TextString("large".into()),
         ]));
-        assert!(raw.offers.0.contains_key("playground_short"));
-        assert!(raw.offers.0.contains_key("playground_short_sgx"));
-        assert_eq!(raw.offers.0.len(), 2);
-        // No per-offer overrides — both fields are None (global fallback applies).
-        assert!(raw.offers.0["playground_short"].allowed_creators.is_none());
+        assert_eq!(offers.len(), 2);
+        assert_eq!(offers[0].id, "small");
+        assert!(offers[0].allowed_creators.is_none());
+        assert_eq!(offers[1].id, "large");
     }
 
     #[test]
     fn test_offers_mixed_format() {
         // Mixed: plain strings alongside a map entry with an explicit `id` field and overrides.
-        let raw = make_raw(cbor::Value::Array(vec![
-            cbor::Value::TextString("playground_short".into()),
-            cbor::Value::TextString("playground_short_sgx".into()),
+        let offers = decode_offers(cbor::Value::Array(vec![
+            cbor::Value::TextString("small".into()),
+            cbor::Value::TextString("large".into()),
             cbor::Value::Map(vec![
                 (
                     cbor::Value::TextString("id".into()),
-                    cbor::Value::TextString("oasis_internal".into()),
+                    cbor::Value::TextString("internal".into()),
                 ),
                 (
                     cbor::Value::TextString("allowed_creators".into()),
@@ -449,10 +451,12 @@ mod test {
                 ),
             ]),
         ]));
-        assert!(raw.offers.0.contains_key("playground_short"));
-        assert!(raw.offers.0["playground_short"].allowed_creators.is_none());
-        assert!(raw.offers.0.contains_key("oasis_internal"));
-        assert!(raw.offers.0["oasis_internal"].allowed_creators.is_some());
+        assert_eq!(offers[0].id, "small");
+        assert!(offers[0].allowed_creators.is_none());
+        assert_eq!(offers[1].id, "large");
+        assert!(offers[1].allowed_creators.is_none());
+        assert_eq!(offers[2].id, "internal");
+        assert!(offers[2].allowed_creators.is_some());
     }
 
     #[test]
@@ -463,16 +467,14 @@ mod test {
             allowed_creators: BTreeSet::new(), // global: allow all
             ..Default::default()
         };
-        let addr = Address::from_bech32("oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7").unwrap();
+        let addr = testing::keys::alice::address();
         assert!(cfg.is_creator_allowed("public", &addr));
     }
 
     #[test]
     fn test_is_creator_allowed_per_offer_override() {
-        let allowed =
-            Address::from_bech32("oasis1qp0cnmkjl22gky6p7q0tgkwmsc6g4c5er6x0hsk7").unwrap();
-        let blocked =
-            Address::from_bech32("oasis1qrad7s7nqm4gvyzr8yt48jkrjxuqc6d7pvjm4ze").unwrap();
+        let allowed = testing::keys::alice::address();
+        let blocked = testing::keys::bob::address();
 
         let cfg = LocalConfig {
             offers: BTreeMap::from([(
