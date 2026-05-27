@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.7.0
+version: 0.7.1
 repository: https://github.com/oasisprotocol/oasis-sdk
 description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 tee: tdx
@@ -22,8 +22,8 @@ deployments:
     paratime: sapphire
     admin: rofl_scheduler_admin
     trust_root:
-      height: 24612496
-      hash: ae5b2064bb62987150c2c94821b7434b7d9d3f3b75a53a8dbe8267050ffbe09a
+      height: 30157369
+      hash: fe1e78fcb0767cc6ea716ec461e0febddf82bcf4d7e77e66469cd4ed30e35385
     policy:
       quotes:
         pcs:
@@ -48,7 +48,11 @@ deployments:
         - id: iEhH0oJ7RCsuBWL2RgV9mYRek1Lp2s4KDyLH9Yi19AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.3
         - id: Q93d04I7OA5aWotmB9717cT19DXWueiuZBz5AQdmBhwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.7.0
         - id: aVhLf5JvG0cYzqrBzrtGslAfgiofMsrLgWxwkXYpSA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.7.0
+        - id: 1T2E93k/KBFGT+Bt0VdE3Qn65fbetLCcvZxac7FO7mYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: 1e+03hCIHJ1iRjob3cRJMrzj8Rd6S4jXxBMa93tSPp0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -59,8 +63,8 @@ deployments:
     paratime: sapphire
     admin: test_a
     trust_root:
-      height: 25755045
-      hash: 9eb1320bc63630fb0015c182a329616acecc37cc8ce9bf091b4b123867d28aec
+      height: 32257726
+      hash: d66ecb3715143705010fdee13a6487291e88fdce15ef464cd5b201a9f8965f27
     policy:
       quotes:
         pcs:
@@ -85,7 +89,11 @@ deployments:
         - id: jcpEa2+vdoTErDOjRZXkx8O++LoZ4fE1fYYL13VEL5wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.6.3
         - id: wcj3vGIU8JQtALywmJf/83AlGfKvTEUVD4J8d2aGaEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.7.0
         - id: hlr8yDrlEKcvZbfhAm5raS0BrbW7j2OZQ59Gic0zyN0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.7.0
+        - id: /lfKZDnSGk7l3JWfc5gxX/nrRqEvYBP976S8m+8TeQsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: TtqGUQ868crT1Wci8oIVJm6Y87tqPyWApyjDiyfx0YwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
