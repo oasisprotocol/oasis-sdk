@@ -98,3 +98,5 @@ deployments:
         - any: {}
       fees: endorsing_node
       max_expiration: 3
+tooling:
+  version: 0.19.0
