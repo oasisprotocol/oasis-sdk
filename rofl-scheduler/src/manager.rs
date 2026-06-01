@@ -109,8 +109,11 @@ struct LocalState {
     accepted: BTreeMap<InstanceId, Instance>,
     /// A list of our bundles running locally.
     running: BTreeMap<InstanceId, bundle_manager::BundleInfo>,
+    /// Map from on-chain offer ID to its metadata key (`net.oasis.scheduler.offer` value).
+    offer_key_by_id: BTreeMap<market::types::OfferId, String>,
     /// A list of deployments that should already be running but are not.
-    pending_start: Vec<(Instance, Deployment, bool)>,
+    /// Tuple: (instance, deployment, wipe_storage, offer_key).
+    pending_start: Vec<(Instance, Deployment, bool, String)>,
     /// A list of instance identifiers that should have no running deployments.
     pending_stop: Vec<(InstanceId, bool)>,
     /// A map of instance updates.
@@ -251,6 +254,7 @@ impl Manager {
             client,
             accepted: BTreeMap::new(),
             running: BTreeMap::new(),
+            offer_key_by_id: BTreeMap::new(),
             pending_start: Vec::new(),
             pending_stop: Vec::new(),
             instance_updates: BTreeMap::new(),
@@ -303,6 +307,17 @@ impl Manager {
             .collect();
         let mut running_unknown =
             BTreeSet::from_iter(local_state.running.keys().copied().chain(volumes));
+
+        // Build a map from offer ID to offer metadata key, used when populating pending_start so
+        // that per-offer config (allowed_creators, allowed_artifacts) can be applied later.
+        let offers = local_state.client.offers().await?;
+        local_state.offer_key_by_id = offers
+            .into_iter()
+            .filter_map(|offer| {
+                let key = offer.metadata.get(METADATA_KEY_OFFER)?.clone();
+                Some((offer.id, key))
+            })
+            .collect();
 
         // Discover desired instance state.
         let instances: Vec<Instance> = local_state.client.instances().await?;
@@ -474,16 +489,29 @@ impl Manager {
                     if actual_hash != desired_hash || force_restart {
                         // Note that any old instances will be restarted in case they are already
                         // running and we add them to `pending_start`.
-                        local_state
-                            .pending_start
-                            .push((instance, desired, wipe_storage));
+                        let offer_key = local_state
+                            .offer_key_by_id
+                            .get(&instance.offer)
+                            .cloned()
+                            .unwrap_or_default();
+                        local_state.pending_start.push((
+                            instance,
+                            desired,
+                            wipe_storage,
+                            offer_key,
+                        ));
                     }
                 }
                 (None, Some(desired)) => {
                     // Instance is not running and should be started.
+                    let offer_key = local_state
+                        .offer_key_by_id
+                        .get(&instance.offer)
+                        .cloned()
+                        .unwrap_or_default();
                     local_state
                         .pending_start
-                        .push((instance, desired, wipe_storage));
+                        .push((instance, desired, wipe_storage, offer_key));
                 }
                 (Some(_), None) => {
                     // Instance is running and should be stopped.
@@ -533,20 +561,17 @@ impl Manager {
         local_node_id: PublicKey,
         local_state: &mut LocalState,
     ) -> Result<()> {
-        let offers = local_state.client.offers().await?;
         let instances = local_state.client.instances().await?;
 
-        let acceptable_offers: BTreeSet<market::types::OfferId> = offers
-            .into_iter()
-            .filter_map(|offer| {
-                let offer_key = offer.metadata.get(METADATA_KEY_OFFER)?;
-
-                if self.cfg.offers.is_empty() || self.cfg.offers.contains(offer_key) {
-                    Some(offer.id)
-                } else {
-                    None
-                }
+        // Build a map from offer ID to offer key for offers this scheduler accepts.
+        // `offer_key_by_id` was populated by discover(); no second network call needed.
+        let acceptable_offers: BTreeMap<market::types::OfferId, String> = local_state
+            .offer_key_by_id
+            .iter()
+            .filter(|(_, key)| {
+                self.cfg.offers.is_empty() || self.cfg.offers.contains_key(key.as_str())
             })
+            .map(|(id, key)| (*id, key.clone()))
             .collect();
 
         for instance in instances {
@@ -586,22 +611,26 @@ impl Manager {
                 "transfer" => transfer_instance,
             );
 
-            // Check if creator is among the allowed creators.
-            if !self.cfg.is_creator_allowed(&instance.creator) {
+            // Check if offer is among the configured offers (and retrieve its key for per-offer
+            // policy lookups that follow).
+            let offer_key = match acceptable_offers.get(&instance.offer) {
+                Some(key) => key.as_str(),
+                None => {
+                    slog::info!(self.logger, "offer not acceptable for this instance";
+                        "id" => ?instance.id,
+                        "offer" => ?instance.offer,
+                        "transfer" => transfer_instance,
+                    );
+                    maybe_remove();
+                    continue;
+                }
+            };
+
+            // Check if creator is among the allowed creators for this offer (falls back to global).
+            if !self.cfg.is_creator_allowed(offer_key, &instance.creator) {
                 slog::info!(self.logger, "creator not allowed";
                     "id" => ?instance.id,
                     "creator" => instance.creator,
-                    "transfer" => transfer_instance,
-                );
-                maybe_remove();
-                continue;
-            }
-
-            // Check if offer is among the configured offers.
-            if !acceptable_offers.contains(&instance.offer) {
-                slog::info!(self.logger, "offer not acceptable for this instance";
-                    "id" => ?instance.id,
-                    "offer" => ?instance.offer,
                     "transfer" => transfer_instance,
                 );
                 maybe_remove();
@@ -664,12 +693,13 @@ impl Manager {
         let start_jobs: Vec<_> = local_state
             .pending_start
             .iter()
-            .map(|(instance, deployment, wipe_storage)| {
+            .map(|(instance, deployment, wipe_storage, offer_key)| {
                 self.clone().start_instance(
                     local_state.client.clone(),
                     instance.clone(),
                     deployment.clone(),
                     *wipe_storage,
+                    offer_key.clone(),
                 )
             })
             .collect();
@@ -861,6 +891,7 @@ impl Manager {
         instance: Instance,
         deployment: Deployment,
         wipe_storage: bool,
+        offer_key: String,
     ) -> Result<()> {
         if !self.should_start_instance(instance.id, &deployment) {
             return Ok(());
@@ -875,7 +906,7 @@ impl Manager {
         self.set_last_instance_deployment(instance.id, &deployment);
 
         match self
-            .pull_and_deploy_instance(client, &instance, &deployment)
+            .pull_and_deploy_instance(client, &instance, &deployment, &offer_key)
             .await
         {
             Ok(_) => {
@@ -965,9 +996,10 @@ impl Manager {
         client: Arc<MarketQueryClient>,
         instance: &Instance,
         deployment: &Deployment,
+        offer_key: &str,
     ) -> Result<()> {
         let deployment_info = self
-            .pull_and_validate_deployment(instance, deployment)
+            .pull_and_validate_deployment(instance, deployment, offer_key)
             .await?;
         self.deploy_instance(client, instance, deployment, deployment_info)
             .await
@@ -1102,6 +1134,7 @@ impl Manager {
         self: &Arc<Self>,
         instance: &Instance,
         deployment: &Deployment,
+        offer_key: &str,
     ) -> Result<DeploymentInfo> {
         slog::info!(self.logger, "pulling deployment bundle";
             "instance_id" => ?instance.id,
@@ -1214,28 +1247,31 @@ impl Manager {
                     .get(&tdx.firmware)
                     .ok_or(anyhow!("ORC is missing firmware digest"))?;
                 self.cfg
-                    .ensure_artifact_allowed("firmware", firmware_digest)?;
+                    .ensure_artifact_allowed(offer_key, "firmware", firmware_digest)?;
 
                 if !tdx.kernel.is_empty() {
                     let kernel_digest = orc_manifest
                         .digests
                         .get(&tdx.kernel)
                         .ok_or(anyhow!("ORC is missing kernel digest"))?;
-                    self.cfg.ensure_artifact_allowed("kernel", kernel_digest)?;
+                    self.cfg
+                        .ensure_artifact_allowed(offer_key, "kernel", kernel_digest)?;
 
                     if !tdx.initrd.is_empty() {
                         let initrd_digest = orc_manifest
                             .digests
                             .get(&tdx.initrd)
                             .ok_or(anyhow!("ORC is missing initrd digest"))?;
-                        self.cfg.ensure_artifact_allowed("initrd", initrd_digest)?;
+                        self.cfg
+                            .ensure_artifact_allowed(offer_key, "initrd", initrd_digest)?;
                     }
                     if !tdx.stage2_image.is_empty() {
                         let stage2_digest = orc_manifest
                             .digests
                             .get(&tdx.stage2_image)
                             .ok_or(anyhow!("ORC is missing stage2 digest"))?;
-                        self.cfg.ensure_artifact_allowed("stage2", stage2_digest)?;
+                        self.cfg
+                            .ensure_artifact_allowed(offer_key, "stage2", stage2_digest)?;
 
                         qcow2_names.insert(tdx.stage2_image.clone());
 
