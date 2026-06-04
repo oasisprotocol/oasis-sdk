@@ -77,6 +77,12 @@ pub trait Config: 'static {
     /// Maximum result size in bytes.
     const MAX_RESULT_SIZE: usize = 1024;
 
+    /// Maximum contract code size in bytes.
+    const CREATE_CONTRACT_LIMIT: usize = 0x10000; // 64 KiB (see EIP-7907).
+
+    /// Maximum size of the init code in bytes.
+    const MAX_INITCODE_SIZE: usize = 0x20000; // 2*CREATE_CONTRACT_LIMIT (see EIP-3860).
+
     /// Maps an Ethereum address into an SDK account address.
     fn map_address(address: primitive_types::H160) -> Address {
         Address::new(
@@ -117,7 +123,11 @@ pub trait Config: 'static {
                 }
             })
         } else {
-            EVM_CONFIG.get_or_init(EVMConfig::shanghai)
+            EVM_CONFIG.get_or_init(|| EVMConfig {
+                create_contract_limit: Some(Self::CREATE_CONTRACT_LIMIT),
+                max_initcode_size: Some(Self::MAX_INITCODE_SIZE),
+                ..EVMConfig::shanghai()
+            })
         }
     }
 }

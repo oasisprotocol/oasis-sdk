@@ -78,6 +78,51 @@ fn load_erc20() -> Vec<u8> {
     .expect("compiled ERC20 contract should be a valid hex string")
 }
 
+/// Constructs an EVM init code that, once executed, deploys `code_len` bytes of runtime code
+/// consisting of dummy JUMPDEST opcodes.
+///
+/// `total_init_len` defines the total length of the init code (the prologue + the runtime code);
+/// if zero, the prologue code is kept minimal, otherwise it is padded by STOP opcodes to fit
+/// `total_init_len`.
+fn make_deploy_init_code(code_len: usize, total_init_len: usize) -> Vec<u8> {
+    let len = code_len as u32;
+    let prologue_len = 0x12u8; // Length of the bytecode prologue below.
+    let code_offset = if total_init_len == 0 {
+        prologue_len as u32
+    } else {
+        assert!(
+            total_init_len >= prologue_len as usize + code_len,
+            "total_init_len must fit the prologue and the runtime code",
+        );
+        (total_init_len - code_len) as u32
+    };
+    let mut code = vec![
+        0x62, // PUSH3 code_len
+        (len >> 16) as u8,
+        (len >> 8) as u8,
+        len as u8,
+        0x62, // PUSH3 code_offset (offset of runtime code within init code)
+        (code_offset >> 16) as u8,
+        (code_offset >> 8) as u8,
+        code_offset as u8,
+        0x60, // PUSH1 0x00 (destination offset in memory)
+        0x00,
+        0x39, // CODECOPY
+        0x62, // PUSH3 code_len
+        (len >> 16) as u8,
+        (len >> 8) as u8,
+        len as u8,
+        0x60, // PUSH1 0x00 (offset in memory)
+        0x00,
+        0xf3, // RETURN
+    ];
+    assert_eq!(code.len(), prologue_len as usize);
+    // Pad the init code with STOP (0x00) opcodes up to code offset.
+    code.resize(code_offset as usize, 0x00);
+    code.resize(code_offset as usize + code_len, 0x5b);
+    code
+}
+
 fn check_derivation(seed: &str, priv_hex: &str, addr_hex: &str) {
     let priv_bytes = sha3::Keccak256::digest(seed.as_bytes());
     assert_eq!(
@@ -1004,6 +1049,108 @@ fn test_fee_refunds() {
     let events: Vec<GasUsedEvent> = cbor::from_slice(&tags[1].value).unwrap();
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].amount, 24_585);
+}
+
+#[test]
+fn test_large_contract_deploy() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    let code_len = <EVMConfig as Config>::CREATE_CONTRACT_LIMIT / 2;
+    let total_init_len = <EVMConfig as Config>::MAX_INITCODE_SIZE / 2;
+    let dispatch_result = signer.call_opts(
+        &ctx,
+        "evm.Create",
+        types::Create {
+            value: 0.into(),
+            init_code: make_deploy_init_code(code_len, total_init_len),
+        },
+        CallOptions {
+            // Deploying ~32 KiB of code costs ~200 gas/byte for the code deposit.
+            fee: Fee {
+                gas: 7_274_386,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    );
+    assert!(
+        dispatch_result.result.is_success(),
+        "large contract deploy should succeed: {:?}",
+        dispatch_result.result
+    );
+    let result: Vec<u8> = cbor::from_value(dispatch_result.result.unwrap()).unwrap();
+    let contract_address = H160::from_slice(&result);
+
+    let code = EVMModule::<EVMConfig>::query_code(
+        &ctx,
+        types::CodeQuery {
+            address: contract_address,
+        },
+    )
+    .unwrap();
+    assert_eq!(code.len(), code_len, "deployed code should have full size");
+    assert!(
+        code.iter().all(|&b| b == 0x5b),
+        "deployed code should consist entirely of JUMPDEST (0x5b) opcodes",
+    );
+}
+
+#[test]
+fn test_too_large_contract_deploy_fails() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+    let mut signer = EvmSigner::new(0, keys::dave::sigspec());
+
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
+
+    // Helper function to test deploy failure
+    let mut test_deploy_failure = |code_len: usize, total_init_len: usize, test_name: &str| {
+        let dispatch_result = signer.call_opts(
+            &ctx,
+            "evm.Create",
+            types::Create {
+                value: 0.into(),
+                init_code: make_deploy_init_code(code_len, total_init_len),
+            },
+            CallOptions {
+                // Enough to pass basic gas checks.
+                fee: Fee {
+                    gas: 1_126_418,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        );
+
+        if let module::CallResult::Failed {
+            module: _,
+            code: _,
+            message,
+        } = dispatch_result.result
+        {
+            assert_eq!(message, "execution failed: create contract limit");
+        } else {
+            panic!(
+                "deploy exceeding the {} should fail: {:?}",
+                test_name, dispatch_result.result
+            );
+        }
+    };
+
+    test_deploy_failure(
+        <EVMConfig as Config>::CREATE_CONTRACT_LIMIT + 1,
+        0,
+        "contract size limit",
+    );
+    test_deploy_failure(
+        1,
+        <EVMConfig as Config>::MAX_INITCODE_SIZE + 1,
+        "contract size limit",
+    );
 }
 
 #[test]
