@@ -98,8 +98,8 @@ func fixture() *oasis.NetworkFixture {
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   5 * time.Second,
 				},
-				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
-					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
+				AdmissionPolicy: oasis.RuntimeAdmissionPolicyFixture{
+					AnyNode: true,
 				},
 				GenesisRound:    0,
 				GovernanceModel: registry.GovernanceEntity,

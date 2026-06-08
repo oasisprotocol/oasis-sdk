@@ -3930,7 +3930,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.0#76002fa954eeaf823dcc90321db2f726100c812a"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.1#d2bf1620e9793345045a10a0391db9bde1bb20b9"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3958,7 +3958,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.0#76002fa954eeaf823dcc90321db2f726100c812a"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.1#d2bf1620e9793345045a10a0391db9bde1bb20b9"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -5873,7 +5873,7 @@ dependencies = [
 [[package]]
 name = "secret-sharing"
 version = "0.1.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.0#76002fa954eeaf823dcc90321db2f726100c812a"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.1#d2bf1620e9793345045a10a0391db9bde1bb20b9"
 dependencies = [
  "anyhow",
  "group",
