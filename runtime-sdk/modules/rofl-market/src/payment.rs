@@ -44,26 +44,30 @@ pub trait PaymentMethod {
 }
 
 /// Type of the method invoked for the `pay` action for `Payment::EvmContract`.
-/// rmpPay(term, termCount, from, data)
+/// rmpPay(instanceId, term, termCount, from, data)
 #[allow(clippy::type_complexity)]
 const EVM_CONTRACT_PAY: solabi::FunctionEncoder<
-    (u8, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (u64, u8, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
     (bool,),
-> = solabi::FunctionEncoder::new(solabi::selector!("rmpPay(uint8,uint64,address,bytes)"));
+> = solabi::FunctionEncoder::new(solabi::selector!(
+    "rmpPay(uint64,uint8,uint64,address,bytes)"
+));
 
 /// Type of the method invoked for the `refund` action for `Payment::EvmContract`.
-/// rmpRefund(data)
+/// rmpRefund(instanceId, data)
 #[allow(clippy::type_complexity)]
-const EVM_CONTRACT_REFUND: solabi::FunctionEncoder<(solabi::Bytes<Vec<u8>>,), (bool,)> =
-    solabi::FunctionEncoder::new(solabi::selector!("rmpRefund(bytes)"));
+const EVM_CONTRACT_REFUND: solabi::FunctionEncoder<(u64, solabi::Bytes<Vec<u8>>), (bool,)> =
+    solabi::FunctionEncoder::new(solabi::selector!("rmpRefund(uint64,bytes)"));
 
 /// Type of the method invoked for the `claim` action for `Payment::EvmContract`.
-/// rmpClaim(claimableTime, paidTime, to, data)
+/// rmpClaim(instanceId, claimableTime, paidTime, to, data)
 #[allow(clippy::type_complexity)]
 const EVM_CONTRACT_CLAIM: solabi::FunctionEncoder<
-    (u64, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (u64, u64, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
     (bool,),
-> = solabi::FunctionEncoder::new(solabi::selector!("rmpClaim(uint64,uint64,address,bytes)"));
+> = solabi::FunctionEncoder::new(solabi::selector!(
+    "rmpClaim(uint64,uint64,uint64,address,bytes)"
+));
 
 impl PaymentMethod for Payment {
     fn pay<C: Context>(
@@ -110,6 +114,7 @@ impl PaymentMethod for Payment {
                             address: *address,
                             value: 0.into(),
                             data: EVM_CONTRACT_PAY.encode_params(&(
+                                instance.id.into(),
                                 term.as_u8(),
                                 term_count,
                                 solabi::Address(from.into()),
@@ -188,7 +193,7 @@ impl PaymentMethod for Payment {
                             address: *address,
                             value: 0.into(),
                             data: EVM_CONTRACT_REFUND
-                                .encode_params(&(solabi::Bytes(data.clone()),)),
+                                .encode_params(&(instance.id.into(), solabi::Bytes(data.clone()))),
                         }),
                         max_depth: 8,
                         max_gas: remaining_gas,
@@ -280,6 +285,7 @@ impl PaymentMethod for Payment {
                             address: *address,
                             value: 0.into(),
                             data: EVM_CONTRACT_CLAIM.encode_params(&(
+                                instance.id.into(),
                                 u64::try_from(claimable_time).unwrap(),
                                 paid_time,
                                 provider_address,
