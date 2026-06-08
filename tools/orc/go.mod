@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tools/orc
 
-go 1.26.0
+go 1.26.3
 
 require (
 	github.com/BurntSushi/toml v1.4.0

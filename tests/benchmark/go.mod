@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/tests/benchmark
 
-go 1.26.0
+go 1.26.3
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (

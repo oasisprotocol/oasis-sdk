@@ -1,6 +1,6 @@
 module example.com/oasisprotocol/minimal-runtime-client
 
-go 1.26.0
+go 1.26.3
 
 require (
 	github.com/oasisprotocol/oasis-core/go v0.2600.0
