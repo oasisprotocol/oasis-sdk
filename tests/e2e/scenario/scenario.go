@@ -209,8 +209,8 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 				Kind:       registry.KindKeyManager,
 				Entity:     0,
 				Keymanager: -1,
-				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
-					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
+				AdmissionPolicy: oasis.RuntimeAdmissionPolicyFixture{
+					AnyNode: true,
 				},
 				GovernanceModel: registry.GovernanceEntity,
 				Deployments: []oasis.DeploymentCfg{
@@ -242,8 +242,8 @@ func (sc *RuntimeScenario) Fixture() (*oasis.NetworkFixture, error) {
 					BatchFlushTimeout: 1 * time.Second,
 					ProposerTimeout:   5 * time.Second,
 				},
-				AdmissionPolicy: registry.RuntimeAdmissionPolicy{
-					AnyNode: &registry.AnyNodeRuntimeAdmissionPolicy{},
+				AdmissionPolicy: oasis.RuntimeAdmissionPolicyFixture{
+					AnyNode: true,
 				},
 				Constraints: map[scheduler.CommitteeKind]map[scheduler.Role]registry.SchedulingConstraints{
 					scheduler.KindComputeExecutor: {
