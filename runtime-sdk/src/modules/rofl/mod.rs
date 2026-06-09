@@ -712,6 +712,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn resolve_payer_from_tx<C: Context>(
         ctx: &C,
         tx: &Transaction,
+        app_id: app_id::AppId,
         _app_policy: &policy::AppAuthPolicy,
     ) -> Result<Option<Address>, anyhow::Error> {
         let caller_pk = tx
@@ -724,6 +725,9 @@ impl<Cfg: Config> Module<Cfg> {
             "rofl.Register" => {
                 // For registration transactions, extract endorsing node.
                 let body: types::Register = cbor::from_value(tx.call.body.clone())?;
+                if body.app != app_id {
+                    return Err(Error::InvalidArgument.into());
+                }
                 if body.expiration <= ctx.epoch() {
                     return Err(Error::RegistrationExpired.into());
                 }
@@ -751,9 +755,14 @@ impl<Cfg: Config> Module<Cfg> {
                     Some(pk) => pk,
                     None => return Ok(None),
                 };
-
-                Ok(state::get_endorser(&caller_pk)
-                    .map(|ei| Address::from_consensus_pk(&ei.node_id)))
+                let endorser = match state::get_endorser(&caller_pk) {
+                    Some(ei) => ei,
+                    None => return Ok(None),
+                };
+                if endorser.app_id != app_id {
+                    return Err(Error::InvalidArgument.into());
+                }
+                Ok(Some(Address::from_consensus_pk(&endorser.node_id)))
             }
         }
     }
@@ -788,8 +797,10 @@ impl<Cfg: Config> module::FeeProxyHandler for Module<Cfg> {
                 // Application needs to figure out a way to pay, defer to regular handler.
                 Ok(None)
             }
-            FeePolicy::EndorsingNodePays => Self::resolve_payer_from_tx(ctx, tx, &app_policy)
-                .map_err(modules::core::Error::InvalidArgument),
+            FeePolicy::EndorsingNodePays => {
+                Self::resolve_payer_from_tx(ctx, tx, app_id, &app_policy)
+                    .map_err(modules::core::Error::InvalidArgument)
+            }
         }
     }
 }
