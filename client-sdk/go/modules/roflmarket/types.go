@@ -229,8 +229,8 @@ type Instance struct {
 	Payment Payment `json:"payment"`
 	// PaymentAddress is the instance payment address.
 	PaymentAddress [20]byte `json:"payment_address"`
-	// RefundData is payment method-specific refund information.
-	RefundData []byte `json:"refund_data"`
+	// DeprecatedRefundData is payment method-specific refund information.
+	DeprecatedRefundData []byte `json:"refund_data"`
 
 	// CmdNextID is the next command identifier to use.
 	CmdNextID CommandID `json:"cmd_next_id"`

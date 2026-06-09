@@ -443,8 +443,6 @@ fn test_instance_management() {
             76
         ]
     );
-    let charlie_address: Vec<u8> = keys::charlie::address().into();
-    assert_eq!(instances[0].refund_data, charlie_address);
 
     // Ensure instance payment address has the correct amount of funds.
     let payment_address = Address::from_eth(&instances[0].payment_address);

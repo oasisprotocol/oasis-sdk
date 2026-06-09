@@ -44,28 +44,30 @@ pub trait PaymentMethod {
 }
 
 /// Type of the method invoked for the `pay` action for `Payment::EvmContract`.
-/// rmpPay(term, termCount, from, data)
+/// rmpPay(instanceId, term, termCount, from, data)
 #[allow(clippy::type_complexity)]
 const EVM_CONTRACT_PAY: solabi::FunctionEncoder<
-    (u8, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (u64, u8, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
     (bool,),
-> = solabi::FunctionEncoder::new(solabi::selector!("rmpPay(uint8,uint64,address,bytes)"));
+> = solabi::FunctionEncoder::new(solabi::selector!(
+    "rmpPay(uint64,uint8,uint64,address,bytes)"
+));
 
 /// Type of the method invoked for the `refund` action for `Payment::EvmContract`.
-/// rmpRefund(to, data)
+/// rmpRefund(instanceId, data)
 #[allow(clippy::type_complexity)]
-const EVM_CONTRACT_REFUND: solabi::FunctionEncoder<
-    (solabi::Address, solabi::Bytes<Vec<u8>>),
-    (bool,),
-> = solabi::FunctionEncoder::new(solabi::selector!("rmpRefund(address,bytes)"));
+const EVM_CONTRACT_REFUND: solabi::FunctionEncoder<(u64, solabi::Bytes<Vec<u8>>), (bool,)> =
+    solabi::FunctionEncoder::new(solabi::selector!("rmpRefund(uint64,bytes)"));
 
 /// Type of the method invoked for the `claim` action for `Payment::EvmContract`.
-/// rmpClaim(claimableTime, paidTime, to, data)
+/// rmpClaim(instanceId, claimableTime, paidTime, to, data)
 #[allow(clippy::type_complexity)]
 const EVM_CONTRACT_CLAIM: solabi::FunctionEncoder<
-    (u64, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
+    (u64, u64, u64, solabi::Address, solabi::Bytes<Vec<u8>>),
     (bool,),
-> = solabi::FunctionEncoder::new(solabi::selector!("rmpClaim(uint64,uint64,address,bytes)"));
+> = solabi::FunctionEncoder::new(solabi::selector!(
+    "rmpClaim(uint64,uint64,uint64,address,bytes)"
+));
 
 impl PaymentMethod for Payment {
     fn pay<C: Context>(
@@ -88,7 +90,6 @@ impl PaymentMethod for Payment {
                     .ok_or(Error::PaymentFailed("invalid value".to_string()))?;
 
                 let caller = CurrentState::with_env(|env| env.tx_caller_address());
-                instance.refund_data = caller.into();
 
                 <C::Runtime as Runtime>::Accounts::transfer(
                     caller,
@@ -103,7 +104,6 @@ impl PaymentMethod for Payment {
                 let from = CurrentState::with_env(|env| {
                     oasis_runtime_sdk_evm::derive_caller::from_tx_auth_info(env.tx_auth_info())
                 })?;
-                instance.refund_data = from.as_bytes().to_vec();
 
                 let result = subcall::call(
                     ctx,
@@ -114,6 +114,7 @@ impl PaymentMethod for Payment {
                             address: *address,
                             value: 0.into(),
                             data: EVM_CONTRACT_PAY.encode_params(&(
+                                instance.id.into(),
                                 term.as_u8(),
                                 term_count,
                                 solabi::Address(from.into()),
@@ -161,8 +162,7 @@ impl PaymentMethod for Payment {
     fn refund<C: Context>(&self, ctx: &C, instance: &Instance) -> Result<(), Error> {
         match self {
             Self::Native { denomination, .. } => {
-                let refund_address = Address::from_bytes(&instance.refund_data)
-                    .map_err(|_| Error::PaymentFailed("malformed refund data".to_string()))?;
+                let refund_address = instance.admin;
                 let payment_address = Address::from_eth(&instance.payment_address);
 
                 // Determine refund amount.
@@ -183,14 +183,7 @@ impl PaymentMethod for Payment {
             Self::EvmContract { address, data } => {
                 // EVM contract call that handles the refund. This requires that the caller is a
                 // compatible address.
-                use oasis_runtime_sdk_evm::types::H160;
-
                 let remaining_gas = <C::Runtime as Runtime>::Core::remaining_tx_gas();
-                if instance.refund_data.len() != H160::len_bytes() {
-                    return Err(Error::PaymentFailed("malformed refund data".to_string()));
-                }
-                let refund_address = H160::from_slice(&instance.refund_data);
-
                 let result = subcall::call(
                     ctx,
                     subcall::SubcallInfo {
@@ -199,10 +192,8 @@ impl PaymentMethod for Payment {
                         body: cbor::to_value(oasis_runtime_sdk_evm::types::Call {
                             address: *address,
                             value: 0.into(),
-                            data: EVM_CONTRACT_REFUND.encode_params(&(
-                                solabi::Address(refund_address.into()),
-                                solabi::Bytes(data.clone()),
-                            )),
+                            data: EVM_CONTRACT_REFUND
+                                .encode_params(&(instance.id.into(), solabi::Bytes(data.clone()))),
                         }),
                         max_depth: 8,
                         max_gas: remaining_gas,
@@ -294,6 +285,7 @@ impl PaymentMethod for Payment {
                             address: *address,
                             value: 0.into(),
                             data: EVM_CONTRACT_CLAIM.encode_params(&(
+                                instance.id.into(),
                                 u64::try_from(claimable_time).unwrap(),
                                 paid_time,
                                 provider_address,

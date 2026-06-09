@@ -172,9 +172,9 @@ pub enum Payment {
     /// The contract is expected to have the following methods as part of its ABI:
     ///
     /// ```text
-    /// rmpPay(uint8 term, uint64 termCount, address from, bytes data)
-    /// rmpRefund(address to, bytes data)
-    /// rmpClaim(uint64 claimableTime, uint64 paidTime, address to, bytes data)
+    /// rmpPay(uint64 instanceId, uint8 term, uint64 termCount, address from, bytes data)
+    /// rmpRefund(uint64 instanceId, bytes data)
+    /// rmpClaim(uint64 instanceId, uint64 claimableTime, uint64 paidTime, address to, bytes data)
     /// ```
     ///
     /// The contract will be called in the context of instance creation, with the caller being the
@@ -307,6 +307,8 @@ pub struct Instance {
     /// Instance payment address.
     pub payment_address: [u8; 20],
     /// Payment method-specific refund information.
+    ///
+    /// Deprecated: Refunds are always issued to the administrator.
     pub refund_data: Vec<u8>,
 
     /// Next command identifier to use.
