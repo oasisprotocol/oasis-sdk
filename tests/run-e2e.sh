@@ -144,7 +144,7 @@ printf "${CYAN}### Running end-to-end tests...${OFF}\n"
 	--e2e.node.binary="${TEST_NODE_BINARY}" \
 	--e2e.runtime.binary_dir.default="${TEST_BASE_DIR}" \
 	--e2e.runtime.loader="${TEST_RUNTIME_LOADER}" \
-	--scenario_timeout 30m \
+	--scenario_timeout 1s \
 	"$@"
 
 cd "${TESTS_DIR}"
