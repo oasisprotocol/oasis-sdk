@@ -7567,7 +7567,7 @@ dependencies = [
 [[package]]
 name = "wasm3"
 version = "0.3.3"
-source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.3#6952da16a9ff789dab0ee5ff6623ba7a58ca977f"
+source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.4#7e24ecff1007850926f2ee7a11332c3f2ed22d00"
 dependencies = [
  "cty",
  "impl-trait-for-tuples",
@@ -7579,7 +7579,7 @@ dependencies = [
 [[package]]
 name = "wasm3-sys"
 version = "0.3.3"
-source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.3#6952da16a9ff789dab0ee5ff6623ba7a58ca977f"
+source = "git+https://github.com/oasisprotocol/wasm3-rs?tag=v0.3.4#7e24ecff1007850926f2ee7a11332c3f2ed22d00"
 dependencies = [
  "bindgen 0.69.5",
  "cc",

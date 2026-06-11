@@ -9,11 +9,13 @@ license = "Apache-2.0"
 [dependencies]
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-contract-sdk-crypto = { path = "../../../contract-sdk/crypto" }
-oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = ["oasis-runtime-sdk"] }
+oasis-contract-sdk-types = { path = "../../../contract-sdk/types", features = [
+    "oasis-runtime-sdk",
+] }
 oasis-runtime-sdk = { path = "../.." }
 
 # Internal Wasm3 bindings.
-wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.3" }
+wasm3 = { git = "https://github.com/oasisprotocol/wasm3-rs", tag = "v0.3.4" }
 
 # Third party.
 anyhow = "1.0"
@@ -35,4 +37,4 @@ pretty_assertions = "1.3.0"
 
 [features]
 debug-utils = []
-benchmarks = [] # Enable inline benchmarks for use with `cargo bench`.
+benchmarks = []  # Enable inline benchmarks for use with `cargo bench`.
