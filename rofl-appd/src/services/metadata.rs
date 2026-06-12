@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rocket::async_trait;
 use tokio::sync::RwLock;
@@ -23,6 +23,18 @@ pub trait MetadataService: Send + Sync {
     /// This replaces all existing app provided metadata. Will trigger a registration
     /// refresh if the metadata has changed.
     async fn set(&self, metadata: BTreeMap<String, String>) -> Result<(), Error>;
+
+    /// Insert or update the given metadata key-value pairs.
+    ///
+    /// Existing keys not present in `metadata` are left untouched. Will trigger a
+    /// registration refresh if the metadata has changed.
+    async fn upsert(&self, metadata: BTreeMap<String, String>) -> Result<(), Error>;
+
+    /// Delete the given metadata keys.
+    ///
+    /// Keys that do not exist are ignored. Will trigger a registration refresh if the
+    /// metadata has changed.
+    async fn delete(&self, keys: BTreeSet<String>) -> Result<(), Error>;
 
     /// Get all user-set metadata key-value pairs.
     async fn get(&self) -> Result<BTreeMap<String, String>, Error>;
@@ -67,19 +79,16 @@ impl<A: App> OasisMetadataService<A> {
             limits,
         })
     }
-}
 
-#[async_trait]
-impl<A: App> MetadataService for OasisMetadataService<A> {
-    async fn set(&self, metadata: BTreeMap<String, String>) -> Result<(), Error> {
-        // Validate metadata against runtime limits.
+    /// Validate the given metadata map against the configured runtime limits.
+    fn validate(&self, metadata: &BTreeMap<String, String>) -> Result<(), Error> {
         let max_user_pairs =
             (self.limits.max_pairs as usize).saturating_sub(RESERVED_METADATA_SLOTS);
         if metadata.len() > max_user_pairs {
             return Err(Error::InvalidArgument);
         }
 
-        for (key, value) in &metadata {
+        for (key, value) in metadata {
             // Account for namespace prefix when checking key size.
             let full_key_size = METADATA_NAMESPACE.len() + 1 + key.len();
             if full_key_size > self.limits.max_key_size as usize {
@@ -90,10 +99,63 @@ impl<A: App> MetadataService for OasisMetadataService<A> {
             }
         }
 
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl<A: App> MetadataService for OasisMetadataService<A> {
+    async fn set(&self, metadata: BTreeMap<String, String>) -> Result<(), Error> {
+        self.validate(&metadata)?;
+
         let mut map = self.metadata.write().await;
+        if *map == metadata {
+            return Ok(());
+        }
         *map = metadata;
 
-        // Refresh registration.
+        self.env.refresh_registration().await?;
+
+        Ok(())
+    }
+
+    async fn upsert(&self, metadata: BTreeMap<String, String>) -> Result<(), Error> {
+        let mut map = self.metadata.write().await;
+
+        let mut updated = map.clone();
+        let mut changed = false;
+        for (key, value) in metadata {
+            if updated.get(&key) != Some(&value) {
+                updated.insert(key, value);
+                changed = true;
+            }
+        }
+        self.validate(&updated)?;
+
+        if !changed {
+            return Ok(());
+        }
+        *map = updated;
+
+        self.env.refresh_registration().await?;
+
+        Ok(())
+    }
+
+    async fn delete(&self, keys: BTreeSet<String>) -> Result<(), Error> {
+        let mut map = self.metadata.write().await;
+
+        let mut changed = false;
+        for key in &keys {
+            if map.remove(key).is_some() {
+                changed = true;
+            }
+        }
+
+        if !changed {
+            return Ok(());
+        }
+
         self.env.refresh_registration().await?;
 
         Ok(())

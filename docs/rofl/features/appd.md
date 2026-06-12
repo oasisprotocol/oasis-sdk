@@ -234,6 +234,38 @@ and will trigger a registration refresh if the metadata has changed.
 **Note:** Metadata is validated against runtime-configured limits for the
 number of pairs, key size, and value size.
 
+#### Upsert Metadata
+
+Insert or update the given metadata key-value pairs. Existing app metadata not
+present in the request are untouched. It will trigger a registration refresh
+if the metadata has changed.
+
+**Endpoint:** `/rofl/v1/metadata` (`PUT`)
+
+**Example request:**
+
+```json
+{
+  "version": "1.0.1"
+}
+```
+
+**Note:** The resulting metadata is validated against runtime-configured limits
+for the number of pairs, key size, and value size.
+
+#### Delete Metadata
+
+Delete the given metadata keys. Keys that do not exist are ignored. It will
+trigger a registration refresh if the metadata has changed.
+
+**Endpoint:** `/rofl/v1/metadata` (`DELETE`)
+
+**Example request:**
+
+```json
+["version", "key_fingerprint"]
+```
+
 ### Query
 
 Runs arbitrary query method defined in the [Oasis Runtime SDK] module and
