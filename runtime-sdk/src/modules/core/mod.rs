@@ -33,6 +33,8 @@ use crate::{
     Runtime,
 };
 
+use oasis_core_runtime::common::crypto::signature::PublicKey;
+
 use self::types::RuntimeInfoResponse;
 
 #[cfg(test)]
@@ -425,8 +427,12 @@ pub trait Config: 'static {
 
     /// The gas cost of the internal call to retrieve the current calldata public key.
     const GAS_COST_CALL_CALLDATA_PUBLIC_KEY: u64 = 20;
+    /// The gas cost of the internal call to retrieve the current key managers runtime signing public key.
+    const GAS_COST_CALL_KEYMANAGER_PUBLIC_KEY: u64 = 20;
     /// The gas cost of the internal call to retrieve the current epoch.
     const GAS_COST_CALL_CURRENT_EPOCH: u64 = 10;
+    /// The gas cost of the internal call to retrieve the current long-term public key
+    const GAS_COST_CALL_PUBLIC_KEY: u64 = 20;
 }
 
 pub struct Module<Cfg: Config> {
@@ -845,6 +851,17 @@ impl<Cfg: Config> Module<Cfg> {
         <C::Runtime as Runtime>::Modules::check_invariants(ctx)
     }
 
+    fn keymanager_public_key_common<C: Context>(ctx: &C) -> Result<PublicKey, Error> {
+        let key_manager = ctx
+            .key_manager()
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
+        let public_key = key_manager
+            .runtime_signing_key()
+            .ok_or_else(|| Error::InvalidArgument(anyhow!("cannot get runtime signing key")))?;
+
+        Ok(public_key)
+    }
+
     fn calldata_public_key_common<C: Context>(
         ctx: &C,
     ) -> Result<types::CallDataPublicKeyQueryResponse, Error> {
@@ -852,8 +869,9 @@ impl<Cfg: Config> Module<Cfg> {
             .key_manager()
             .ok_or_else(|| Error::InvalidArgument(anyhow!("key manager not available")))?;
         let epoch = ctx.epoch();
+        let key_pair_id = callformat::get_key_pair_id(epoch);
         let public_key = key_manager
-            .get_public_ephemeral_key(callformat::get_key_pair_id(epoch), epoch)
+            .get_public_ephemeral_key(key_pair_id, epoch)
             .map_err(|err| match err {
                 keymanager::KeyManagerError::InvalidEpoch(..) => {
                     Error::InvalidCallFormat(anyhow!("invalid epoch"))
@@ -861,7 +879,27 @@ impl<Cfg: Config> Module<Cfg> {
                 _ => Error::Abort(err.into()),
             })?;
 
-        Ok(types::CallDataPublicKeyQueryResponse { public_key, epoch })
+        let runtime_id = *ctx.runtime_id();
+
+        Ok(types::CallDataPublicKeyQueryResponse {
+            public_key,
+            epoch,
+            runtime_id,
+            key_pair_id,
+        })
+    }
+
+    /// Retrieve the public key for encrypting call data.
+    #[handler(query = "core.KeyManagerPublicKey")]
+    fn query_keymanager_public_key<C: Context>(ctx: &C, _args: ()) -> Result<PublicKey, Error> {
+        Self::keymanager_public_key_common(ctx)
+    }
+
+    /// Retrieve the public key for encrypting call data (internally exposed call).
+    #[handler(call = "core.KeyManagerPublicKey", internal)]
+    fn internal_keymanager_public_key<C: Context>(ctx: &C, _args: ()) -> Result<PublicKey, Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_KEYMANAGER_PUBLIC_KEY)?;
+        Self::keymanager_public_key_common(ctx)
     }
 
     /// Retrieve the public key for encrypting call data.
