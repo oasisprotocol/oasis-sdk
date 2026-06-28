@@ -158,9 +158,25 @@ impl App for ContainersApp {
             }
         }
 
-        // Initialize secrets.
+        // Fetch app config.
+        let app_cfg = match env.client().app_cfg().await {
+            Ok(cfg) => cfg,
+            Err(err) => {
+                slog::error!(logger, "failed to fetch app config"; "err" => ?err);
+                process::abort();
+            }
+        };
+
+        // Initialize environment variables from deployment metadata (env.* keys).
+        slog::info!(logger, "initializing container environment variables");
+        for (name, value) in containers::env_from_metadata(&app_cfg.metadata) {
+            containers::env().set(&name, &value);
+            slog::info!(logger, "provisioned environment variable"; "name" => name);
+        }
+
+        // Initialize secrets (runs after env vars so secrets take precedence on collision).
         slog::info!(logger, "initializing container secrets");
-        if let Err(err) = secrets::init(env.clone(), kms.clone()).await {
+        if let Err(err) = secrets::init(&app_cfg.secrets, kms.clone()).await {
             slog::error!(logger, "failed to initialize container secrets"; "err" => ?err);
             process::abort();
         }
