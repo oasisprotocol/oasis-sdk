@@ -87,6 +87,32 @@ pub async fn start() -> Result<()> {
     Ok(())
 }
 
+/// Extract environment variables from deployment metadata.
+pub fn env_from_metadata(metadata: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    metadata
+        .iter()
+        .filter_map(|(key, value)| {
+            parse_env_metadata_key(key).map(|name| (name.to_string(), value.clone()))
+        })
+        .collect()
+}
+
+/// Parse a metadata key that follows the environment variable convention.
+///
+/// The canonical format is `env.<VAR>`, where `<VAR>` environment variable
+/// consists of a non-empty ASCII alphanumeric characters or `_`.
+///
+/// Dotted forms are intentionally rejected so `env.<SERVICE>.<VAR>` can be added
+/// later without being breaking.
+fn parse_env_metadata_key(key: &str) -> Option<&str> {
+    let name = key.strip_prefix("env.")?;
+    if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+        return None;
+    }
+
+    Some(name)
+}
+
 static GLOBAL_ENVIRONMENT: LazyLock<Environment> = LazyLock::new(Environment::new);
 
 /// Management of environment variables to expose to the compose file.
@@ -115,5 +141,65 @@ impl Environment {
     fn get(&self) -> BTreeMap<String, String> {
         let vars = self.vars.lock().unwrap();
         vars.clone()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parse_env_metadata_key() {
+        let tcs = vec![
+            ("foo", None),
+            ("env.", None),
+            ("env.MY_VAR", Some("MY_VAR")),
+            ("env.MY_VAR_1", Some("MY_VAR_1")),
+            ("env.service_A.MY_VAR", None),
+            ("env.MY-VAR", None),
+            ("env.MY VAR", None),
+            ("env.my_var", Some("my_var")),
+        ];
+        for tc in tcs {
+            assert_eq!(parse_env_metadata_key(tc.0), tc.1);
+        }
+    }
+
+    #[test]
+    fn test_env_from_empty_metadata() {
+        assert_eq!(env_from_metadata(&BTreeMap::new()), BTreeMap::new());
+    }
+
+    #[test]
+    fn test_env_from_metadata_with_non_env_keys() {
+        let metadata = BTreeMap::from([
+            (".env".to_string(), "ignored".to_string()),
+            ("env.MY_VAR".to_string(), "my value".to_string()),
+        ]);
+
+        assert_eq!(
+            env_from_metadata(&metadata),
+            BTreeMap::from([("MY_VAR".to_string(), "my value".to_string())])
+        );
+    }
+
+    #[test]
+    fn test_env_from_metadata() {
+        let metadata = BTreeMap::from([
+            ("env.".to_string(), "ignored".to_string()),
+            ("env.MY_VAR".to_string(), "my value".to_string()),
+            ("env.OTHER_VAR".to_string(), "other value".to_string()),
+            ("env.service_A.MY_VAR".to_string(), "reserved".to_string()),
+            ("env.MY-VAR".to_string(), "ignored".to_string()),
+            ("net.oasis.foo".to_string(), "ignored".to_string()),
+        ]);
+
+        assert_eq!(
+            env_from_metadata(&metadata),
+            BTreeMap::from([
+                ("MY_VAR".to_string(), "my value".to_string()),
+                ("OTHER_VAR".to_string(), "other value".to_string()),
+            ])
+        );
     }
 }

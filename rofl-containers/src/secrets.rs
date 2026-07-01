@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 
 use anyhow::Result;
 use cmd_lib::run_cmd;
@@ -10,24 +10,21 @@ use rofl_appd::services::{self, kms::OpenSecretRequest};
 use crate::containers;
 
 /// Initialize secrets available to containers.
-pub async fn init<A: App>(
-    env: Environment<A>,
+pub async fn init(
+    encrypted_secrets: &BTreeMap<String, Vec<u8>>,
     kms: Arc<dyn services::kms::KmsService>,
 ) -> Result<()> {
     let logger = get_logger("secrets");
 
-    // Query own app cfg to get encrypted secrets.
-    let encrypted_secrets = env.client().app_cfg().await?.secrets;
-
     // Ensure all secrets are removed.
     run_cmd!(podman secret rm --all)?;
     // Create all requested secrets.
-    for (pub_name, value) in encrypted_secrets {
+    for (pub_name, encrypted_value) in encrypted_secrets {
         // Decrypt and authenticate secret. In case of failures, the secret is skipped.
         let (name, value) = match kms
             .open_secret(&OpenSecretRequest {
-                name: &pub_name,
-                value: &value,
+                name: pub_name,
+                value: encrypted_value,
                 context: None,
             })
             .await
