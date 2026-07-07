@@ -43,7 +43,12 @@ where
 
     let server = server.manage(cfg.metadata).mount(
         "/rofl/v1/metadata",
-        routes![routes::metadata::set, routes::metadata::get],
+        routes![
+            routes::metadata::set,
+            routes::metadata::upsert,
+            routes::metadata::delete,
+            routes::metadata::get
+        ],
     );
 
     let server = server.mount("/rofl/v1/query", routes![routes::query::query]);
