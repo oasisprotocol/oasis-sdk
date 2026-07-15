@@ -4,7 +4,7 @@ Sometimes containers need access to data that should not be disclosed publicly,
 for example API keys to access certain services. This data can be passed to
 containers running in ROFL via _secrets_. Secrets are arbitrary key-value pairs
 which are end-to-end encrypted so that they can only be decrypted inside a
-correctly attested app.
+correctly attested app. For public config use [public variables] instead.
 
 Secrets can be easily managed via the Oasis CLI, for example to create a secret
 called `mysecret` you can use:
@@ -83,5 +83,6 @@ secrets:
     external: true
 ```
 
+[public variables]: ./public_variables.md
 [container secret]: https://docs.docker.com/compose/how-tos/use-secrets/
 [Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#secret
