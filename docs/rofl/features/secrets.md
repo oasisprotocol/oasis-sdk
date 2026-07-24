@@ -83,6 +83,6 @@ secrets:
     external: true
 ```
 
-[public variables]: ./public_variables.md
+[public variables]: ./public-variables.md
 [container secret]: https://docs.docker.com/compose/how-tos/use-secrets/
 [Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#secret
