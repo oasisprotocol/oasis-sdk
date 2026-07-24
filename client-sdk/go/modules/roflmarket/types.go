@@ -124,6 +124,31 @@ type Offer struct {
 	Metadata map[string]string `json:"metadata"`
 }
 
+// Well-known offer metadata keys recognized by the ROFL scheduler.
+const (
+	// MetadataKeyOffer is the offer metadata key holding the offer identifier (the value used by
+	// the scheduler's local config to select which offers it serves).
+	MetadataKeyOffer = "net.oasis.scheduler.offer"
+	// MetadataKeyOfferAllowedCreators is the offer metadata key holding a comma-separated list of
+	// allowed instance creator addresses. When unset or empty, all creators are allowed.
+	MetadataKeyOfferAllowedCreators = "net.oasis.scheduler.offer.allowed_creators"
+	// MetadataKeyOfferAllowedArtifactsPrefix is the prefix of the offer metadata keys holding the
+	// allowed artifact hashes. The artifact kind is the suffix following the prefix (e.g.
+	// "net.oasis.scheduler.offer.allowed_artifacts.firmware") and the value is a comma-separated
+	// list of allowed SHA256 hashes. If no key exists for a kind, all artifacts of that kind are
+	// allowed.
+	MetadataKeyOfferAllowedArtifactsPrefix = "net.oasis.scheduler.offer.allowed_artifacts."
+	// MetadataKeyOfferPrivate is the offer metadata key marking an offer as private. Private
+	// offers are hidden from normal offer listings unless explicitly requested. The only value
+	// that enables the flag is MetadataValueTrue; any other value (or an absent key) leaves the
+	// offer public.
+	MetadataKeyOfferPrivate = "net.oasis.scheduler.offer.private"
+
+	// MetadataValueTrue is the offer metadata value that enables a boolean flag such as
+	// MetadataKeyOfferPrivate.
+	MetadataValueTrue = "1"
+)
+
 // Term is the reservation term.
 type Term uint8
 

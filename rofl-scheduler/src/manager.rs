@@ -10,13 +10,16 @@ use backoff::backoff::Backoff;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::BufMut;
 use futures_util::StreamExt;
-use oasis_runtime_sdk::core::{
-    common::{
-        crypto::{hash::Hash, signature::PublicKey},
-        logger::get_logger,
-        process,
+use oasis_runtime_sdk::{
+    core::{
+        common::{
+            crypto::{hash::Hash, signature::PublicKey},
+            logger::get_logger,
+            process,
+        },
+        host::{bundle_manager, volume_manager},
     },
-    host::{bundle_manager, volume_manager},
+    types::address::Address,
 };
 use oasis_runtime_sdk_rofl_market::{
     self as market,
@@ -45,6 +48,21 @@ use crate::{
 
 /// Metadata key used to configure the offer identifier.
 const METADATA_KEY_OFFER: &str = "net.oasis.scheduler.offer";
+/// Offer metadata key with the comma-separated list of allowed instance creator addresses. When
+/// unset or empty, all creators are allowed.
+const METADATA_KEY_OFFER_ALLOWED_CREATORS: &str = "net.oasis.scheduler.offer.allowed_creators";
+/// Prefix of the offer metadata keys with the allowed artifact hashes. The artifact kind is the
+/// suffix following the prefix (e.g. `...allowed_artifacts.firmware`) and the value is a
+/// comma-separated list of allowed SHA256 hashes. If no key exists for a kind, all artifacts of
+/// that kind are allowed.
+const METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX: &str =
+    "net.oasis.scheduler.offer.allowed_artifacts.";
+/// Offer metadata key marking an offer as private. Private offers are hidden from normal offer
+/// listings; the scheduler reads but does not act on this flag. The only value that enables the
+/// flag is `"1"`; any other value (or an absent key) leaves the offer public.
+const METADATA_KEY_OFFER_PRIVATE: &str = "net.oasis.scheduler.offer.private";
+/// Offer metadata value that enables a boolean flag (e.g. [`METADATA_KEY_OFFER_PRIVATE`]).
+const METADATA_VALUE_TRUE: &str = "1";
 /// Metadata key used to configure the deployment ORC bundle location.
 const METADATA_KEY_DEPLOYMENT_ORC_REF: &str = "net.oasis.deployment.orc.ref";
 /// Metadata key used to report errors.
@@ -102,6 +120,84 @@ impl InstanceUpdates {
     }
 }
 
+/// Per-offer access policy parsed from on-chain offer metadata.
+#[derive(Clone, Debug, Default)]
+struct OfferPolicy {
+    /// Allowed instance creator addresses. An empty set means all creators are allowed.
+    allowed_creators: BTreeSet<Address>,
+    /// Allowed artifact hashes keyed by artifact kind. When a kind is absent, all artifacts of
+    /// that kind are allowed.
+    allowed_artifacts: BTreeMap<String, BTreeSet<Hash>>,
+    /// Whether the offer is marked private. The scheduler reads but does not act on this flag; it
+    /// only affects how offers are listed.
+    private: bool,
+}
+
+impl OfferPolicy {
+    /// Parse the offer access policy from on-chain offer metadata. Malformed list entries are
+    /// silently skipped.
+    fn from_metadata(metadata: &BTreeMap<String, String>) -> Self {
+        let allowed_creators = metadata
+            .get(METADATA_KEY_OFFER_ALLOWED_CREATORS)
+            .map(|raw| {
+                parse_csv(raw)
+                    .filter_map(|item| Address::from_bech32(item).ok())
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let mut allowed_artifacts: BTreeMap<String, BTreeSet<Hash>> = BTreeMap::new();
+        for (key, raw) in metadata {
+            let Some(kind) = key.strip_prefix(METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX) else {
+                continue;
+            };
+            if kind.is_empty() {
+                continue;
+            }
+            let hashes = parse_csv(raw)
+                .filter_map(|item| item.parse::<Hash>().ok())
+                .collect();
+            allowed_artifacts.insert(kind.to_string(), hashes);
+        }
+
+        let private = metadata
+            .get(METADATA_KEY_OFFER_PRIVATE)
+            .is_some_and(|v| v == METADATA_VALUE_TRUE);
+
+        Self {
+            allowed_creators,
+            allowed_artifacts,
+            private,
+        }
+    }
+
+    /// Whether the given creator is allowed by this offer. An empty list means all creators are
+    /// allowed.
+    fn is_creator_allowed(&self, address: &Address) -> bool {
+        self.allowed_creators.is_empty() || self.allowed_creators.contains(address)
+    }
+
+    /// Validate the given artifact hash against this offer's allowed artifacts. When the offer
+    /// does not restrict the given kind, all artifacts of that kind are allowed.
+    fn ensure_artifact_allowed(&self, kind: &str, hash: &Hash) -> Result<()> {
+        match self.allowed_artifacts.get(kind) {
+            None => Ok(()), // All artifacts of this kind are allowed.
+            Some(allowed_hashes) => {
+                if !allowed_hashes.contains(hash) {
+                    Err(anyhow!("{kind} artifact not allowed"))
+                } else {
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
+/// Split a comma-separated metadata value into trimmed, non-empty items.
+fn parse_csv(raw: &str) -> impl Iterator<Item = &str> {
+    raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty())
+}
+
 struct LocalState {
     /// Market query client instance for a specific round.
     client: Arc<MarketQueryClient>,
@@ -111,9 +207,11 @@ struct LocalState {
     running: BTreeMap<InstanceId, bundle_manager::BundleInfo>,
     /// Map from on-chain offer ID to its metadata key (`net.oasis.scheduler.offer` value).
     offer_key_by_id: BTreeMap<market::types::OfferId, String>,
+    /// Map from on-chain offer ID to its parsed access policy (allowed creators/apps, private).
+    offer_policy_by_id: BTreeMap<market::types::OfferId, OfferPolicy>,
     /// A list of deployments that should already be running but are not.
-    /// Tuple: (instance, deployment, wipe_storage, offer_key).
-    pending_start: Vec<(Instance, Deployment, bool, String)>,
+    /// Tuple: (instance, deployment, wipe_storage, offer_policy).
+    pending_start: Vec<(Instance, Deployment, bool, OfferPolicy)>,
     /// A list of instance identifiers that should have no running deployments.
     pending_stop: Vec<(InstanceId, bool)>,
     /// A map of instance updates.
@@ -255,6 +353,7 @@ impl Manager {
             accepted: BTreeMap::new(),
             running: BTreeMap::new(),
             offer_key_by_id: BTreeMap::new(),
+            offer_policy_by_id: BTreeMap::new(),
             pending_start: Vec::new(),
             pending_stop: Vec::new(),
             instance_updates: BTreeMap::new(),
@@ -308,16 +407,20 @@ impl Manager {
         let mut running_unknown =
             BTreeSet::from_iter(local_state.running.keys().copied().chain(volumes));
 
-        // Build a map from offer ID to offer metadata key, used when populating pending_start so
-        // that per-offer config (allowed_creators, allowed_artifacts) can be applied later.
+        // Build maps from offer ID to its metadata key and to its parsed on-chain access policy
+        // (allowed creators/apps, private flag). These are used later when evaluating instances.
         let offers = local_state.client.offers().await?;
-        local_state.offer_key_by_id = offers
-            .into_iter()
-            .filter_map(|offer| {
-                let key = offer.metadata.get(METADATA_KEY_OFFER)?.clone();
-                Some((offer.id, key))
-            })
-            .collect();
+        for offer in offers {
+            let policy = OfferPolicy::from_metadata(&offer.metadata);
+            if policy.private {
+                slog::debug!(self.logger, "discovered private offer"; "offer" => ?offer.id);
+            }
+            local_state.offer_policy_by_id.insert(offer.id, policy);
+
+            if let Some(key) = offer.metadata.get(METADATA_KEY_OFFER) {
+                local_state.offer_key_by_id.insert(offer.id, key.clone());
+            }
+        }
 
         // Discover desired instance state.
         let instances: Vec<Instance> = local_state.client.instances().await?;
@@ -489,8 +592,8 @@ impl Manager {
                     if actual_hash != desired_hash || force_restart {
                         // Note that any old instances will be restarted in case they are already
                         // running and we add them to `pending_start`.
-                        let offer_key = local_state
-                            .offer_key_by_id
+                        let offer_policy = local_state
+                            .offer_policy_by_id
                             .get(&instance.offer)
                             .cloned()
                             .unwrap_or_default();
@@ -498,20 +601,20 @@ impl Manager {
                             instance,
                             desired,
                             wipe_storage,
-                            offer_key,
+                            offer_policy,
                         ));
                     }
                 }
                 (None, Some(desired)) => {
                     // Instance is not running and should be started.
-                    let offer_key = local_state
-                        .offer_key_by_id
+                    let offer_policy = local_state
+                        .offer_policy_by_id
                         .get(&instance.offer)
                         .cloned()
                         .unwrap_or_default();
                     local_state
                         .pending_start
-                        .push((instance, desired, wipe_storage, offer_key));
+                        .push((instance, desired, wipe_storage, offer_policy));
                 }
                 (Some(_), None) => {
                     // Instance is running and should be stopped.
@@ -563,15 +666,13 @@ impl Manager {
     ) -> Result<()> {
         let instances = local_state.client.instances().await?;
 
-        // Build a map from offer ID to offer key for offers this scheduler accepts.
-        // `offer_key_by_id` was populated by discover(); no second network call needed.
-        let acceptable_offers: BTreeMap<market::types::OfferId, String> = local_state
+        // Build the set of offer IDs this scheduler accepts. `offer_key_by_id` was populated by
+        // discover(); no second network call needed.
+        let acceptable_offers: BTreeSet<market::types::OfferId> = local_state
             .offer_key_by_id
             .iter()
-            .filter(|(_, key)| {
-                self.cfg.offers.is_empty() || self.cfg.offers.contains_key(key.as_str())
-            })
-            .map(|(id, key)| (*id, key.clone()))
+            .filter(|(_, key)| self.cfg.offers.is_empty() || self.cfg.offers.contains(key.as_str()))
+            .map(|(id, _)| *id)
             .collect();
 
         for instance in instances {
@@ -611,23 +712,27 @@ impl Manager {
                 "transfer" => transfer_instance,
             );
 
-            // Check if offer is among the configured offers (and retrieve its key for per-offer
-            // policy lookups that follow).
-            let offer_key = match acceptable_offers.get(&instance.offer) {
-                Some(key) => key.as_str(),
-                None => {
-                    slog::info!(self.logger, "offer not acceptable for this instance";
-                        "id" => ?instance.id,
-                        "offer" => ?instance.offer,
-                        "transfer" => transfer_instance,
-                    );
-                    maybe_remove();
-                    continue;
-                }
-            };
+            // Check if offer is among the configured offers.
+            if !acceptable_offers.contains(&instance.offer) {
+                slog::info!(self.logger, "offer not acceptable for this instance";
+                    "id" => ?instance.id,
+                    "offer" => ?instance.offer,
+                    "transfer" => transfer_instance,
+                );
+                maybe_remove();
+                continue;
+            }
 
-            // Check if creator is among the allowed creators for this offer (falls back to global).
-            if !self.cfg.is_creator_allowed(offer_key, &instance.creator) {
+            // Look up the offer's on-chain access policy (allowed creators/apps). A missing entry
+            // means the offer has no policy set, so global defaults apply.
+            let offer_policy = local_state
+                .offer_policy_by_id
+                .get(&instance.offer)
+                .cloned()
+                .unwrap_or_default();
+
+            // Check if creator is among the allowed creators for this offer.
+            if !offer_policy.is_creator_allowed(&instance.creator) {
                 slog::info!(self.logger, "creator not allowed";
                     "id" => ?instance.id,
                     "creator" => instance.creator,
@@ -693,13 +798,13 @@ impl Manager {
         let start_jobs: Vec<_> = local_state
             .pending_start
             .iter()
-            .map(|(instance, deployment, wipe_storage, offer_key)| {
+            .map(|(instance, deployment, wipe_storage, offer_policy)| {
                 self.clone().start_instance(
                     local_state.client.clone(),
                     instance.clone(),
                     deployment.clone(),
                     *wipe_storage,
-                    offer_key.clone(),
+                    offer_policy.clone(),
                 )
             })
             .collect();
@@ -891,7 +996,7 @@ impl Manager {
         instance: Instance,
         deployment: Deployment,
         wipe_storage: bool,
-        offer_key: String,
+        offer_policy: OfferPolicy,
     ) -> Result<()> {
         if !self.should_start_instance(instance.id, &deployment) {
             return Ok(());
@@ -906,7 +1011,7 @@ impl Manager {
         self.set_last_instance_deployment(instance.id, &deployment);
 
         match self
-            .pull_and_deploy_instance(client, &instance, &deployment, &offer_key)
+            .pull_and_deploy_instance(client, &instance, &deployment, &offer_policy)
             .await
         {
             Ok(_) => {
@@ -996,10 +1101,10 @@ impl Manager {
         client: Arc<MarketQueryClient>,
         instance: &Instance,
         deployment: &Deployment,
-        offer_key: &str,
+        offer_policy: &OfferPolicy,
     ) -> Result<()> {
         let deployment_info = self
-            .pull_and_validate_deployment(instance, deployment, offer_key)
+            .pull_and_validate_deployment(instance, deployment, offer_policy)
             .await?;
         self.deploy_instance(client, instance, deployment, deployment_info)
             .await
@@ -1134,7 +1239,7 @@ impl Manager {
         self: &Arc<Self>,
         instance: &Instance,
         deployment: &Deployment,
-        offer_key: &str,
+        offer_policy: &OfferPolicy,
     ) -> Result<DeploymentInfo> {
         slog::info!(self.logger, "pulling deployment bundle";
             "instance_id" => ?instance.id,
@@ -1246,32 +1351,28 @@ impl Manager {
                     .digests
                     .get(&tdx.firmware)
                     .ok_or(anyhow!("ORC is missing firmware digest"))?;
-                self.cfg
-                    .ensure_artifact_allowed(offer_key, "firmware", firmware_digest)?;
+                offer_policy.ensure_artifact_allowed("firmware", firmware_digest)?;
 
                 if !tdx.kernel.is_empty() {
                     let kernel_digest = orc_manifest
                         .digests
                         .get(&tdx.kernel)
                         .ok_or(anyhow!("ORC is missing kernel digest"))?;
-                    self.cfg
-                        .ensure_artifact_allowed(offer_key, "kernel", kernel_digest)?;
+                    offer_policy.ensure_artifact_allowed("kernel", kernel_digest)?;
 
                     if !tdx.initrd.is_empty() {
                         let initrd_digest = orc_manifest
                             .digests
                             .get(&tdx.initrd)
                             .ok_or(anyhow!("ORC is missing initrd digest"))?;
-                        self.cfg
-                            .ensure_artifact_allowed(offer_key, "initrd", initrd_digest)?;
+                        offer_policy.ensure_artifact_allowed("initrd", initrd_digest)?;
                     }
                     if !tdx.stage2_image.is_empty() {
                         let stage2_digest = orc_manifest
                             .digests
                             .get(&tdx.stage2_image)
                             .ok_or(anyhow!("ORC is missing stage2 digest"))?;
-                        self.cfg
-                            .ensure_artifact_allowed(offer_key, "stage2", stage2_digest)?;
+                        offer_policy.ensure_artifact_allowed("stage2", stage2_digest)?;
 
                         qcow2_names.insert(tdx.stage2_image.clone());
 
@@ -1598,4 +1699,93 @@ fn deployment_hash_for_scheduler(scheduler_id: &[u8; 32], deployment: &Deploymen
     let hash = Hash::digest_bytes_list(&[scheduler_id, &cbor::to_vec(deployment.clone())]);
 
     format!("{hash:x}")
+}
+
+#[cfg(test)]
+mod test {
+    use oasis_runtime_sdk::testing;
+
+    use super::*;
+
+    #[test]
+    fn test_offer_policy_absent() {
+        let policy = OfferPolicy::from_metadata(&BTreeMap::new());
+        assert!(policy.allowed_creators.is_empty());
+        assert!(policy.allowed_artifacts.is_empty());
+        assert!(!policy.private);
+        // Empty policy allows all creators.
+        assert!(policy.is_creator_allowed(&testing::keys::alice::address()));
+    }
+
+    #[test]
+    fn test_offer_policy_allowed_creators() {
+        let alice = testing::keys::alice::address();
+        let bob = testing::keys::bob::address();
+        let metadata = BTreeMap::from([(
+            METADATA_KEY_OFFER_ALLOWED_CREATORS.to_string(),
+            // Whitespace is trimmed; the malformed entry is skipped.
+            format!(" {} , garbage ", alice.to_bech32()),
+        )]);
+
+        let policy = OfferPolicy::from_metadata(&metadata);
+        assert_eq!(policy.allowed_creators.len(), 1);
+        assert!(policy.allowed_creators.contains(&alice));
+
+        assert!(policy.is_creator_allowed(&alice));
+        assert!(!policy.is_creator_allowed(&bob));
+    }
+
+    #[test]
+    fn test_offer_policy_empty_creators_allows_all() {
+        // Key present but empty → all creators allowed.
+        let alice = testing::keys::alice::address();
+        let metadata = BTreeMap::from([(
+            METADATA_KEY_OFFER_ALLOWED_CREATORS.to_string(),
+            "".to_string(),
+        )]);
+        let policy = OfferPolicy::from_metadata(&metadata);
+        assert!(policy.is_creator_allowed(&alice));
+    }
+
+    #[test]
+    fn test_offer_policy_allowed_artifacts() {
+        let allowed = Hash::digest_bytes(b"allowed-firmware");
+        let blocked = Hash::digest_bytes(b"blocked-firmware");
+        let kernel = Hash::digest_bytes(b"some-kernel");
+        let metadata = BTreeMap::from([(
+            format!("{METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX}firmware"),
+            format!(" {allowed:x} , garbage "),
+        )]);
+
+        let policy = OfferPolicy::from_metadata(&metadata);
+        // Only the valid firmware hash is parsed; the malformed entry is skipped.
+        assert_eq!(policy.allowed_artifacts["firmware"].len(), 1);
+        assert!(policy.ensure_artifact_allowed("firmware", &allowed).is_ok());
+        assert!(policy
+            .ensure_artifact_allowed("firmware", &blocked)
+            .is_err());
+        // Kinds without a configured key are unrestricted.
+        assert!(policy.ensure_artifact_allowed("kernel", &kernel).is_ok());
+    }
+
+    #[test]
+    fn test_offer_policy_artifacts_unset_allows_all() {
+        let policy = OfferPolicy::default();
+        let hash = Hash::digest_bytes(b"anything");
+        assert!(policy.ensure_artifact_allowed("firmware", &hash).is_ok());
+    }
+
+    #[test]
+    fn test_offer_policy_private() {
+        // Only the canonical value "1" enables the flag.
+        let metadata = BTreeMap::from([(METADATA_KEY_OFFER_PRIVATE.to_string(), "1".to_string())]);
+        assert!(OfferPolicy::from_metadata(&metadata).private);
+
+        // Any other value (or an absent key) leaves the offer public.
+        for v in ["true", "YES", "True", "false", "0", "", "no", " 1"] {
+            let metadata =
+                BTreeMap::from([(METADATA_KEY_OFFER_PRIVATE.to_string(), v.to_string())]);
+            assert!(!OfferPolicy::from_metadata(&metadata).private, "{v}");
+        }
+    }
 }
