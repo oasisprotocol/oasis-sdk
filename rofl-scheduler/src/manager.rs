@@ -135,16 +135,23 @@ struct OfferPolicy {
 
 impl OfferPolicy {
     /// Parse the offer access policy from on-chain offer metadata. Malformed list entries are
-    /// silently skipped.
-    fn from_metadata(metadata: &BTreeMap<String, String>) -> Self {
-        let allowed_creators = metadata
-            .get(METADATA_KEY_OFFER_ALLOWED_CREATORS)
-            .map(|raw| {
-                parse_csv(raw)
-                    .filter_map(|item| Address::from_bech32(item).ok())
-                    .collect()
-            })
-            .unwrap_or_default();
+    /// skipped and logged as warnings.
+    fn from_metadata(metadata: &BTreeMap<String, String>, logger: &slog::Logger) -> Self {
+        let mut allowed_creators = BTreeSet::new();
+        if let Some(raw) = metadata.get(METADATA_KEY_OFFER_ALLOWED_CREATORS) {
+            for item in parse_csv(raw) {
+                match Address::from_bech32(item) {
+                    Ok(address) => {
+                        allowed_creators.insert(address);
+                    }
+                    Err(_) => {
+                        slog::warn!(logger, "ignoring malformed allowed creator address in offer metadata";
+                            "address" => item,
+                        );
+                    }
+                }
+            }
+        }
 
         let mut allowed_artifacts: BTreeMap<String, BTreeSet<Hash>> = BTreeMap::new();
         for (key, raw) in metadata {
@@ -154,9 +161,20 @@ impl OfferPolicy {
             if kind.is_empty() {
                 continue;
             }
-            let hashes = parse_csv(raw)
-                .filter_map(|item| item.parse::<Hash>().ok())
-                .collect();
+            let mut hashes = BTreeSet::new();
+            for item in parse_csv(raw) {
+                match item.parse::<Hash>() {
+                    Ok(hash) => {
+                        hashes.insert(hash);
+                    }
+                    Err(_) => {
+                        slog::warn!(logger, "ignoring malformed allowed artifact hash in offer metadata";
+                            "kind" => kind,
+                            "hash" => item,
+                        );
+                    }
+                }
+            }
             allowed_artifacts.insert(kind.to_string(), hashes);
         }
 
@@ -411,9 +429,12 @@ impl Manager {
         // (allowed creators/apps, private flag). These are used later when evaluating instances.
         let offers = local_state.client.offers().await?;
         for offer in offers {
-            let policy = OfferPolicy::from_metadata(&offer.metadata);
+            let logger = self
+                .logger
+                .new(slog::o!("offer" => format!("{:?}", offer.id)));
+            let policy = OfferPolicy::from_metadata(&offer.metadata, &logger);
             if policy.private {
-                slog::debug!(self.logger, "discovered private offer"; "offer" => ?offer.id);
+                slog::debug!(logger, "discovered private offer");
             }
             local_state.offer_policy_by_id.insert(offer.id, policy);
 
@@ -1707,9 +1728,14 @@ mod test {
 
     use super::*;
 
+    /// A logger that discards all output, for use in tests.
+    fn test_logger() -> slog::Logger {
+        slog::Logger::root(slog::Discard, slog::o!())
+    }
+
     #[test]
     fn test_offer_policy_absent() {
-        let policy = OfferPolicy::from_metadata(&BTreeMap::new());
+        let policy = OfferPolicy::from_metadata(&BTreeMap::new(), &test_logger());
         assert!(policy.allowed_creators.is_empty());
         assert!(policy.allowed_artifacts.is_empty());
         assert!(!policy.private);
@@ -1727,7 +1753,7 @@ mod test {
             format!(" {} , garbage ", alice.to_bech32()),
         )]);
 
-        let policy = OfferPolicy::from_metadata(&metadata);
+        let policy = OfferPolicy::from_metadata(&metadata, &test_logger());
         assert_eq!(policy.allowed_creators.len(), 1);
         assert!(policy.allowed_creators.contains(&alice));
 
@@ -1743,7 +1769,7 @@ mod test {
             METADATA_KEY_OFFER_ALLOWED_CREATORS.to_string(),
             "".to_string(),
         )]);
-        let policy = OfferPolicy::from_metadata(&metadata);
+        let policy = OfferPolicy::from_metadata(&metadata, &test_logger());
         assert!(policy.is_creator_allowed(&alice));
     }
 
@@ -1757,7 +1783,7 @@ mod test {
             format!(" {allowed:x} , garbage "),
         )]);
 
-        let policy = OfferPolicy::from_metadata(&metadata);
+        let policy = OfferPolicy::from_metadata(&metadata, &test_logger());
         // Only the valid firmware hash is parsed; the malformed entry is skipped.
         assert_eq!(policy.allowed_artifacts["firmware"].len(), 1);
         assert!(policy.ensure_artifact_allowed("firmware", &allowed).is_ok());
@@ -1779,13 +1805,13 @@ mod test {
     fn test_offer_policy_private() {
         // Only the canonical value "1" enables the flag.
         let metadata = BTreeMap::from([(METADATA_KEY_OFFER_PRIVATE.to_string(), "1".to_string())]);
-        assert!(OfferPolicy::from_metadata(&metadata).private);
+        assert!(OfferPolicy::from_metadata(&metadata, &test_logger()).private);
 
         // Any other value (or an absent key) leaves the offer public.
         for v in ["true", "YES", "True", "false", "0", "", "no", " 1"] {
             let metadata =
                 BTreeMap::from([(METADATA_KEY_OFFER_PRIVATE.to_string(), v.to_string())]);
-            assert!(!OfferPolicy::from_metadata(&metadata).private, "{v}");
+            assert!(!OfferPolicy::from_metadata(&metadata, &test_logger()).private, "{v}");
         }
     }
 }
