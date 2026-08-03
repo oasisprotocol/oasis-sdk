@@ -5,10 +5,11 @@ of EVM-compatible smart contracts.
 
 ## Known Divergence from Ethereum
 
-* `SELFDISTRUCT` op code is unsupported. Invoking `SELFDESTRUCT` will result in
+* `SELFDESTRUCT` op code is disabled. Invoking `SELFDESTRUCT` will result in
   a transaction being reverted. Solving this would require either inefficient
   iteration over all storage keys, a special storage operation for removing
-  prefixes or some form of generational storage.
+  prefixes or some form of generational storage. This behavior is also in line
+  with the Ethereum Dencun upgrade.
 
 * `COINBASE` op code always returns an all-zero address.
 
