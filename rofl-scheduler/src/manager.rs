@@ -1811,7 +1811,10 @@ mod test {
         for v in ["true", "YES", "True", "false", "0", "", "no", " 1"] {
             let metadata =
                 BTreeMap::from([(METADATA_KEY_OFFER_PRIVATE.to_string(), v.to_string())]);
-            assert!(!OfferPolicy::from_metadata(&metadata, &test_logger()).private, "{v}");
+            assert!(
+                !OfferPolicy::from_metadata(&metadata, &test_logger()).private,
+                "{v}"
+            );
         }
     }
 }
