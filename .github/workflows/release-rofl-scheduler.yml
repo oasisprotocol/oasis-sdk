@@ -18,7 +18,7 @@ jobs:
       - name: Setup Oasis CLI
         uses: oasisprotocol/setup-cli-action@0.0.2
         with:
-          version: '0.19.0'
+          version: '0.19.1'
 
       - name: Build rofl-scheduler for Testnet
         working-directory: rofl-scheduler
