@@ -34,7 +34,7 @@ runs:
           branch=${GITHUB_REF_NAME}
 
           if [[ -n "$TRIM_PREFIX" ]]; then
-        branch=${branch//\//-}
+            branch=${branch#"$TRIM_PREFIX"}
           fi
         elif [[ "$USE_BASE_FOR_PR" == "yes" ]]; then
           # Use base branch.
