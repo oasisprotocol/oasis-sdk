@@ -267,7 +267,7 @@ impl Options {
 
     /// Request for local entropy to be mixed into the current RNG.
     ///
-    /// # Determinisim
+    /// # Determinism
     ///
     /// Using this method will result in non-deterministic behavior as the node's local entropy is
     /// mixed into the RNG. As such, this method should only be used in cases where non-determinism
