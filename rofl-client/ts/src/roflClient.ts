@@ -311,8 +311,7 @@ export class RoflClient {
      * it will trigger an automatic on-chain registration refresh. Keys are automatically
      * namespaced with 'net.oasis.app.' when published on-chain.
      *
-     * Metadata is validated against runtime-configured limits (typically max 64 pairs,
-     * max key size 1024 bytes, max value size 16KB).
+     * Metadata is validated against runtime-configured limits.
      *
      * @param metadata - Dictionary of metadata key-value pairs to set
      * @returns Promise that resolves when metadata is successfully updated
