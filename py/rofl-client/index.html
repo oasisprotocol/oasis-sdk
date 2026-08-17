@@ -530,8 +530,8 @@ refresh if the metadata has changed.</p>
 
 <span class="n">client</span> <span class="o">=</span> <span class="n">RoflClient</span><span class="p">()</span>
 
-<span class="n">key</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate_key</span><span class="p">(</span><span class="s2">&quot;my-key-id&quot;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated SECP256K1 key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="n">key</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">generate_key</span><span class="p">(</span><span class="s2">"my-key-id"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated SECP256K1 key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>You can also use an async version:</p>
@@ -541,8 +541,8 @@ refresh if the metadata has changed.</p>
 <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
     <span class="n">client</span> <span class="o">=</span> <span class="n">AsyncRoflClient</span><span class="p">()</span>
 
-    <span class="n">key</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">generate_key</span><span class="p">(</span><span class="s2">&quot;my-key-id&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated SECP256K1 key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="k">await</span> <span class="n">client</span><span class="o">.</span><span class="n">generate_key</span><span class="p">(</span><span class="s2">"my-key-id"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Generated SECP256K1 key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </pre></div>
@@ -555,7 +555,7 @@ refresh if the metadata has changed.</p>
 <p>The main client class for interacting with ROFL runtime services.</p>
 <section id="constructor">
 <h5>Constructor<a class="headerlink" href="#constructor" title="Link to this heading">¶</a></h5>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">RoflClient</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">RoflClient</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">

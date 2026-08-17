@@ -228,10 +228,10 @@
         </div>
         <article role="main" id="furo-main-content">
           <h1>Source code for oasis_rofl_client.rofl_client</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;ROFL client for interacting with ROFL appd REST API.</span>
+<span></span><span class="sd">"""ROFL client for interacting with ROFL appd REST API.</span>
 
 <span class="sd">Provides native python methods for the ROFL appd REST API endpoints.</span>
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
@@ -258,22 +258,22 @@
 <div class="viewcode-block" id="RoflClient">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.RoflClient">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">RoflClient</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Client for interacting with ROFL REST API.</span>
+<span class="w">    </span><span class="sd">"""Client for interacting with ROFL REST API.</span>
 
 <span class="sd">    Provides methods for key fetching through the ROFL REST API.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize ROFL client.</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Initialize ROFL client.</span>
 
 <span class="sd">        :param url: Optional URL for HTTP transport (defaults to Unix socket)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">url</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_appd_request</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">payload</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Response</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Request to ROFL application daemon.</span>
+<span class="w">        </span><span class="sd">"""Request to ROFL application daemon.</span>
 
 <span class="sd">        :param method: HTTP method (GET or POST)</span>
 <span class="sd">        :param path: API endpoint path</span>
@@ -281,32 +281,32 @@
 <span class="sd">        :returns: HTTP response from the daemon</span>
 <span class="sd">        :raises ValueError: If an unsupported HTTP method is provided</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If the request fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="s2">&quot;POST&quot;</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported HTTP method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"GET"</span><span class="p">,</span> <span class="s2">"POST"</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Unsupported HTTP method: </span><span class="si">{</span><span class="n">method</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="n">transport</span><span class="p">:</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPTransport</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"http"</span><span class="p">):</span>
             <span class="n">transport</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPTransport</span><span class="p">(</span><span class="n">uds</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using HTTP socket: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using HTTP socket: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">elif</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="p">:</span>
             <span class="n">transport</span> <span class="o">=</span> <span class="n">httpx</span><span class="o">.</span><span class="n">HTTPTransport</span><span class="p">(</span><span class="n">uds</span><span class="o">=</span><span class="n">ROFL_SOCKET_PATH</span><span class="p">)</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using unix domain socket: </span><span class="si">{</span><span class="n">ROFL_SOCKET_PATH</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Using unix domain socket: </span><span class="si">{</span><span class="n">ROFL_SOCKET_PATH</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 
         <span class="k">with</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">transport</span><span class="o">=</span><span class="n">transport</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
             <span class="n">base_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">url</span>
-                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;http&quot;</span><span class="p">)</span>
-                <span class="k">else</span> <span class="s2">&quot;http://localhost&quot;</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">url</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"http"</span><span class="p">)</span>
+                <span class="k">else</span> <span class="s2">"http://localhost"</span>
             <span class="p">)</span>
             <span class="n">full_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">base_url</span> <span class="o">+</span> <span class="n">path</span>
 
-            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Getting from </span><span class="si">{</span><span class="n">full_url</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">"GET"</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Getting from </span><span class="si">{</span><span class="n">full_url</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">response</span><span class="p">:</span> <span class="n">httpx</span><span class="o">.</span><span class="n">Response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">full_url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">60.0</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>  <span class="c1"># POST</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Posting to </span><span class="si">{</span><span class="n">full_url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Posting to </span><span class="si">{</span><span class="n">full_url</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
                 <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="n">full_url</span><span class="p">,</span> <span class="n">json</span><span class="o">=</span><span class="n">payload</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">60.0</span><span class="p">)</span>
 
             <span class="n">response</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
@@ -319,12 +319,12 @@
 <div class="viewcode-block" id="RoflClient.get_app_id">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.RoflClient.get_app_id">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_app_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Retrieve the app ID.</span>
+<span class="w">        </span><span class="sd">"""Retrieve the app ID.</span>
 
 <span class="sd">        :returns: The app ID as Bech32-encoded string</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If key fetch fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_APP_ID</span><span class="p">))</span><span class="o">.</span><span class="n">text</span></div>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"GET"</span><span class="p">,</span> <span class="n">ENDPOINT_APP_ID</span><span class="p">))</span><span class="o">.</span><span class="n">text</span></div>
 
 
 <div class="viewcode-block" id="RoflClient.generate_key">
@@ -332,23 +332,23 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">generate_key</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">key_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">kind</span><span class="p">:</span> <span class="n">KeyKind</span> <span class="o">=</span> <span class="n">KeyKind</span><span class="o">.</span><span class="n">SECP256K1</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fetch or generate a cryptographic key from ROFL.</span>
+<span class="w">        </span><span class="sd">"""Fetch or generate a cryptographic key from ROFL.</span>
 
 <span class="sd">        :param key_id: Identifier for the key</span>
 <span class="sd">        :param kind: Type of key to generate (default: SECP256K1)</span>
 <span class="sd">        :returns: The private key as a hex string</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If key fetch fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
 
         <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;key_id&quot;</span><span class="p">:</span> <span class="n">key_id</span><span class="p">,</span>
-            <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="s2">"key_id"</span><span class="p">:</span> <span class="n">key_id</span><span class="p">,</span>
+            <span class="s2">"kind"</span><span class="p">:</span> <span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
         <span class="p">}</span>
 
         <span class="n">response</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_KEYS_GENERATE</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"POST"</span><span class="p">,</span> <span class="n">ENDPOINT_KEYS_GENERATE</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
         <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;key&quot;</span><span class="p">]</span></div>
+        <span class="k">return</span> <span class="n">response</span><span class="p">[</span><span class="s2">"key"</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="RoflClient.sign_submit">
@@ -358,7 +358,7 @@
         <span class="n">tx</span><span class="p">:</span> <span class="n">TxParams</span><span class="p">,</span>
         <span class="n">encrypt</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.</span>
+<span class="w">        </span><span class="sd">"""Sign the given Ethereum transaction with an endorsed ephemeral key and submit it to Sapphire.</span>
 
 <span class="sd">        Note: Transaction nonce and gas price are ignored.</span>
 
@@ -367,29 +367,29 @@
 <span class="sd">        :returns: Deserialized response data object.</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If the request fails</span>
 <span class="sd">        :raises cbor2.CBORDecodeValueError: If the response data is invalid</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">payload</span> <span class="o">=</span> <span class="n">get_tx_payload</span><span class="p">(</span><span class="n">tx</span><span class="p">,</span> <span class="n">encrypt</span><span class="p">)</span>
 
         <span class="n">response</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_TX_SIGN_SUBMIT</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"POST"</span><span class="p">,</span> <span class="n">ENDPOINT_TX_SIGN_SUBMIT</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
         <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
         <span class="c1"># Decode CBOR-encoded data field to python object.</span>
-        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">):</span>
-            <span class="n">result</span> <span class="o">=</span> <span class="n">cbor2</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"data"</span><span class="p">):</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">cbor2</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]))</span>
         <span class="k">return</span> <span class="n">result</span></div>
 
 
 <div class="viewcode-block" id="RoflClient.get_metadata">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.RoflClient.get_metadata">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">get_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get all user-set metadata key-value pairs.</span>
+<span class="w">        </span><span class="sd">"""Get all user-set metadata key-value pairs.</span>
 
 <span class="sd">        :returns: Dictionary of metadata key-value pairs</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If the request fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">response</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;GET&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_METADATA</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"GET"</span><span class="p">,</span> <span class="n">ENDPOINT_METADATA</span><span class="p">)</span>
         <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">response</span></div>
 
@@ -397,36 +397,36 @@
 <div class="viewcode-block" id="RoflClient.set_metadata">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.RoflClient.set_metadata">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">set_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">metadata</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set metadata key-value pairs.</span>
+<span class="w">        </span><span class="sd">"""Set metadata key-value pairs.</span>
 
 <span class="sd">        This replaces all existing app-provided metadata. Will trigger a registration</span>
 <span class="sd">        refresh if the metadata has changed.</span>
 
 <span class="sd">        :param metadata: Dictionary of metadata key-value pairs to set</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If the request fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_METADATA</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span></div>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"POST"</span><span class="p">,</span> <span class="n">ENDPOINT_METADATA</span><span class="p">,</span> <span class="n">metadata</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="RoflClient.query">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.RoflClient.query">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">args</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Query the on-chain paratime state.</span>
+<span class="w">        </span><span class="sd">"""Query the on-chain paratime state.</span>
 
 <span class="sd">        :param method: The query method name</span>
 <span class="sd">        :param args: CBOR-encoded query arguments</span>
 <span class="sd">        :returns: CBOR-encoded response data</span>
 <span class="sd">        :raises httpx.HTTPStatusError: If the request fails</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">payload</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;method&quot;</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
-            <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span>
+            <span class="s2">"method"</span><span class="p">:</span> <span class="n">method</span><span class="p">,</span>
+            <span class="s2">"args"</span><span class="p">:</span> <span class="n">args</span><span class="o">.</span><span class="n">hex</span><span class="p">(),</span>
         <span class="p">}</span>
 
         <span class="n">response</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">&quot;POST&quot;</span><span class="p">,</span> <span class="n">ENDPOINT_QUERY</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_appd_request</span><span class="p">(</span><span class="s2">"POST"</span><span class="p">,</span> <span class="n">ENDPOINT_QUERY</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
         <span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
-        <span class="k">return</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span></div>
+        <span class="k">return</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">response</span><span class="p">[</span><span class="s2">"data"</span><span class="p">])</span></div>
 </div>
 
 </pre></div>

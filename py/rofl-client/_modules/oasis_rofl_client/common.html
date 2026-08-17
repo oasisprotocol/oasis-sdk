@@ -236,57 +236,57 @@
 <div class="viewcode-block" id="KeyKind">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.KeyKind">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">KeyKind</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Supported key generation types for ROFL.</span>
+<span class="w">    </span><span class="sd">"""Supported key generation types for ROFL.</span>
 
 <span class="sd">    :cvar RAW_256: Generate 256 bits of entropy</span>
 <span class="sd">    :cvar RAW_384: Generate 384 bits of entropy</span>
 <span class="sd">    :cvar ED25519: Generate an Ed25519 private key</span>
 <span class="sd">    :cvar SECP256K1: Generate a Secp256k1 private key</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="n">RAW_256</span> <span class="o">=</span> <span class="s2">&quot;raw-256&quot;</span>
-    <span class="n">RAW_384</span> <span class="o">=</span> <span class="s2">&quot;raw-384&quot;</span>
-    <span class="n">ED25519</span> <span class="o">=</span> <span class="s2">&quot;ed25519&quot;</span>
-    <span class="n">SECP256K1</span> <span class="o">=</span> <span class="s2">&quot;secp256k1&quot;</span></div>
+    <span class="n">RAW_256</span> <span class="o">=</span> <span class="s2">"raw-256"</span>
+    <span class="n">RAW_384</span> <span class="o">=</span> <span class="s2">"raw-384"</span>
+    <span class="n">ED25519</span> <span class="o">=</span> <span class="s2">"ed25519"</span>
+    <span class="n">SECP256K1</span> <span class="o">=</span> <span class="s2">"secp256k1"</span></div>
 
 
 
-<span class="n">ROFL_SOCKET_PATH</span> <span class="o">=</span> <span class="s2">&quot;/run/rofl-appd.sock&quot;</span>
+<span class="n">ROFL_SOCKET_PATH</span> <span class="o">=</span> <span class="s2">"/run/rofl-appd.sock"</span>
 
-<span class="n">ENDPOINT_APP_ID</span> <span class="o">=</span> <span class="s2">&quot;/rofl/v1/app/id&quot;</span>
-<span class="n">ENDPOINT_KEYS_GENERATE</span> <span class="o">=</span> <span class="s2">&quot;/rofl/v1/keys/generate&quot;</span>
-<span class="n">ENDPOINT_TX_SIGN_SUBMIT</span> <span class="o">=</span> <span class="s2">&quot;/rofl/v1/tx/sign-submit&quot;</span>
-<span class="n">ENDPOINT_METADATA</span> <span class="o">=</span> <span class="s2">&quot;/rofl/v1/metadata&quot;</span>
-<span class="n">ENDPOINT_QUERY</span> <span class="o">=</span> <span class="s2">&quot;/rofl/v1/query&quot;</span>
+<span class="n">ENDPOINT_APP_ID</span> <span class="o">=</span> <span class="s2">"/rofl/v1/app/id"</span>
+<span class="n">ENDPOINT_KEYS_GENERATE</span> <span class="o">=</span> <span class="s2">"/rofl/v1/keys/generate"</span>
+<span class="n">ENDPOINT_TX_SIGN_SUBMIT</span> <span class="o">=</span> <span class="s2">"/rofl/v1/tx/sign-submit"</span>
+<span class="n">ENDPOINT_METADATA</span> <span class="o">=</span> <span class="s2">"/rofl/v1/metadata"</span>
+<span class="n">ENDPOINT_QUERY</span> <span class="o">=</span> <span class="s2">"/rofl/v1/query"</span>
 
 
 <div class="viewcode-block" id="get_tx_payload">
 <a class="viewcode-back" href="../../oasis_rofl_client.html#oasis_rofl_client.get_tx_payload">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_tx_payload</span><span class="p">(</span><span class="n">tx</span><span class="p">:</span> <span class="n">TxParams</span><span class="p">,</span> <span class="n">encrypt</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Prepare the payload of the EVM transaction for the &quot;tx/sign-submit&quot; appd endpoint.</span>
+<span class="w">    </span><span class="sd">"""Prepare the payload of the EVM transaction for the "tx/sign-submit" appd endpoint.</span>
 
 <span class="sd">    :param tx: Transaction parameters</span>
 <span class="sd">    :param encrypt: End-to-end encrypt the transaction before submitting (default: True)</span>
 <span class="sd">    :returns: The payload object</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
     <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="s2">&quot;tx&quot;</span><span class="p">:</span> <span class="p">{</span>
-            <span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;eth&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
-                <span class="s2">&quot;gas_limit&quot;</span><span class="p">:</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;gas&quot;</span><span class="p">],</span>
-                <span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">tx</span><span class="p">[</span><span class="s2">&quot;value&quot;</span><span class="p">]),</span>
-                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="mi">2</span><span class="p">:]</span>
-                <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;0x&quot;</span><span class="p">)</span>
-                <span class="k">else</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+        <span class="s2">"tx"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"kind"</span><span class="p">:</span> <span class="s2">"eth"</span><span class="p">,</span>
+            <span class="s2">"data"</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">"gas_limit"</span><span class="p">:</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"gas"</span><span class="p">],</span>
+                <span class="s2">"value"</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">tx</span><span class="p">[</span><span class="s2">"value"</span><span class="p">]),</span>
+                <span class="s2">"data"</span><span class="p">:</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"data"</span><span class="p">][</span><span class="mi">2</span><span class="p">:]</span>
+                <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"data"</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"0x"</span><span class="p">)</span>
+                <span class="k">else</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"data"</span><span class="p">],</span>
             <span class="p">},</span>
         <span class="p">},</span>
-        <span class="s2">&quot;encrypt&quot;</span><span class="p">:</span> <span class="n">encrypt</span><span class="p">,</span>
+        <span class="s2">"encrypt"</span><span class="p">:</span> <span class="n">encrypt</span><span class="p">,</span>
     <span class="p">}</span>
 
-    <span class="c1"># Contract create transactions don&#39;t have &quot;to&quot;. For others, include it.</span>
-    <span class="k">if</span> <span class="s2">&quot;to&quot;</span> <span class="ow">in</span> <span class="n">tx</span><span class="p">:</span>
-        <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;tx&quot;</span><span class="p">][</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;to&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">][</span><span class="mi">2</span><span class="p">:]</span> <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;0x&quot;</span><span class="p">)</span> <span class="k">else</span> <span class="n">tx</span><span class="p">[</span><span class="s2">&quot;to&quot;</span><span class="p">]</span>
+    <span class="c1"># Contract create transactions don't have "to". For others, include it.</span>
+    <span class="k">if</span> <span class="s2">"to"</span> <span class="ow">in</span> <span class="n">tx</span><span class="p">:</span>
+        <span class="n">payload</span><span class="p">[</span><span class="s2">"tx"</span><span class="p">][</span><span class="s2">"data"</span><span class="p">][</span><span class="s2">"to"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">tx</span><span class="p">[</span><span class="s2">"to"</span><span class="p">][</span><span class="mi">2</span><span class="p">:]</span> <span class="k">if</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"to"</span><span class="p">]</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"0x"</span><span class="p">)</span> <span class="k">else</span> <span class="n">tx</span><span class="p">[</span><span class="s2">"to"</span><span class="p">]</span>
         <span class="p">)</span>
 
     <span class="k">return</span> <span class="n">payload</span></div>
