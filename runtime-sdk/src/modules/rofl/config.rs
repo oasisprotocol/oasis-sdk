@@ -26,7 +26,9 @@ pub trait Config: 'static {
     const GAS_COST_CALL_DERIVE_KEY: u64 = 10_000;
 
     /// Maximum number of metadata key-value pairs.
-    const MAX_METADATA_PAIRS: usize = 64;
+    /// TODO: Enforce cumulative metadata size limit instead of fixed per-pair sizes.
+    /// See https://github.com/oasisprotocol/oasis-sdk/issues/2489.
+    const MAX_METADATA_PAIRS: usize = 128;
     /// Maximum metadata key size.
     const MAX_METADATA_KEY_SIZE: usize = 1024;
     /// Maximum metadata value size.
