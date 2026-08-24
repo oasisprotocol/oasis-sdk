@@ -11,11 +11,11 @@ cbor = { version = "0.5.1", package = "oasis-cbor" }
 oasis-runtime-sdk = { path = "../../runtime-sdk" }
 
 # Third party.
-k256 = "0.13.1"
-thiserror = "1.0.61"
-x25519-dalek = { version = "2.0.1", features = ["static_secrets"] }
-sha2 = "0.10.8"
-hmac = "0.12.1"
+k256 = "0.14.0"
+thiserror = "2.0.18"
+x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
+sha2 = "0.11.0"
+hmac = "0.13.0"
 
 [dev-dependencies]
 hex = "0.4.2"
