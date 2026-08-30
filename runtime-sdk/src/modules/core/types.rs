@@ -1,9 +1,13 @@
 use std::collections::BTreeMap;
 
 use crate::{
+    core::common::namespace::Namespace,
     keymanager::SignedPublicKey,
     types::transaction::{CallResult, CallerAddress, Transaction},
 };
+
+use oasis_core_keymanager::crypto::KeyPairId;
+use oasis_core_runtime::common::crypto::signature::PublicKey;
 
 /// Key in the versions map used for the global state version.
 pub const VERSION_GLOBAL_KEY: &str = "";
@@ -39,6 +43,17 @@ pub struct CallDataPublicKeyQueryResponse {
     pub public_key: SignedPublicKey,
     /// Epoch of the ephemeral runtime key.
     pub epoch: u64,
+    /// Runtime ID the ephemeral SignedPublicKey belongs to
+    pub runtime_id: Namespace,
+    /// ID of the public key which signs the call data public keys
+    pub key_pair_id: KeyPairId,
+}
+
+/// Response to the public key query.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct KeyManagerPublicKeyQueryResponse {
+    /// Runtime signing key which signs the call data public keys
+    pub public_key: PublicKey,
 }
 
 #[derive(Debug, Copy, Clone, cbor::Encode, cbor::Decode)]
