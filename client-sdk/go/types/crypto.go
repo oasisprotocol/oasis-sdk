@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/bits"
 
+	"github.com/oasisprotocol/oasis-core/go/common"
 	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
@@ -53,7 +54,11 @@ func (pk *PublicKey) marshal() (*serializedPublicKey, error) {
 }
 
 func (pk *PublicKey) unmarshal(spk *serializedPublicKey) error {
-	if spk.Ed25519 != nil && spk.Secp256k1 != nil && spk.Sr25519 != nil {
+	if !common.ExactlyOneTrue(
+		spk.Ed25519 != nil,
+		spk.Secp256k1 != nil,
+		spk.Sr25519 != nil,
+	) {
 		return fmt.Errorf("malformed public key")
 	}
 
