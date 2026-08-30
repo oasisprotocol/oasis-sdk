@@ -5,4 +5,7 @@ ignore = [
 	"RUSTSEC-2026-0098", # Vulnerable crate is only used in rofl-oracle-sgx example.
 	"RUSTSEC-2026-0099", # Vulnerable crate is only used in rofl-oracle-sgx example.
 	"RUSTSEC-2026-0104", # Vulnerable crate is only used in rofl-oracle-sgx example.
+	"RUSTSEC-2026-0002", # Remove once we bump Oasis Core 26.1 to a higher version.
+	"RUSTSEC-2026-0253", # Remove once we bump Oasis Core 26.1 to a higher version.
+	"RUSTSEC-2026-0097", # Remove once all upstream dependencies upgrade rand.
 ]
