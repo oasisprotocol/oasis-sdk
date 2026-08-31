@@ -425,7 +425,26 @@ impl CertificateProvisioner {
             .poll_ready(&instant_acme::RetryPolicy::default())
             .await?;
         if status != instant_acme::OrderStatus::Ready {
-            return Err(anyhow::anyhow!("unexpected order status: {status:?}"));
+            // Re-fetch the authorizations to find out why certificate order failed.
+            let mut reasons = Vec::new();
+            let mut authorizations = order.authorizations();
+            while let Some(result) = authorizations.next().await {
+                let authz = result?;
+                reasons.extend(
+                    authz
+                        .challenges
+                        .iter()
+                        .filter_map(|challenge| challenge.error.as_ref())
+                        .map(|error| error.to_string()),
+                );
+            }
+            let reason = reasons.join("; ");
+            if reason.is_empty() {
+                return Err(anyhow::anyhow!("unexpected order status: {status:?}"));
+            }
+            return Err(anyhow::anyhow!(
+                "unexpected order status: {status:?} ({reason})"
+            ));
         }
 
         // Generate a CSR and finalize the order.
