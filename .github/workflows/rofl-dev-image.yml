@@ -64,7 +64,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Rebuild oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}"
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: docker/rofl-dev
           file: docker/rofl-dev/Dockerfile.full
@@ -105,7 +105,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Rebuild oasisprotocol/rofl-dev:${{ steps.determine-tag.outputs.tag }}-minimal"
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: docker/rofl-dev
           file: docker/rofl-dev/Dockerfile.minimal
