@@ -11,4 +11,4 @@ oasis-runtime-sdk-evm = { path = "../../../runtime-sdk/modules/evm" }
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 
 # Third party.
-thiserror = "1.0"
+thiserror = "2.0"
