@@ -1169,6 +1169,8 @@ fn test_module_info() {
                         methods: vec![
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.EstimateGas".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CheckInvariants".to_string() },
+                            MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.KeyManagerPublicKey".to_string() },
+                            MethodHandlerInfo { kind: MethodHandlerKind::Call, name: "core.KeyManagerPublicKey".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Query, name: "core.CallDataPublicKey".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Call, name: "core.CallDataPublicKey".to_string() },
                             MethodHandlerInfo { kind: MethodHandlerKind::Call, name: "core.CurrentEpoch".to_string() },
