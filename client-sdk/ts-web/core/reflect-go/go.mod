@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/ts-web/core/reflect-go
 
-go 1.26.3
+go 1.27.1
 
 replace github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.18-oasis3
 
