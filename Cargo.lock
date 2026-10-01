@@ -1728,12 +1728,11 @@ dependencies = [
 
 [[package]]
 name = "ethaddr"
-version = "0.2.2"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ecbcc1770d1b2e3fb83915c80c47a10efbe1964544a40e0211fe40274f8363c8"
+checksum = "5ff2fe2f8a76a917dd910180b0da7ccf96766e3391faacda1b33bf0146a9f466"
 dependencies = [
  "serde",
- "sha3",
 ]
 
 [[package]]
@@ -1753,12 +1752,11 @@ dependencies = [
 
 [[package]]
 name = "ethdigest"
-version = "0.4.0"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cadad23be1ff9cf970f84a87e8e9666c19b4a4393c1acf89a1790d727ae11cc"
+checksum = "35cf7512d40a0d1dce6f1b967479632f4cf03174a0735859539139e6c4f56d54"
 dependencies = [
  "serde",
- "sha3",
 ]
 
 [[package]]
@@ -1824,9 +1822,9 @@ dependencies = [
 
 [[package]]
 name = "ethprim"
-version = "0.3.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d5d08a4d724b4d10c7f5db832f45298c7418629acf0b17cc265f3f35a00bd79"
+checksum = "74badd752c138d0f13b57c745cda84c767e9a1aa7e17a30a1256651eb5a590ea"
 dependencies = [
  "ethaddr",
  "ethdigest",
