@@ -21,7 +21,7 @@ type PublicKey signature.PublicKey
 
 // MarshalBinary encodes a public key into binary form.
 func (pk PublicKey) MarshalBinary() ([]byte, error) {
-	return (signature.PublicKey)(pk).MarshalBinary()
+	return signature.PublicKey(pk).MarshalBinary()
 }
 
 // UnmarshalBinary decodes a binary marshaled public key.
@@ -31,7 +31,7 @@ func (pk *PublicKey) UnmarshalBinary(data []byte) error {
 
 // MarshalText encodes a public key into text form.
 func (pk PublicKey) MarshalText() ([]byte, error) {
-	return (signature.PublicKey)(pk).MarshalText()
+	return signature.PublicKey(pk).MarshalText()
 }
 
 // UnmarshalText decodes a text marshaled public key.
@@ -41,7 +41,7 @@ func (pk *PublicKey) UnmarshalText(text []byte) error {
 
 // String returns a string representation of the public key.
 func (pk PublicKey) String() string {
-	return (signature.PublicKey)(pk).String()
+	return signature.PublicKey(pk).String()
 }
 
 // Equal compares vs another public key for equality.
@@ -55,7 +55,7 @@ func (pk PublicKey) Equal(other sdkSignature.PublicKey) bool {
 	default:
 		return false
 	}
-	return (signature.PublicKey)(pk).Equal((signature.PublicKey)(*opk))
+	return signature.PublicKey(pk).Equal(signature.PublicKey(*opk))
 }
 
 // Verify returns true iff the signature is valid for the public key over the context and message.

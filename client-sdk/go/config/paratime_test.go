@@ -6,6 +6,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	symbolFOO     = "FOO"
+	symbolBAR     = "BAR"
+	symbolBARfoo  = "BARfoo"
+	symbolLOW     = "LOW"
+	symbolLOWfoo  = "LOWfoo"
+	symbolDEFAULT = "DEFAULT"
+)
+
 func TestValidateParaTime(t *testing.T) {
 	require := require.New(t)
 
@@ -14,15 +23,15 @@ func TestValidateParaTime(t *testing.T) {
 		ID:          "000000000000000000000000000000000000000000000000f80306c9858e7279",
 		Denominations: map[string]*DenominationInfo{
 			NativeDenominationKey: {
-				Symbol:   "FOO",
+				Symbol:   symbolFOO, //nolint:goconst
 				Decimals: 18,
 			},
 			"BAR": {
-				Symbol:   "BARfoo",
+				Symbol:   symbolBARfoo,
 				Decimals: 9,
 			},
 			"foo": {
-				Symbol:   "FOO",
+				Symbol:   symbolFOO,
 				Decimals: 9,
 			},
 		},
@@ -33,10 +42,10 @@ func TestValidateParaTime(t *testing.T) {
 	p.ConsensusDenomination = NativeDenominationKey
 	err = p.Validate()
 	require.NoError(err, "Validate should succeed with valid consensus denomination")
-	p.ConsensusDenomination = "BAR"
+	p.ConsensusDenomination = symbolBAR
 	err = p.Validate()
 	require.NoError(err, "Validate should succeed with valid consensus denomination")
-	p.ConsensusDenomination = "FOO"
+	p.ConsensusDenomination = symbolFOO
 	err = p.Validate()
 	require.NoError(err, "Validate should succeed with valid consensus denomination")
 
@@ -59,15 +68,15 @@ func TestDenominationInfo(t *testing.T) {
 		ID:          "000000000000000000000000000000000000000000000000f80306c9858e7279",
 		Denominations: map[string]*DenominationInfo{
 			NativeDenominationKey: {
-				Symbol:   "FOO",
+				Symbol:   symbolFOO,
 				Decimals: 18,
 			},
 			"BAR": {
-				Symbol:   "BARfoo",
+				Symbol:   symbolBARfoo,
 				Decimals: 9,
 			},
 			"low": {
-				Symbol:   "LOWfoo",
+				Symbol:   symbolLOWfoo,
 				Decimals: 9,
 			},
 		},
@@ -77,21 +86,21 @@ func TestDenominationInfo(t *testing.T) {
 
 	di := p.GetDenominationInfo("")
 	require.NotNil(di, "GetDenominationInfo should return a non-nil denomination info")
-	require.Equal(di.Symbol, "FOO")
+	require.Equal(di.Symbol, symbolFOO)
 	require.EqualValues(di.Decimals, 18)
 
-	di = p.GetDenominationInfo("BAR")
+	di = p.GetDenominationInfo(symbolBAR)
 	require.NotNil(di, "GetDenominationInfo should return a non-nil denomination info")
-	require.Equal(di.Symbol, "BARfoo")
+	require.Equal(di.Symbol, symbolBARfoo)
 	require.EqualValues(di.Decimals, 9)
 
-	di = p.GetDenominationInfo("LOW")
+	di = p.GetDenominationInfo(symbolLOW)
 	require.NotNil(di, "GetDenominationInfo should return a non-nil denomination info")
-	require.Equal(di.Symbol, "LOWfoo")
+	require.Equal(di.Symbol, symbolLOWfoo)
 	require.EqualValues(di.Decimals, 9)
 
-	di = p.GetDenominationInfo("DEFAULT")
+	di = p.GetDenominationInfo(symbolDEFAULT)
 	require.NotNil(di, "GetDenominationInfo should return a non-nil denomination info")
-	require.Equal(di.Symbol, "DEFAULT")
+	require.Equal(di.Symbol, symbolDEFAULT)
 	require.EqualValues(di.Decimals, 9)
 }

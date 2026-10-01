@@ -1,4 +1,5 @@
-package types //nolint:revive
+//nolint:goconst // Constants would reduce readability in this file.
+package types
 
 import (
 	"encoding/hex"
@@ -35,7 +36,7 @@ func TestEventUnmarshal(t *testing.T) {
 		require.NoError(err)
 
 		var ev Event
-		err = ev.UnmarshalRaw(key, value, &tc.txhash) //nolint: gosec
+		err = ev.UnmarshalRaw(key, value, &tc.txhash)
 		switch tc.ok {
 		case false:
 			require.Error(err, tc.msg)

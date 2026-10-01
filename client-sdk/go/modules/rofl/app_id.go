@@ -31,7 +31,7 @@ type AppID address.Address
 
 // MarshalBinary encodes an application identifier into binary form.
 func (a AppID) MarshalBinary() ([]byte, error) {
-	return (address.Address)(a).MarshalBinary()
+	return address.Address(a).MarshalBinary()
 }
 
 // UnmarshalBinary decodes a binary marshaled application identifier.
@@ -41,7 +41,7 @@ func (a *AppID) UnmarshalBinary(data []byte) error {
 
 // MarshalText encodes an application identifier into text form.
 func (a AppID) MarshalText() ([]byte, error) {
-	return (address.Address)(a).MarshalBech32(AppIDBech32HRP)
+	return address.Address(a).MarshalBech32(AppIDBech32HRP)
 }
 
 // UnmarshalText decodes a text marshaled application identifier.
@@ -51,7 +51,7 @@ func (a *AppID) UnmarshalText(text []byte) error {
 
 // Equal compares vs another application identifier for equality.
 func (a AppID) Equal(cmp AppID) bool {
-	return (address.Address)(a).Equal((address.Address)(cmp))
+	return address.Address(a).Equal(address.Address(cmp))
 }
 
 // String returns the string representation of an application identifier.
@@ -96,7 +96,7 @@ func NewAppIDGlobalName(name string) AppID {
 
 // NewAppIDRaw creates a new application identifier from passed context and data.
 func NewAppIDRaw(ctx address.Context, data []byte) AppID {
-	return (AppID)(address.NewAddress(ctx, data))
+	return AppID(address.NewAddress(ctx, data))
 }
 
 // NewAppIDFromBech32 creates a new application identifier from the given bech-32 encoded string.
