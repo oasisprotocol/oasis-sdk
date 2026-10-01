@@ -945,7 +945,7 @@ impl Manager {
 
             // Set last error metadata entry.
             if let Some(mut error) = state.and_then(|s| s.last_error.clone()) {
-                error.truncate(METADATA_VALUE_ERROR_MAX_SIZE);
+                error.truncate(error.floor_char_boundary(METADATA_VALUE_ERROR_MAX_SIZE));
 
                 updates
                     .metadata
