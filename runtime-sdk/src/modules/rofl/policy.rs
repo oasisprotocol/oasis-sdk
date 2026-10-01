@@ -315,26 +315,22 @@ impl EndorsementPolicyEvaluator for BasicEndorsementPolicyEvaluator {
                 // Any node is allowed.
                 return Ok(());
             }
-            (AllowedEndorsement::ComputeRole, Some(node)) => {
-                if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) && has_runtime(node) {
-                    return Ok(());
-                }
+            (AllowedEndorsement::ComputeRole, Some(node))
+                if node.has_roles(RolesMask::ROLE_COMPUTE_WORKER) && has_runtime(node) =>
+            {
+                return Ok(());
             }
-            (AllowedEndorsement::ObserverRole, Some(node)) => {
-                if node.has_roles(RolesMask::ROLE_OBSERVER) && has_runtime(node) {
-                    return Ok(());
-                }
+            (AllowedEndorsement::ObserverRole, Some(node))
+                if node.has_roles(RolesMask::ROLE_OBSERVER) && has_runtime(node) =>
+            {
+                return Ok(());
             }
-            (AllowedEndorsement::Entity(entity_id), Some(node)) => {
+            (AllowedEndorsement::Entity(entity_id), Some(node)) if &node.entity_id == entity_id => {
                 // If a specific entity is required, it may be registered for any runtime.
-                if &node.entity_id == entity_id {
-                    return Ok(());
-                }
+                return Ok(());
             }
-            (AllowedEndorsement::Node(node_id), _) => {
-                if endorsing_node_id == *node_id {
-                    return Ok(());
-                }
+            (AllowedEndorsement::Node(node_id), _) if endorsing_node_id == *node_id => {
+                return Ok(());
             }
             _ => {}
         }

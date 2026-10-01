@@ -37,7 +37,7 @@ macro_rules! assert_empty_diff {
         use quote::ToTokens;
 
         let actual_code = $crate::test_utils::rustfmt(&$actual.to_token_stream().to_string());
-        let expected_code = crate::test_utils::rustfmt(&$expected.to_token_stream().to_string());
+        let expected_code = $crate::test_utils::rustfmt(&$expected.to_token_stream().to_string());
 
         let diff = difference::Changeset::new(&expected_code, &actual_code, "\n");
 

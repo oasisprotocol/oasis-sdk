@@ -1,4 +1,5 @@
-package types //nolint:revive
+//nolint:goconst // Constants would reduce readability in this file.
+package types
 
 import (
 	"bytes"

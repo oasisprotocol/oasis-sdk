@@ -389,7 +389,7 @@ func visitSigned(t reflect.Type) {
 	for i := 1; i < m.Type.NumIn(); i++ {
 		u := m.Type.In(i)
 		// skip parameters that couldn't be out pointers
-		if u.Kind() != reflect.Ptr {
+		if u.Kind() != reflect.Pointer {
 			continue
 		}
 		visitType(u.Elem(), false)
@@ -575,7 +575,7 @@ func visitType(t reflect.Type, typesDot bool) string {
 			return fmt.Sprintf("{[%s: string]: %s}", getMapKeyName(t), visitType(t.Elem(), typesDot))
 		}
 		return fmt.Sprintf("Map<%s, %s>", visitType(t.Key(), typesDot), visitType(t.Elem(), typesDot))
-	case reflect.Ptr:
+	case reflect.Pointer:
 		return visitType(t.Elem(), typesDot)
 	case reflect.String:
 		return "string"

@@ -1057,17 +1057,17 @@ mod test {
     #[test]
     fn test_allowed_queries_defaults() {
         let mut mock = Mock::with_local_config(BTreeMap::new());
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
+        let ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
 
         Dispatcher::<AlphabetRuntime>::dispatch_query(
-            &mut ctx,
+            &ctx,
             "alphabet.Alpha",
             cbor::to_vec(().into_cbor_value()),
         )
         .expect("alphabet.Alpha is an inexpensive query, allowed by default");
 
         Dispatcher::<AlphabetRuntime>::dispatch_query(
-            &mut ctx,
+            &ctx,
             "alphabet.Omega",
             cbor::to_vec(().into_cbor_value()),
         )
@@ -1086,18 +1086,18 @@ mod test {
             ],
         };
         let mut mock = Mock::with_local_config(local_config);
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
+        let ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
 
         CurrentState::with_transaction_opts(Options::new().with_mode(state::Mode::Check), || {
             Dispatcher::<AlphabetRuntime>::dispatch_query(
-                &mut ctx,
+                &ctx,
                 "alphabet.Alpha",
                 cbor::to_vec(().into_cbor_value()),
             )
             .expect_err("alphabet.Alpha is a disallowed query");
 
             Dispatcher::<AlphabetRuntime>::dispatch_query(
-                &mut ctx,
+                &ctx,
                 "alphabet.Omega",
                 cbor::to_vec(().into_cbor_value()),
             )
@@ -1110,9 +1110,9 @@ mod test {
     #[test]
     fn test_dispatch_read_only_call() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
+        let ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
 
-        AlphabetRuntime::migrate(&mut ctx);
+        AlphabetRuntime::migrate(&ctx);
 
         let mut tx = transaction::Transaction {
             version: 1,
@@ -1137,9 +1137,8 @@ mod test {
         };
 
         // Dispatch read-only transaction.
-        let dispatch_result =
-            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0)
-                .expect("read only method dispatch should work");
+        let dispatch_result = Dispatcher::<AlphabetRuntime>::dispatch_tx(&ctx, 1024, tx.clone(), 0)
+            .expect("read only method dispatch should work");
         let result = dispatch_result.result.unwrap();
         let result: u64 = cbor::from_value(result).unwrap();
         assert_eq!(result, 42);
@@ -1147,7 +1146,7 @@ mod test {
         // Dispatch read-only transaction of a method that writes.
         tx.call.method = "alphabet.NotReadOnly".to_owned();
 
-        let dispatch_result = Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx, 0)
+        let dispatch_result = Dispatcher::<AlphabetRuntime>::dispatch_tx(&ctx, 1024, tx, 0)
             .expect("read only method dispatch should work");
         match dispatch_result.result {
             module::CallResult::Failed {
@@ -1166,9 +1165,9 @@ mod test {
     #[test]
     fn test_dispatch_abort_forwarding() {
         let mut mock = Mock::default();
-        let mut ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
+        let ctx = mock.create_ctx_for_runtime::<AlphabetRuntime>(false);
 
-        AlphabetRuntime::migrate(&mut ctx);
+        AlphabetRuntime::migrate(&ctx);
 
         let tx = transaction::Transaction {
             version: 1,
@@ -1192,8 +1191,7 @@ mod test {
         };
 
         // Dispatch transaction and make sure the abort gets propagated.
-        let dispatch_result =
-            Dispatcher::<AlphabetRuntime>::dispatch_tx(&mut ctx, 1024, tx.clone(), 0);
+        let dispatch_result = Dispatcher::<AlphabetRuntime>::dispatch_tx(&ctx, 1024, tx.clone(), 0);
         assert!(matches!(dispatch_result, Err(Error::Aborted)));
     }
 }

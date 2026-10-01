@@ -662,7 +662,7 @@ mod tests {
                     async move {
                         // Use random key ID for test to avoid conflicts with previous test runs.
                         let random_bytes: [u8; 32] = rand::thread_rng().gen();
-                        let key_id = format!("test-acme-account-{}", hex::encode(&random_bytes));
+                        let key_id = format!("test-acme-account-{}", hex::encode(random_bytes));
                         let response = kms
                             .generate(&GenerateRequest {
                                 key_id: &key_id,

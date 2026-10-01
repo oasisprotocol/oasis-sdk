@@ -228,7 +228,7 @@ mod test {
             &token::Denomination::NATIVE,
         )
         .unwrap();
-        println!("{:?}", &tx);
+        println!("{:?}", tx);
         assert_eq!(tx.call.method, "evm.Call");
         let body: types::Call = cbor::from_value(tx.call.body).unwrap();
         assert_eq!(body.address, types::H160::from_str(expected_to).unwrap());
@@ -267,7 +267,7 @@ mod test {
             &token::Denomination::NATIVE,
         )
         .unwrap();
-        println!("{:?}", &tx);
+        println!("{:?}", tx);
         assert_eq!(tx.call.method, "evm.Create");
         let body: types::Create = cbor::from_value(tx.call.body).unwrap();
         assert_eq!(body.value, types::U256::from(expected_value));

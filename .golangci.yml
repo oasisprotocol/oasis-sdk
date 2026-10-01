@@ -23,7 +23,7 @@ linters:
     - godot
     - goheader
     - revive
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
     - govet

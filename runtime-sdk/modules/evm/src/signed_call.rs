@@ -252,12 +252,12 @@ mod test {
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = data_pack.leash.block_number;
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         setup_nonce(&query.caller, &data_pack.leash);
         setup_block(&data_pack.leash);
 
-        verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature).unwrap();
+        verify::<_, C10lCfg>(&ctx, query, data_pack.leash, data_pack.signature).unwrap();
     }
 
     #[test]
@@ -266,15 +266,14 @@ mod test {
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = data_pack.leash.block_number;
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         setup_nonce(&query.caller, &data_pack.leash);
         setup_block(&data_pack.leash);
 
         data_pack.signature[0] ^= 1;
         assert!(matches!(
-            verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
-                .unwrap_err(),
+            verify::<_, C10lCfg>(&ctx, query, data_pack.leash, data_pack.signature).unwrap_err(),
             Error::InvalidSignedSimulateCall("signer != caller")
         ));
     }
@@ -285,14 +284,13 @@ mod test {
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = data_pack.leash.block_number;
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         setup_stale_nonce(&query.caller, &data_pack.leash);
         setup_block(&data_pack.leash);
 
         assert!(matches!(
-            verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
-                .unwrap_err(),
+            verify::<_, C10lCfg>(&ctx, query, data_pack.leash, data_pack.signature).unwrap_err(),
             Error::InvalidSignedSimulateCall("stale nonce")
         ));
     }
@@ -303,13 +301,12 @@ mod test {
 
         let mut mock = mock::Mock::default();
         mock.runtime_header.round = data_pack.leash.block_number;
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         setup_nonce(&query.caller, &data_pack.leash);
 
         assert!(matches!(
-            verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
-                .unwrap_err(),
+            verify::<_, C10lCfg>(&ctx, query, data_pack.leash, data_pack.signature).unwrap_err(),
             Error::InvalidSignedSimulateCall("base block not found")
         ));
     }
@@ -319,14 +316,13 @@ mod test {
         let (query, data_pack) = make_signed_call();
 
         let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         setup_nonce(&query.caller, &data_pack.leash);
         setup_block(&data_pack.leash);
 
         assert!(matches!(
-            verify::<_, C10lCfg>(&mut ctx, query, data_pack.leash, data_pack.signature)
-                .unwrap_err(),
+            verify::<_, C10lCfg>(&ctx, query, data_pack.leash, data_pack.signature).unwrap_err(),
             Error::InvalidSignedSimulateCall("current block out of range")
         ));
     }
@@ -340,24 +336,24 @@ mod test {
         };
 
         let mut mock = mock::Mock::default();
-        let mut ctx = mock.create_ctx();
+        let ctx = mock.create_ctx();
 
         let mut c10l_mock = mock::Mock::default();
         c10l_mock.runtime_header.round = data_pack.leash.block_number;
-        let mut c10l_ctx = c10l_mock.create_ctx();
+        let c10l_ctx = c10l_mock.create_ctx();
 
         setup_nonce(&signed_body.caller, &data_pack.leash);
         setup_block(&data_pack.leash);
 
-        let mut non_c10l_decode = |body: &SimulateCallQuery| {
-            EVMModule::<Cfg>::decode_simulate_call_query(&mut ctx, body.clone())
+        let non_c10l_decode = |body: &SimulateCallQuery| {
+            EVMModule::<Cfg>::decode_simulate_call_query(&ctx, body.clone())
         };
-        let mut c10l_decode = |body: &SimulateCallQuery| {
-            EVMModule::<C10lCfg>::decode_simulate_call_query(&mut c10l_ctx, body.clone())
+        let c10l_decode = |body: &SimulateCallQuery| {
+            EVMModule::<C10lCfg>::decode_simulate_call_query(&c10l_ctx, body.clone())
         };
 
         assert!(EVMModule::<C10lCfg>::decode_simulate_call_query(
-            &mut mock::Mock::default().create_ctx(),
+            &mock::Mock::default().create_ctx(),
             signed_body.clone()
         )
         .is_err()); // Check that errors are propagated (in this case leash invalidity).

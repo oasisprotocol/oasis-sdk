@@ -11,7 +11,7 @@ use oasis_runtime_sdk::{
 #[test]
 fn test_impl_for_tuple() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     <super::Runtime as oasis_runtime_sdk::Runtime>::Core::set_params(core::Parameters {
         max_batch_gas: u64::MAX,
@@ -29,7 +29,7 @@ fn test_impl_for_tuple() {
 
     let dummy_bytes = b"you look, you die".to_vec();
     <super::Runtime as oasis_runtime_sdk::Runtime>::Modules::approve_unverified_tx(
-        &mut ctx,
+        &ctx,
         &transaction::UnverifiedTransaction(
             dummy_bytes.clone(),
             vec![

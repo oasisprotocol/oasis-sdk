@@ -19,6 +19,7 @@ use rofl_app_core::{
 };
 
 /// A key management service.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait KmsService: Send + Sync {
     /// Start the KMS service.

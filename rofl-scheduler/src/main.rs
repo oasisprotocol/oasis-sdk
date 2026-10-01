@@ -1,5 +1,6 @@
 //! The rofl-scheduler is a ROFL app that acts as the instruction interpreter for the on-chain
 //! control plane implemented by the roflmarket module.
+#![allow(unused_features)]
 #![feature(once_cell_try)]
 
 use std::collections::BTreeMap;

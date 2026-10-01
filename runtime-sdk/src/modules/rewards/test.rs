@@ -49,10 +49,10 @@ fn init_accounts<C: Context>(ctx: &mut C) {
 #[should_panic]
 fn test_init_incorrect_rewards_schedule() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     Rewards::init_or_migrate(
-        &mut ctx,
+        &ctx,
         &mut core::types::Metadata::default(),
         Genesis {
             parameters: Parameters {
@@ -79,10 +79,10 @@ fn test_init_incorrect_rewards_schedule() {
 #[should_panic]
 fn test_init_incorrect_participation_threshold() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx();
+    let ctx = mock.create_ctx();
 
     Rewards::init_or_migrate(
-        &mut ctx,
+        &ctx,
         &mut core::types::Metadata::default(),
         Genesis {
             parameters: Parameters {
@@ -117,7 +117,7 @@ fn test_reward_disbursement() {
     init_accounts(&mut ctx);
 
     Rewards::init_or_migrate(
-        &mut ctx,
+        &ctx,
         &mut core::types::Metadata::default(),
         Genesis {
             parameters: Parameters {
@@ -137,9 +137,9 @@ fn test_reward_disbursement() {
     for round in 0..=10 {
         mock.runtime_header.round = round;
 
-        let mut ctx = mock.create_ctx();
-        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-        Rewards::end_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+        Rewards::end_block(&ctx);
     }
 
     // Check reward pool account balances.
@@ -154,9 +154,9 @@ fn test_reward_disbursement() {
     mock.epoch += 1;
 
     // Simulate the first round in the new epoch passing.
-    let mut ctx = mock.create_ctx();
-    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-    Rewards::end_block(&mut ctx);
+    let ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+    Rewards::end_block(&ctx);
 
     // Check reward pool account balance.
     let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
@@ -199,9 +199,9 @@ fn test_reward_disbursement() {
             mock.runtime_round_results.bad_compute_entities = vec![];
         }
 
-        let mut ctx = mock.create_ctx();
-        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-        Rewards::end_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+        Rewards::end_block(&ctx);
     }
 
     // Check reward pool account balances.
@@ -216,9 +216,9 @@ fn test_reward_disbursement() {
     mock.epoch += 1;
 
     // Simulate the first round in the new epoch passing.
-    let mut ctx = mock.create_ctx();
-    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-    Rewards::end_block(&mut ctx);
+    let ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+    Rewards::end_block(&ctx);
 
     // Check reward pool account balance.
     let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");
@@ -260,9 +260,9 @@ fn test_reward_disbursement() {
         }
         mock.runtime_round_results.bad_compute_entities = vec![];
 
-        let mut ctx = mock.create_ctx();
-        <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-        Rewards::end_block(&mut ctx);
+        let ctx = mock.create_ctx();
+        <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+        Rewards::end_block(&ctx);
     }
 
     // Check reward pool account balances.
@@ -277,9 +277,9 @@ fn test_reward_disbursement() {
     mock.epoch += 1;
 
     // Simulate the first round in the new epoch passing.
-    let mut ctx = mock.create_ctx();
-    <EmptyRuntime as Runtime>::Core::begin_block(&mut ctx);
-    Rewards::end_block(&mut ctx);
+    let ctx = mock.create_ctx();
+    <EmptyRuntime as Runtime>::Core::begin_block(&ctx);
+    Rewards::end_block(&ctx);
 
     // Check reward pool account balance.
     let bals = Accounts::get_balances(*ADDRESS_REWARD_POOL).expect("get_balances should succeed");

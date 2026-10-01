@@ -1,4 +1,5 @@
 //! Oasis runtime SDK.
+#![allow(unused_features)]
 #![feature(test)]
 #![feature(associated_type_defaults)]
 #![deny(rust_2018_idioms, unreachable_pub)]

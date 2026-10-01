@@ -1,4 +1,4 @@
-package types //nolint:revive
+package types
 
 import (
 	"encoding"
@@ -99,7 +99,7 @@ type Address address.Address
 
 // MarshalBinary encodes an address into binary form.
 func (a Address) MarshalBinary() ([]byte, error) {
-	return (address.Address)(a).MarshalBinary()
+	return address.Address(a).MarshalBinary()
 }
 
 // UnmarshalBinary decodes a binary marshaled address.
@@ -109,7 +109,7 @@ func (a *Address) UnmarshalBinary(data []byte) error {
 
 // MarshalText encodes an address into text form.
 func (a Address) MarshalText() ([]byte, error) {
-	return (address.Address)(a).MarshalBech32(AddressBech32HRP)
+	return address.Address(a).MarshalBech32(AddressBech32HRP)
 }
 
 // UnmarshalText decodes a text marshaled address.
@@ -119,7 +119,7 @@ func (a *Address) UnmarshalText(text []byte) error {
 
 // Equal compares vs another address for equality.
 func (a Address) Equal(cmp Address) bool {
-	return (address.Address)(a).Equal((address.Address)(cmp))
+	return address.Address(a).Equal(address.Address(cmp))
 }
 
 // String returns the string representation of an address.
@@ -133,7 +133,7 @@ func (a Address) String() string {
 
 // ConsensusAddress converts this address into a consensus-layer address type.
 func (a Address) ConsensusAddress() staking.Address {
-	return (staking.Address)((address.Address)(a))
+	return staking.Address(address.Address(a))
 }
 
 // NewAddress creates a new address from the given signature address specification.
@@ -160,12 +160,12 @@ func NewAddress(spec SignatureAddressSpec) (a Address) {
 	default:
 		panic("address: unsupported public key type")
 	}
-	return (Address)(address.NewAddress(ctx, pkData))
+	return Address(address.NewAddress(ctx, pkData))
 }
 
 // NewAddressRaw creates a new address from passed address context and data.
 func NewAddressRaw(ctx address.Context, data []byte) Address {
-	return (Address)(address.NewAddress(ctx, data))
+	return Address(address.NewAddress(ctx, data))
 }
 
 // NewAddressForModule creates a new address for a specific module and raw kind.
@@ -177,10 +177,11 @@ func NewAddressForModule(module string, kind []byte) Address {
 		moduleBytes...)
 	data = append(data,
 		sepBytes...)
-	data = append(data,
+	data = append(
+		data,
 		kind...,
 	)
-	return (Address)(address.NewAddress(AddressV0ModuleContext, data))
+	return Address(address.NewAddress(AddressV0ModuleContext, data))
 }
 
 // NewAddressFromBech32 creates a new address from the given bech-32 encoded string.
@@ -197,12 +198,12 @@ func NewAddressFromBech32(data string) Address {
 
 // NewAddressFromMultisig creates a new address from the given multisig configuration.
 func NewAddressFromMultisig(config *MultisigConfig) Address {
-	return (Address)(address.NewAddress(AddressV0MultisigContext, cbor.Marshal(config)))
+	return Address(address.NewAddress(AddressV0MultisigContext, cbor.Marshal(config)))
 }
 
 // NewAddressFromConsensus converts a consensus layer address into an address.
 func NewAddressFromConsensus(addr staking.Address) Address {
-	return (Address)((address.Address)(addr))
+	return Address(address.Address(addr))
 }
 
 // NewAddressFromConsensusPublicKey converts a consensus layer public key

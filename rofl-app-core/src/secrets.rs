@@ -178,7 +178,7 @@ mod test {
 
     #[test]
     fn test_vectors() {
-        let tvs = vec![(
+        let tvs = [(
             "786894cf62ac4f7c32f4faa1f090de99b5781f139703c97ac1fd2fe42a6ca78b",
             "f2a9acca2319c3814adfec136804129860f724f2523d737bfd07d47c88ab4736",
             b"key".to_vec(),

@@ -1156,14 +1156,14 @@ fn test_too_large_contract_deploy_fails() {
 #[test]
 fn test_transfer_event() {
     let mut mock = mock::Mock::default();
-    let mut ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
+    let ctx = mock.create_ctx_for_runtime::<EVMRuntime<EVMConfig>>(true);
     let mut signer = EvmSigner::new(0, keys::dave::sigspec());
 
-    EVMRuntime::<EVMConfig>::migrate(&mut ctx);
+    EVMRuntime::<EVMConfig>::migrate(&ctx);
 
     // Create contract.
     let dispatch_result = signer.call(
-        &mut ctx,
+        &ctx,
         "evm.Create",
         types::Create {
             value: 0.into(),
@@ -1184,7 +1184,7 @@ fn test_transfer_event() {
 
     // Call the `withdraw` method on the contract; this initiates a native token transfer from within EVM.
     let dispatch_result = signer.call_evm_opts(
-        &mut ctx,
+        &ctx,
         contract_address,
         solabi::selector!("withdraw(uint256)"),
         &(solabi::U256::new(1_000_000_000_u128),),

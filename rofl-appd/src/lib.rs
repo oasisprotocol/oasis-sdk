@@ -22,7 +22,7 @@ pub struct Config<'a> {
 }
 
 /// Start the REST API server.
-pub async fn start<A>(cfg: Config<'_>, env: Environment<A>) -> Result<(), rocket::Error>
+pub async fn start<A>(cfg: Config<'_>, env: Environment<A>) -> Result<(), Box<rocket::Error>>
 where
     A: App,
 {
