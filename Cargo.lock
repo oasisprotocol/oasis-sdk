@@ -4136,7 +4136,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "sha2 0.10.9",
  "thiserror 1.0.69",
- "x25519-dalek 2.0.1",
+ "x25519-dalek 3.0.0",
 ]
 
 [[package]]
@@ -4311,7 +4311,7 @@ dependencies = [
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
- "x25519-dalek 2.0.1",
+ "x25519-dalek 3.0.0",
  "zeroize",
 ]
 
@@ -4374,7 +4374,7 @@ dependencies = [
  "substrate-bn",
  "thiserror 1.0.69",
  "uint",
- "x25519-dalek 2.0.1",
+ "x25519-dalek 3.0.0",
 ]
 
 [[package]]
