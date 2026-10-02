@@ -138,6 +138,7 @@ impl Environment {
         vars.insert(key.to_string(), value.to_string());
     }
 
+    /// Get all environment variables.
     fn get(&self) -> BTreeMap<String, String> {
         let vars = self.vars.lock().unwrap();
         vars.clone()

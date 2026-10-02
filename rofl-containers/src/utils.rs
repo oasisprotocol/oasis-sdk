@@ -18,6 +18,19 @@ impl<P: AsRef<Path>> Drop for RemoveFileOnDrop<P> {
     }
 }
 
+/// Sanitize a filename by replacing invalid characters with underscores.
+pub fn sanitize_filename(name: &str) -> String {
+    name.chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
