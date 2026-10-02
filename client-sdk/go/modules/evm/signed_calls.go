@@ -75,12 +75,12 @@ func makeSignableCall(chainID uint64, caller, callee []byte, gasLimit uint64, ga
 			"EIP712Domain": {
 				{Name: "name", Type: "string"},
 				{Name: "version", Type: "string"},
-				{Name: "chainId", Type: "uint256"},
+				{Name: "chainId", Type: "uint256"}, //nolint:goconst
 			},
 			"Call": {
 				{Name: "from", Type: "address"},
 				{Name: "to", Type: "address"},
-				{Name: "gasLimit", Type: "uint64"},
+				{Name: "gasLimit", Type: "uint64"}, //nolint:goconst
 				{Name: "gasPrice", Type: "uint256"},
 				{Name: "value", Type: "uint256"},
 				{Name: "data", Type: "bytes"},

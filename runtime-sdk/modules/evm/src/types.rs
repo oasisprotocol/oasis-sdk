@@ -115,7 +115,9 @@ pub struct Leash {
     clippy::non_canonical_clone_impl,
     clippy::manual_div_ceil,
     clippy::infallible_try_from,
-    unexpected_cfgs
+    unexpected_cfgs,
+    deprecated,
+    semicolon_in_expressions_from_non_local_macros
 )]
 mod eth {
     use std::convert::TryFrom;

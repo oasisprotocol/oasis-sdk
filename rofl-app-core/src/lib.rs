@@ -35,6 +35,7 @@ pub use oasis_runtime_sdk::modules::rofl::app_id::AppId;
 
 /// ROFL component application.
 #[allow(unused_variables)]
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait App: Send + Sync + 'static {
     /// ROFL application version.
