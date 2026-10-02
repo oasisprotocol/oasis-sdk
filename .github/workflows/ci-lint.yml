@@ -80,7 +80,7 @@ jobs:
           go-version: "1.26.x"
 
       - name: Lint Go client-sdk
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
           version: v2.11
@@ -109,7 +109,7 @@ jobs:
           go-version: "1.26.x"
 
       - name: Lint E2E tests
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
           version: v2.11
@@ -128,7 +128,7 @@ jobs:
           go-version: "1.26.x"
 
       - name: Lint reflect-go
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
           version: v2.11

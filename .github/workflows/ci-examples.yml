@@ -131,7 +131,7 @@ jobs:
 
       # NOTE: "file exists" tar errors can be safely ignored, because go is already installed.
       - name: Lint ${{ matrix.example }}
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
           version: v2.11
