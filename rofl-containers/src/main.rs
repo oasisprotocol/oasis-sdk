@@ -17,6 +17,7 @@ use rofl_app_core::prelude::*;
 use rofl_appd::services;
 
 mod containers;
+mod metadata;
 mod proxy;
 mod reaper;
 mod secrets;
@@ -158,26 +159,10 @@ impl App for ContainersApp {
             }
         }
 
-        // Fetch app config.
-        let app_cfg = match env.client().app_cfg().await {
-            Ok(cfg) => cfg,
-            Err(err) => {
-                slog::error!(logger, "failed to fetch app config"; "err" => ?err);
-                process::abort();
-            }
-        };
-
-        // Initialize environment variables from deployment metadata (env.* keys).
-        slog::info!(logger, "initializing container environment variables");
-        for (name, value) in containers::env_from_metadata(&app_cfg.metadata) {
-            containers::env().set(&name, &value);
-            slog::info!(logger, "provisioned environment variable"; "name" => name);
-        }
-
-        // Initialize secrets (runs after env vars so secrets take precedence on collision).
-        slog::info!(logger, "initializing container secrets");
-        if let Err(err) = secrets::init(&app_cfg.secrets, kms.clone()).await {
-            slog::error!(logger, "failed to initialize container secrets"; "err" => ?err);
+        // Initialize environment from app metadata.
+        slog::info!(logger, "initializing environment from app metadata");
+        if let Err(err) = metadata::start(env.clone(), kms.clone()).await {
+            slog::error!(logger, "failed to initialize environment from app metadata"; "err" => ?err);
             process::abort();
         }
 
