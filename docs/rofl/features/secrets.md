@@ -86,3 +86,18 @@ secrets:
 [public variables]: ./public-variables.md
 [container secret]: https://docs.docker.com/compose/how-tos/use-secrets/
 [Oasis CLI]: https://github.com/oasisprotocol/cli/blob/master/docs/rofl.md#secret
+
+## Refresh Secrets on Updates
+
+When using secrets in your Compose file as mentioned above, the values do not get updated
+when the on-chain app configuration is updated. If you want to have the latest values
+automatically available, you can use the approachbased on file mounts.
+
+```yaml
+services:
+  test:
+    image: docker.io/library/alpine:3.21.2@sha256:f3240395711384fc3c07daa46cbc8d73aa5ba25ad1deb97424992760f8cb2b94
+    command: /bin/sh -c "while true; do cat /run/rofl/secrets/mysecret/value; sleep 1; done"
+    volumes:
+      - /run/rofl/secrets/mysecret:/run/rofl/secrets/mysecret
+```
