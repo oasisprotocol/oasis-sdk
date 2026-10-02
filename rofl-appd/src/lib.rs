@@ -38,8 +38,12 @@ where
     let server = rocket::custom(rocket_cfg)
         .manage(env)
         .manage(cfg.kms)
-        .mount("/rofl/v1/app", routes![routes::app::id,])
-        .mount("/rofl/v1/keys", routes![routes::keys::generate,]);
+        .mount(
+            "/rofl/v1/app",
+            routes![routes::app::id, routes::app::config_metadata,],
+        )
+        .mount("/rofl/v1/keys", routes![routes::keys::generate,])
+        .mount("/rofl/v1/secrets", routes![routes::secrets::get,]);
 
     let server = server.manage(cfg.metadata).mount(
         "/rofl/v1/metadata",
