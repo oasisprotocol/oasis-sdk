@@ -149,7 +149,7 @@ where
         .map(tokio_retry::strategy::jitter)
         .take(5);
 
-    tokio_retry::Retry::spawn(retry_strategy, action).await
+    tokio_retry::Retry::start(retry_strategy, action).await
 }
 
 /// Key manager interface.
