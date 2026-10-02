@@ -1,7 +1,11 @@
 mod compose;
 mod firewall;
 
-use std::{collections::HashSet, fs, future, sync::Arc};
+use std::{
+    collections::{BTreeMap, HashSet},
+    fs, future,
+    sync::Arc,
+};
 
 use anyhow::{anyhow, Context, Result};
 use base64::prelude::*;
@@ -18,7 +22,7 @@ use rofl_proxy::{
     ProxyLabel, LABEL_PROXY, PROXY_LABEL_ENCRYPTION_CONTEXT,
 };
 
-use crate::{containers, App, Environment};
+use crate::{App, Environment};
 
 use compose::{ParsedCompose, PortMappingMode};
 use firewall::Firewall;
@@ -32,19 +36,19 @@ const PROXY_HOST_ENV_NAME: &str = "ROFL_PROXY_HOST";
 /// Name of the environment variable for the external address.
 const PROXY_EXTERNAL_ADDRESS_ENV_NAME: &str = "ROFL_PROXY_EXTERNAL_ADDRESS";
 
-/// Start the proxy if configured.
-pub(crate) async fn start<A: App>(env: Environment<A>, kms: Arc<dyn services::kms::KmsService>) {
-    let logger = get_logger("proxy");
-
-    if let Err(err) = maybe_start(env, kms).await {
-        slog::error!(logger, "failed to start proxy"; "err" => ?err);
-    }
+/// State of the initialized proxy.
+#[derive(Debug, Clone, Default)]
+pub struct ProxyState {
+    /// Extra environment variables to set.
+    pub extra_environment: BTreeMap<String, String>,
 }
 
-async fn maybe_start<A: App>(
+/// Start the proxy if configured.
+pub(crate) async fn start<A: App>(
     env: Environment<A>,
     kms: Arc<dyn services::kms::KmsService>,
-) -> Result<()> {
+) -> Result<ProxyState> {
+    let mut state = ProxyState::default();
     let logger = get_logger("proxy");
 
     // Fetch proxy configuration to see if the proxy is available.
@@ -70,7 +74,7 @@ async fn maybe_start<A: App>(
                 .value;
             cbor::from_slice(&proxy_label).context("malformed proxy configuration")?
         }
-        _ => return Ok(()),
+        _ => return Ok(state),
     };
 
     // Parse and process compose file to see if we even need the proxy.
@@ -82,14 +86,20 @@ async fn maybe_start<A: App>(
             logger,
             "no port mappings are configured, not starting proxy"
         );
-        return Ok(());
+        return Ok(state);
     }
 
     // Store the proxy domain and optional external address in an environment variable so that the
     // containers can use it in their configuration.
-    containers::env().set(PROXY_HOST_ENV_NAME, &proxy_label.http.host);
+    state.extra_environment.insert(
+        PROXY_HOST_ENV_NAME.to_string(),
+        proxy_label.http.host.clone(),
+    );
     if let Some(external_address) = &proxy_label.http.external_address {
-        containers::env().set(PROXY_EXTERNAL_ADDRESS_ENV_NAME, external_address);
+        state.extra_environment.insert(
+            PROXY_EXTERNAL_ADDRESS_ENV_NAME.to_string(),
+            external_address.clone(),
+        );
     }
 
     slog::info!(logger, "proxy configuration is available, starting proxy");
@@ -99,7 +109,7 @@ async fn maybe_start<A: App>(
         }
     });
 
-    Ok(())
+    Ok(state)
 }
 
 async fn run(
