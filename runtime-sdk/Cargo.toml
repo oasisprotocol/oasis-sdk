@@ -15,7 +15,7 @@ oasis-runtime-sdk-macros = { path = "../runtime-sdk-macros", optional = true }
 async-trait = "0.1.77"
 byteorder = "1.4.3"
 curve25519-dalek = "4.1.3"
-ed25519-dalek = { version = "2.0.0", features = ["digest", "hazmat"] }
+ed25519-dalek = { version = "3.0.0", features = ["digest", "hazmat"] }
 x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
 digest = "0.10.3"
 hmac = "0.12.1"

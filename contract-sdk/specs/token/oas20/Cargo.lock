@@ -914,21 +914,6 @@ dependencies = [
 
 [[package]]
 name = "ed25519-dalek"
-version = "2.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70e796c081cee67dc755e1a36a0a172b897fab85fc3f6bc48307991f64e4eca9"
-dependencies = [
- "curve25519-dalek 4.1.3",
- "ed25519 2.2.3",
- "serde",
- "sha2 0.10.9",
- "signature 2.2.0",
- "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "ed25519-dalek"
 version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ebaa1a2bf1290ab3bfe5a7b771d050ebffab2711c19a81691c683a5144a25de"
@@ -1966,7 +1951,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "sha2 0.10.9",
  "thiserror",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -2033,7 +2018,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak 2.0.2",
  "tokio",
- "x25519-dalek 3.0.0",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -2056,7 +2041,7 @@ dependencies = [
  "crossbeam",
  "curve25519-dalek 5.0.0",
  "deoxysii",
- "ed25519-dalek 3.0.0",
+ "ed25519-dalek",
  "futures",
  "hmac 0.12.1",
  "honggfuzz",
@@ -2093,7 +2078,7 @@ dependencies = [
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
- "x25519-dalek 3.0.0",
+ "x25519-dalek",
  "x509-parser",
  "yasna 0.5.2",
  "zeroize",
@@ -2110,7 +2095,7 @@ dependencies = [
  "byteorder",
  "curve25519-dalek 4.1.3",
  "digest 0.10.7",
- "ed25519-dalek 2.2.0",
+ "ed25519-dalek",
  "hex",
  "hmac 0.12.1",
  "impl-trait-for-tuples",
@@ -2135,7 +2120,7 @@ dependencies = [
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
- "x25519-dalek 2.0.1",
+ "x25519-dalek",
  "zeroize",
 ]
 
@@ -4088,18 +4073,6 @@ name = "writeable"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
-
-[[package]]
-name = "x25519-dalek"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7e468321c81fb07fa7f4c636c3972b9100f0346e5b6a9f2bd0603a52f7ed277"
-dependencies = [
- "curve25519-dalek 4.1.3",
- "rand_core 0.6.4",
- "serde",
- "zeroize",
-]
 
 [[package]]
 name = "x25519-dalek"
