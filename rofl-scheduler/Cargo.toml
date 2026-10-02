@@ -39,7 +39,7 @@ rustc-hex = "2.0.1"
 rustls = "0.23.27"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sha2 = "0.10.8"
+sha2 = "0.11.0"
 siwe = "0.6.1"
 thiserror = "2"
 tiny-keccak = { version = "2.0.2", features = ["sha3", "tuple_hash"] }
