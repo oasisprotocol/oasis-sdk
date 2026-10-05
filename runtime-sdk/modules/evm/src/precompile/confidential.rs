@@ -387,7 +387,7 @@ pub(super) fn call_verify(handle: &mut impl PrecompileHandle) -> PrecompileResul
 mod test {
     extern crate test;
 
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
     use test::Bencher;
 
     use oasis_runtime_sdk::crypto::signature::{self, SignatureType};
@@ -396,7 +396,8 @@ mod test {
 
     #[test]
     fn test_x25519_derive() {
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut OsRng);
+        let mut rng = UnwrapErr(SysRng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -456,7 +457,8 @@ mod test {
 
     #[bench]
     fn bench_x25519_derive(b: &mut Bencher) {
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut OsRng);
+        let mut rng = UnwrapErr(SysRng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
         let public = x25519_dalek::PublicKey::from(&static_secret);
 
         let mut blob = [0u8; 64];
@@ -478,7 +480,8 @@ mod test {
 
     #[bench]
     fn bench_curve25519_compute_public(b: &mut Bencher) {
-        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut OsRng);
+        let mut rng = UnwrapErr(SysRng);
+        let static_secret = x25519_dalek::StaticSecret::random_from_rng(&mut rng);
 
         let mut blob = [0u8; 32];
         blob[..32].copy_from_slice(&static_secret.to_bytes());

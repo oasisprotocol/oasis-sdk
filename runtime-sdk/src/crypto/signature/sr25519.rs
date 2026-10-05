@@ -1,6 +1,6 @@
 //! Sr25519 signatures.
 use base64::prelude::*;
-use rand_core::{CryptoRng, RngCore};
+use rand::TryCryptoRng;
 use schnorrkel::{self, context::SigningTranscript};
 use sha2_old::{Digest, Sha512_256};
 
@@ -100,9 +100,9 @@ pub struct MemorySigner {
 }
 
 impl Signer for MemorySigner {
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error> {
+    fn random(rng: &mut impl TryCryptoRng) -> Result<Self, Error> {
         Ok(Self {
-            keypair: schnorrkel::Keypair::generate_with(rng),
+            keypair: schnorrkel::Keypair::generate_with(WrappedCryptoRng(rng)),
         })
     }
 
@@ -138,6 +138,32 @@ impl Signer for MemorySigner {
         Err(Error::InvalidArgument)
     }
 }
+
+pub struct WrappedCryptoRng<R>(pub R);
+
+impl<R> rand_core::RngCore for WrappedCryptoRng<R>
+where
+    R: TryCryptoRng,
+{
+    fn next_u32(&mut self) -> u32 {
+        self.0.try_next_u32().unwrap()
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        self.0.try_next_u64().unwrap()
+    }
+
+    fn fill_bytes(&mut self, dst: &mut [u8]) {
+        self.0.try_fill_bytes(dst).unwrap()
+    }
+
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), rand_core::Error> {
+        self.fill_bytes(dst);
+        Ok(())
+    }
+}
+
+impl<R> rand_core::CryptoRng for WrappedCryptoRng<R> where R: TryCryptoRng {}
 
 #[cfg(test)]
 mod test {

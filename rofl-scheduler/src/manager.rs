@@ -26,7 +26,7 @@ use oasis_runtime_sdk_rofl_market::{
     policy::{ProviderLabel, LABEL_PROVIDER},
     types::{Deployment, Instance, InstanceId, InstanceStatus},
 };
-use rand::{rngs::OsRng, Rng, RngCore};
+use rand::{rngs::SysRng, RngExt, TryRng};
 use rofl_app_core::{prelude::*, secrets};
 use rofl_proxy::{LABEL_PROXY, PROXY_LABEL_ENCRYPTION_CONTEXT};
 use sha2::{Digest, Sha512_256};
@@ -591,9 +591,9 @@ impl Manager {
 
             // If the instance has been running for a while, make sure to claim payment. Use a fuzzy
             // interval to distribute claims a bit.
-            let timeout = rand::distributions::Uniform::new(75, 125);
+            let timeout = rand::distr::Uniform::new(75, 125).unwrap();
             let payment_interval =
-                (self.cfg.claim_payment_interval_secs * rand::thread_rng().sample(timeout)) / 100;
+                (self.cfg.claim_payment_interval_secs * rand::rng().sample(timeout)) / 100;
             if now > instance.paid_from.saturating_add(payment_interval) {
                 local_state.claim_payment.push(instance.id);
             }
@@ -996,8 +996,8 @@ impl Manager {
             .unwrap()
             .as_secs();
 
-        let timeout = rand::distributions::Uniform::new(75, 125);
-        let max_delta = (REMOVE_INSTANCE_AFTER_SECS * rand::thread_rng().sample(timeout)) / 100;
+        let timeout = rand::distr::Uniform::new(75, 125).unwrap();
+        let max_delta = (REMOVE_INSTANCE_AFTER_SECS * rand::rng().sample(timeout)) / 100;
         if now.saturating_sub(ts) < max_delta {
             return Ok(());
         }
@@ -1702,7 +1702,7 @@ pub fn labels_for_instance(id: InstanceId) -> BTreeMap<String, String> {
 /// A unique scheduler instance ID.
 static SCHEDULER_INSTANCE_ID: LazyLock<[u8; 32]> = LazyLock::new(|| {
     let mut instance_id = [0u8; 32];
-    OsRng.fill_bytes(&mut instance_id);
+    SysRng.try_fill_bytes(&mut instance_id).unwrap();
     instance_id
 });
 

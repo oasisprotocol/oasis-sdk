@@ -40,7 +40,7 @@ honggfuzz = "0.5"
 
 [dev-dependencies]
 hex = "0.4"
-rand = "0.8"
+rand = "0.10.3"
 rofl-appd = { path = "../rofl-appd" }
 tokio-test = "0.4"
 

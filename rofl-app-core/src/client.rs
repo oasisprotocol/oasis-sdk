@@ -8,7 +8,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context as _, Result};
-use rand::{rngs::OsRng, Rng};
+use rand::{rngs::SysRng, TryRng};
 use tokio::sync::{mpsc, oneshot};
 
 use oasis_runtime_sdk::{
@@ -604,7 +604,7 @@ where
             // Generate local key pair and nonce.
             let client_kp = deoxysii::generate_key_pair();
             let mut nonce = [0u8; deoxysii::NONCE_SIZE];
-            OsRng.fill(&mut nonce);
+            SysRng.try_fill_bytes(&mut nonce).unwrap();
             // Encrypt and encode call.
             let call = transaction::Call {
                 format: transaction::CallFormat::EncryptedX25519DeoxysII,

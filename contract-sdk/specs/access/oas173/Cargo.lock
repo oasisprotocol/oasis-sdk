@@ -271,9 +271,9 @@ dependencies = [
 
 [[package]]
 name = "bumpalo"
-version = "3.20.3"
+version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
+checksum = "5d20789868f4b01b2f2caec9f5c4e0213b41e3e5702a50157d699ae31ced2fcb"
 
 [[package]]
 name = "byteorder"
@@ -1862,7 +1862,7 @@ dependencies = [
  "oasis-contract-sdk-macros",
  "oasis-contract-sdk-types",
  "oasis-runtime-sdk",
- "rand_core 0.6.4",
+ "rand 0.10.3",
  "rand_xorshift",
  "thiserror",
  "wee_alloc",
@@ -1876,7 +1876,7 @@ dependencies = [
  "k256",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "thiserror",
  "x25519-dalek",
 ]
@@ -2036,7 +2036,7 @@ dependencies = [
  "once_cell",
  "p256",
  "p384",
- "rand 0.8.6",
+ "rand 0.10.3",
  "rand_core 0.6.4",
  "schnorrkel",
  "sha2 0.10.9",
@@ -2460,11 +2460,11 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rand_xorshift"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
+checksum = "60aa6af80be32871323012e02e6e65f8a7cc7890931ae421d217ad8fe0df2ccf"
 dependencies = [
- "rand_core 0.6.4",
+ "rand_core 0.10.1",
 ]
 
 [[package]]

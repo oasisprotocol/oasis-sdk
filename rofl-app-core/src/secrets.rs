@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use oasis_runtime_sdk::core::common::crypto::{mrae::deoxysii, x25519};
-use rand::{rngs::OsRng, Rng};
+use rand::{rngs::SysRng, TryRng};
 
 /// Custom seal options.
 #[derive(Clone, Default)]
@@ -50,7 +50,7 @@ impl SecretEnvelope {
         let sk = opts.sk.unwrap_or_else(x25519::PrivateKey::generate);
         let nonce = opts.nonce.unwrap_or_else(|| {
             let mut nonce = [0u8; deoxysii::NONCE_SIZE];
-            OsRng.fill(&mut nonce);
+            SysRng.try_fill_bytes(&mut nonce).unwrap();
             nonce
         });
 

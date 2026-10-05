@@ -2,7 +2,7 @@
 use std::convert::TryFrom;
 
 use digest::{typenum::Unsigned as _, Digest as _};
-use rand_core::{CryptoRng, RngCore};
+use rand::TryCryptoRng;
 use thiserror::Error;
 
 use crate::core::common::crypto::signature::{
@@ -149,6 +149,8 @@ pub enum Error {
     InvalidArgument,
     #[error("invalid digest length")]
     InvalidDigestLength,
+    #[error("rng error")]
+    RngError,
     #[error("other signing error")]
     SigningError,
 }
@@ -396,7 +398,7 @@ impl From<Signature> for CoreSignature {
 /// Common trait for memory signers.
 pub trait Signer: Send + Sync {
     /// Create a new random signer.
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
+    fn random(rng: &mut impl TryCryptoRng) -> Result<Self, Error>
     where
         Self: Sized;
 
@@ -424,7 +426,7 @@ pub trait Signer: Send + Sync {
 }
 
 impl<T: Signer + ?Sized> Signer for std::sync::Arc<T> {
-    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
+    fn random(_rng: &mut impl TryCryptoRng) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -463,7 +465,7 @@ impl<T: Signer + ?Sized> Signer for std::sync::Arc<T> {
 }
 
 impl<T: CoreSigner> Signer for &T {
-    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
+    fn random(_rng: &mut impl TryCryptoRng) -> Result<Self, Error>
     where
         Self: Sized,
     {
@@ -503,7 +505,7 @@ impl<T: CoreSigner> Signer for &T {
 }
 
 impl Signer for crate::core::identity::Identity {
-    fn random(_rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error>
+    fn random(_rng: &mut impl TryCryptoRng) -> Result<Self, Error>
     where
         Self: Sized,
     {

@@ -4225,7 +4225,7 @@ dependencies = [
  "oasis-contract-sdk-macros",
  "oasis-contract-sdk-types",
  "oasis-runtime-sdk",
- "rand_core 0.6.4",
+ "rand 0.10.3",
  "rand_xorshift",
  "thiserror 1.0.69",
  "wee_alloc",
@@ -4407,7 +4407,7 @@ dependencies = [
  "once_cell",
  "p256",
  "p384",
- "rand 0.8.5",
+ "rand 0.10.3",
  "rand_core 0.6.4",
  "schnorrkel",
  "sha2 0.10.9",
@@ -4438,7 +4438,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "once_cell",
  "pretty_assertions",
- "rand_core 0.6.4",
+ "rand 0.10.3",
  "snap",
  "thiserror 1.0.69",
  "walrus",
@@ -4469,8 +4469,7 @@ dependencies = [
  "oasis-runtime-sdk-macros",
  "once_cell",
  "primitive-types",
- "rand 0.8.5",
- "rand_core 0.6.4",
+ "rand 0.10.3",
  "ripemd",
  "rlp",
  "serde",
@@ -5319,11 +5318,11 @@ dependencies = [
 
 [[package]]
 name = "rand_xorshift"
-version = "0.3.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
+checksum = "60aa6af80be32871323012e02e6e65f8a7cc7890931ae421d217ad8fe0df2ccf"
 dependencies = [
- "rand_core 0.6.4",
+ "rand_core 0.10.0",
 ]
 
 [[package]]
@@ -5631,7 +5630,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-rofl-market",
- "rand 0.8.5",
+ "rand 0.10.3",
  "rofl-proxy",
  "slog",
  "tokio",
@@ -5699,7 +5698,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "p256",
  "ptrie",
- "rand 0.8.5",
+ "rand 0.10.3",
  "rcgen",
  "rofl-appd",
  "rustls",
@@ -5737,7 +5736,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-rofl-market",
  "oci-client",
- "rand 0.8.5",
+ "rand 0.10.3",
  "rcgen",
  "rofl-app-core",
  "rofl-proxy",

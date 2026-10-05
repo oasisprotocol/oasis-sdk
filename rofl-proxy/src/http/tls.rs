@@ -622,6 +622,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{rngs::SysRng, TryRng};
     use rofl_appd::services::kms::{GenerateRequest, KeyKind, KmsService, MockKmsService};
 
     #[test]
@@ -650,7 +651,6 @@ mod tests {
     /// Note: This test relies on network access and let's encrypt staging servers.
     #[tokio::test]
     async fn test_acme_account_creation() {
-        use rand::Rng;
         let kms = Arc::new(MockKmsService);
 
         let timeout = Duration::from_secs(30);
@@ -661,7 +661,8 @@ mod tests {
                     let kms = kms.clone();
                     async move {
                         // Use random key ID for test to avoid conflicts with previous test runs.
-                        let random_bytes: [u8; 32] = rand::thread_rng().gen();
+                        let mut random_bytes = [0u8; 32];
+                        SysRng.try_fill_bytes(&mut random_bytes).unwrap();
                         let key_id = format!("test-acme-account-{}", hex::encode(random_bytes));
                         let response = kms
                             .generate(&GenerateRequest {

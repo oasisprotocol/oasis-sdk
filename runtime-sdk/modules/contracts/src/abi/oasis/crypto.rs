@@ -4,6 +4,7 @@ use std::convert::TryInto;
 use oasis_contract_sdk_crypto as crypto;
 use oasis_contract_sdk_types::crypto::SignatureKind;
 use oasis_runtime_sdk::{context::Context, crypto::signature, state::CurrentState};
+use rand::TryRng;
 
 use super::{memory::Region, OasisV1};
 use crate::{
@@ -153,7 +154,7 @@ impl<Cfg: Config> OasisV1<Cfg> {
                     let output = Region::from_arg((dst_ptr, num_bytes))
                         .as_slice_mut(&mut memory)
                         .map_err(|_| wasm3::Trap::Abort)?;
-                    rand_core::RngCore::try_fill_bytes(&mut rng, output).map_err(|e| {
+                    rng.try_fill_bytes(output).map_err(|e| {
                         ec.aborted = Some(Error::ExecutionFailed(e.into()));
                         wasm3::Trap::Abort
                     })?;
