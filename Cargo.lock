@@ -4362,7 +4362,7 @@ dependencies = [
  "blake3",
  "byteorder",
  "curve25519-dalek 4.1.3",
- "digest 0.10.7",
+ "digest 0.11.3",
  "ed25519-dalek 3.0.0",
  "hex",
  "hmac 0.13.0",

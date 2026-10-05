@@ -1,6 +1,6 @@
 //! Secp256r1 signatures.
 use base64::prelude::*;
-use digest::{consts::U32, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
+use digest::{common::BlockSizeUser, consts::U32, Digest, FixedOutput, FixedOutputReset};
 use k256::sha2::Sha512_256;
 use p256::{
     self,

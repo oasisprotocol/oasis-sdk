@@ -1,6 +1,6 @@
 //! Secp384r1 signatures.
 use base64::prelude::*;
-use digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
+use digest::{common::BlockSizeUser, consts::U48, Digest, FixedOutput, FixedOutputReset};
 use p384::{
     self,
     ecdsa::{
