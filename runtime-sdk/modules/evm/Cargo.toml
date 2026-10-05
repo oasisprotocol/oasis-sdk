@@ -14,7 +14,7 @@ oasis-runtime-sdk-macros = { path = "../../../runtime-sdk-macros" }
 # Third party.
 anyhow = "1.0"
 base64 = "0.22.1"
-blake3 = { version = "~1.5.1", features = ["traits-preview"] }
+blake3 = { version = "1.8.7", features = ["traits-preview"] }
 thiserror = "1.0"
 hex = "0.4.2"
 sha2 = "0.11.0"
