@@ -2,7 +2,7 @@
 use base64::prelude::*;
 use rand_core::{CryptoRng, RngCore};
 use schnorrkel::{self, context::SigningTranscript};
-use sha2::{Digest, Sha512_256};
+use sha2_old::{Digest, Sha512_256};
 
 use crate::crypto::signature::{Error, Signature, Signer};
 

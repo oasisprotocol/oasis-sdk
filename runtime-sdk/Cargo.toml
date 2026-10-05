@@ -19,7 +19,8 @@ ed25519-dalek = { version = "3.0.0", features = ["digest", "hazmat"] }
 x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
 digest = "0.10.3"
 hmac = "0.12.1"
-sha2 = "0.10.8"
+sha2 = "0.11.0"
+sha2_old = { package = "sha2", version = "0.10.9" }
 sha3 = { version = "0.10.1", default-features = false }
 k256 = "0.13.1"
 p256 = "0.13.2"

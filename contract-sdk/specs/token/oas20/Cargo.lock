@@ -1702,7 +1702,7 @@ dependencies = [
  "k256",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "thiserror",
  "x25519-dalek",
 ]
