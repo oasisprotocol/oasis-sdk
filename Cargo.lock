@@ -3556,7 +3556,21 @@ dependencies = [
  "elliptic-curve 0.13.8",
  "once_cell",
  "sha2 0.10.9",
- "signature 2.2.0",
+]
+
+[[package]]
+name = "k256"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93f50113171a713f4a4231ef82eb26703607139b35dcb56241f0ceab2ae1f7d8"
+dependencies = [
+ "cpubits",
+ "ecdsa 0.17.0",
+ "elliptic-curve 0.14.1",
+ "primeorder 0.14.0",
+ "sha2 0.11.0",
+ "signature 3.0.0",
+ "wnaf",
 ]
 
 [[package]]
@@ -4208,7 +4222,7 @@ version = "0.3.0"
 dependencies = [
  "hex",
  "hmac 0.13.0",
- "k256",
+ "k256 0.14.0",
  "oasis-cbor",
  "oasis-runtime-sdk",
  "sha2 0.11.0",
@@ -4367,7 +4381,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "impl-trait-for-tuples",
- "k256",
+ "k256 0.14.0",
  "lru",
  "merlin",
  "num-traits",
@@ -4400,7 +4414,7 @@ dependencies = [
  "anyhow",
  "blake3",
  "hex",
- "k256",
+ "k256 0.14.0",
  "lru",
  "num-traits",
  "oasis-cbor",
@@ -4433,7 +4447,7 @@ dependencies = [
  "hex",
  "hmac 0.13.0",
  "honggfuzz",
- "k256",
+ "k256 0.14.0",
  "num",
  "oasis-cbor",
  "oasis-runtime-sdk",
@@ -6634,7 +6648,7 @@ dependencies = [
  "hex",
  "http",
  "iri-string",
- "k256",
+ "k256 0.13.4",
  "rand 0.8.5",
  "sha3",
  "thiserror 1.0.69",

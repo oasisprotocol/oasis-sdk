@@ -178,7 +178,7 @@ pub fn decode(
                 address_spec: transaction::AddressSpec::Signature(
                     address::SignatureAddressSpec::Secp256k1Eth(
                         signature::secp256k1::PublicKey::from_bytes(
-                            k256::EncodedPoint::from(&key).as_bytes(),
+                            k256::Sec1Point::from(&key).as_bytes(),
                         )
                         .with_context(|| "sdk secp256k1 public key from bytes")?,
                     ),

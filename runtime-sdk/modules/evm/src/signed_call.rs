@@ -51,7 +51,7 @@ pub(crate) fn verify<C: Context, Cfg: Config>(
     let signed_message = hash_call_toplevel::<Cfg>(&query, &leash);
     let signer_pk = crate::raw_tx::recover_low(&sig, sig_recid, &signed_message.into())
         .map_err(|_| Error::InvalidSignedSimulateCall("signature recovery failed"))?;
-    let signer_addr_digest = Keccak256::digest(&signer_pk.to_encoded_point(false).as_bytes()[1..]);
+    let signer_addr_digest = Keccak256::digest(&signer_pk.to_sec1_point(false).as_bytes()[1..]);
     if &signer_addr_digest[12..] != query.caller.as_ref() {
         return Err(Error::InvalidSignedSimulateCall("signer != caller"));
     }

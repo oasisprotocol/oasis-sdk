@@ -352,9 +352,9 @@ mod test {
     const KEY: &[u8] = include_bytes!("../../../../../../tests/contracts/bench/data/key.bin");
 
     fn verify_signature(message: &[u8], signature: &[u8], key: &[u8]) -> Result<(), ()> {
-        let key = k256::EncodedPoint::from_bytes(key).map_err(|_| ())?;
+        let key = k256::Sec1Point::from_bytes(key).map_err(|_| ())?;
         let sig = ecdsa::Signature::from_der(signature).map_err(|_| ())?;
-        let verifying_key = ecdsa::VerifyingKey::from_encoded_point(&key).map_err(|_| ())?;
+        let verifying_key = ecdsa::VerifyingKey::from_sec1_point(&key).map_err(|_| ())?;
         verifying_key.verify(message, &sig).map_err(|_| ())?;
         Ok(())
     }

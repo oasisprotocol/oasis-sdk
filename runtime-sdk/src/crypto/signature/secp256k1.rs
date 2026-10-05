@@ -5,9 +5,12 @@ use k256::{
     self,
     ecdsa::{
         self,
-        signature::{DigestSigner as _, DigestVerifier, Signer as _, Verifier as _},
+        signature::{
+            hazmat::{PrehashSigner, PrehashVerifier},
+            Signer as _, Verifier as _,
+        },
     },
-    elliptic_curve::sec1::{FromEncodedPoint, ToEncodedPoint},
+    elliptic_curve::sec1::{FromSec1Point, ToSec1Point},
     sha2::Sha512_256,
 };
 use rand_core::{CryptoRng, RngCore};
@@ -16,7 +19,7 @@ use crate::crypto::signature::{Error, Signature};
 
 /// A Secp256k1 public key (in compressed form).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PublicKey(k256::EncodedPoint);
+pub struct PublicKey(k256::Sec1Point);
 
 impl PublicKey {
     /// Return a byte representation of this public key.
@@ -27,8 +30,8 @@ impl PublicKey {
     /// Return an alternative byte representation used in deriving Ethereum-compatible addresses.
     pub fn to_uncompressed_untagged_bytes(&self) -> Vec<u8> {
         // Our wrapper type only accepts compressed points, so we shouldn't get None.
-        let pk = k256::PublicKey::from_encoded_point(&self.0).unwrap();
-        pk.to_encoded_point(false).as_bytes()[1..].to_vec()
+        let pk = k256::PublicKey::from_sec1_point(&self.0).unwrap();
+        pk.to_sec1_point(false).as_bytes()[1..].to_vec()
     }
 
     /// Derive an Ethereum-compatible address.
@@ -38,7 +41,7 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        k256::EncodedPoint::from_bytes(bytes)
+        k256::Sec1Point::from_bytes(bytes)
             .map_err(|_| Error::MalformedPublicKey)
             .map(PublicKey)
     }
@@ -61,8 +64,8 @@ impl PublicKey {
     pub fn verify_raw(&self, message: &[u8], signature: &Signature) -> Result<(), Error> {
         let sig = ecdsa::Signature::from_der(signature.0.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
-        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
-            .map_err(|_| Error::MalformedPublicKey)?;
+        let verify_key =
+            ecdsa::VerifyingKey::from_sec1_point(&self.0).map_err(|_| Error::MalformedPublicKey)?;
         verify_key
             .verify(message, &sig)
             .map_err(|_| Error::VerificationFailed)
@@ -75,10 +78,11 @@ impl PublicKey {
     {
         let sig = ecdsa::Signature::from_der(signature.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
-        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
-            .map_err(|_| Error::MalformedPublicKey)?;
+        let verify_key =
+            ecdsa::VerifyingKey::from_sec1_point(&self.0).map_err(|_| Error::MalformedPublicKey)?;
+        let prehash = digest.finalize_fixed();
         verify_key
-            .verify_digest(digest, &sig)
+            .verify_prehash(&prehash, &sig)
             .map_err(|_| Error::VerificationFailed)
     }
 }
@@ -116,7 +120,11 @@ impl MemorySigner {
     where
         D: Digest + FixedOutput<OutputSize = U32>,
     {
-        let signature: ecdsa::Signature = self.sk.sign_digest(digest);
+        let prehash = digest.finalize_fixed();
+        let signature: ecdsa::Signature = self
+            .sk
+            .sign_prehash(&prehash)
+            .map_err(|_| Error::SigningError)?;
         Ok(signature.to_der().as_bytes().to_vec().into())
     }
 }
@@ -144,14 +152,18 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        super::PublicKey::Secp256k1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
+        super::PublicKey::Secp256k1(PublicKey(self.sk.verifying_key().to_sec1_point(true)))
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
         let digest = Sha512_256::new()
             .chain_update(context)
             .chain_update(message);
-        let signature: ecdsa::Signature = self.sk.sign_digest(digest);
+        let prehash = digest.finalize_fixed();
+        let signature: ecdsa::Signature = self
+            .sk
+            .sign_prehash(&prehash)
+            .map_err(|_| Error::SigningError)?;
         Ok(signature.to_der().as_bytes().to_vec().into())
     }
 

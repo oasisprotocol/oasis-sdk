@@ -52,7 +52,7 @@ pub fn recover(input: &[u8]) -> Result<[u8; 65], Error> {
 
     match VerifyingKey::recover_from_prehash(&msg, &signature, recid) {
         Ok(recovered_key) => {
-            let key = recovered_key.to_encoded_point(false);
+            let key = recovered_key.to_sec1_point(false);
 
             Ok(key.as_bytes().try_into().unwrap())
         }
