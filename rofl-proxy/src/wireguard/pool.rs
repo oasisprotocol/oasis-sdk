@@ -41,7 +41,7 @@ impl IpPool {
     }
 
     fn allocate_host_fresh(&mut self) -> Result<IpAddrMask> {
-        match self.network.ip {
+        match self.network.address {
             IpAddr::V4(net) => {
                 let alloc = net
                     .to_bits()
@@ -92,7 +92,7 @@ mod test {
         let host = pool.allocate_host().unwrap();
         assert_eq!(host, "100.64.0.2/32".parse().unwrap());
 
-        pool.return_allocated_host(host.ip);
+        pool.return_allocated_host(host.address);
 
         let host = pool.allocate_host().unwrap();
         assert_eq!(host, "100.64.0.3/32".parse().unwrap());
@@ -118,7 +118,7 @@ mod test {
         // Pool should be exhausted.
         pool.allocate_host().unwrap_err();
 
-        pool.return_allocated_host(host.ip);
+        pool.return_allocated_host(host.address);
         let host = pool.allocate_host().unwrap();
         assert_eq!(host, "10.0.0.254/32".parse().unwrap());
     }
