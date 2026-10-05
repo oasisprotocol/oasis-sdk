@@ -1966,7 +1966,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
- "sha3",
+ "sha3 0.10.8",
  "thiserror 1.0.69",
  "uint",
 ]
@@ -2018,7 +2018,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
- "sha3",
+ "sha3 0.10.8",
  "triehash",
 ]
 
@@ -2036,7 +2036,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
- "sha3",
+ "sha3 0.10.8",
  "trie-root",
 ]
 
@@ -2093,7 +2093,7 @@ dependencies = [
  "rlp",
  "scale-info",
  "serde",
- "sha3",
+ "sha3 0.10.8",
 ]
 
 [[package]]
@@ -2127,7 +2127,7 @@ dependencies = [
  "environmental",
  "evm-core",
  "primitive-types",
- "sha3",
+ "sha3 0.10.8",
 ]
 
 [[package]]
@@ -3585,6 +3585,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "keccak"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8f198d1db720e4940b5a493201d199d9f24f568f8f746bd13706243a2f71598"
+dependencies = [
+ "cfg-if 1.0.4",
+ "cpufeatures 0.3.0",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3805,7 +3815,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58c38e2799fc0978b65dfff8023ec7843e2330bb462f19198840b34b6582397d"
 dependencies = [
  "byteorder",
- "keccak",
+ "keccak 0.1.6",
  "rand_core 0.6.4",
  "zeroize",
 ]
@@ -4399,7 +4409,7 @@ dependencies = [
  "schnorrkel",
  "sha2 0.10.9",
  "sha2 0.11.0",
- "sha3",
+ "sha3 0.12.0",
  "slog",
  "thiserror 1.0.69",
  "tiny-keccak 2.0.2",
@@ -4463,7 +4473,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.0",
- "sha3",
+ "sha3 0.12.0",
  "solabi",
  "substrate-bn",
  "thiserror 1.0.69",
@@ -6325,7 +6335,7 @@ dependencies = [
  "p384 0.13.1",
  "rand 0.8.5",
  "rand_core 0.6.4",
- "sha3",
+ "sha3 0.10.8",
  "subtle",
  "thiserror 1.0.69",
  "zeroize",
@@ -6569,7 +6579,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75872d278a8f37ef87fa0ddbda7802605cb18344497949862c0d4dcb291eba60"
 dependencies = [
  "digest 0.10.7",
- "keccak",
+ "keccak 0.1.6",
+]
+
+[[package]]
+name = "sha3"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc9bad02c26382724b2d2692c6f179285e4b54eeecd7968f52a50059c3c11759"
+dependencies = [
+ "digest 0.11.3",
+ "keccak 0.2.2",
+ "sponge-cursor",
 ]
 
 [[package]]
@@ -6674,7 +6695,7 @@ dependencies = [
  "iri-string",
  "k256 0.13.4",
  "rand 0.8.5",
- "sha3",
+ "sha3 0.10.8",
  "thiserror 1.0.69",
  "time",
 ]
@@ -6824,6 +6845,12 @@ dependencies = [
  "base64ct",
  "der 0.8.2",
 ]
+
+[[package]]
+name = "sponge-cursor"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3a0219bd7d979d58245a4f41f695e1ac9f8befdffadd7f61f1bae9e39abc6620"
 
 [[package]]
 name = "stable-pattern"
