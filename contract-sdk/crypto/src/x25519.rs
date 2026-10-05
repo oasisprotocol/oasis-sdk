@@ -1,4 +1,4 @@
-use hmac::{Hmac, Mac as _};
+use hmac::{Hmac, KeyInit, Mac as _};
 use sha2::Sha512_256;
 use x25519_dalek::{PublicKey, StaticSecret};
 

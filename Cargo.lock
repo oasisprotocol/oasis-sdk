@@ -4110,7 +4110,7 @@ name = "oasis-contract-sdk-crypto"
 version = "0.3.0"
 dependencies = [
  "hex",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "k256",
  "oasis-cbor",
  "oasis-runtime-sdk",
@@ -4268,7 +4268,7 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-dalek 3.0.0",
  "hex",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "impl-trait-for-tuples",
  "k256",
  "lru",
@@ -4334,7 +4334,7 @@ dependencies = [
  "evm",
  "fixed-hash",
  "hex",
- "hmac 0.12.1",
+ "hmac 0.13.0",
  "honggfuzz",
  "k256",
  "num",

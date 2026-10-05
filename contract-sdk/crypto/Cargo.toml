@@ -15,7 +15,7 @@ k256 = "0.13.1"
 thiserror = "1.0.61"
 x25519-dalek = { version = "3.0.0", features = ["static_secrets"] }
 sha2 = "0.11.0"
-hmac = "0.12.1"
+hmac = "0.13.0"
 
 [dev-dependencies]
 hex = "0.4.2"

@@ -1,7 +1,7 @@
 use std::convert::TryInto as _;
 
 use anyhow;
-use hmac::{Hmac, Mac as _};
+use hmac::{Hmac, KeyInit, Mac as _};
 use sha2::Sha512_256;
 use thiserror::Error;
 use zeroize::{Zeroize, Zeroizing};
