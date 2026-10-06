@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MemorySigner","PublicKey"]};
+window.SIDEBAR_ITEMS = {"struct":["MemorySigner","PublicKey","WrappedCryptoRng"]};

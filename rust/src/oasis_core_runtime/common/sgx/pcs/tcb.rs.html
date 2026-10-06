@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/d2bf162/runtime/src/common/sgx/pcs/tcb.rs`."><title>tcb.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0-nightly (9e79395f9 2026-02-10)" data-channel="nightly" data-search-js="search-fb33671b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../../static.files/storage-f9617a14.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-12f88f4f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/common/sgx/pcs/</div>tcb.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::ffi::CString;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `/home/runner/.cargo/git/checkouts/oasis-core-5807357916a22ef1/e4892bf/runtime/src/common/sgx/pcs/tcb.rs`."><title>tcb.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-0c87338a.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="oasis_core_runtime" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (67854e511 2026-08-15)" data-channel="nightly" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">oasis_core_runtime/common/sgx/pcs/</div>tcb.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::ffi::CString;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>byteorder::{ByteOrder, LittleEndian};
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>chrono::{prelude::<span class="kw-2">*</span>, Duration};
@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a><span class="kw">use </span>serde_json::value::RawValue;
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span>sgx_isa::Report;
 <a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>super::{
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use super</span>::{
 <a href=#11 id=11 data-nosnippet>11</a>    certificates::PCS_TRUST_ROOT, constants::<span class="kw-2">*</span>, policy::QuotePolicy, quote::TeeType,
 <a href=#12 id=12 data-nosnippet>12</a>    utils::x509_custom_ts_verify_cb, Error,
 <a href=#13 id=13 data-nosnippet>13</a>};
@@ -202,7 +202,7 @@
 <a href=#202 id=202 data-nosnippet>202</a>            }
 <a href=#203 id=203 data-nosnippet>203</a>        }
 <a href=#204 id=204 data-nosnippet>204</a>
-<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">if </span><span class="self">self</span>.<span class="macro">version !</span>= REQUIRED_TCB_INFO_VERSION {
+<a href=#205 id=205 data-nosnippet>205</a>        <span class="kw">if </span><span class="self">self</span>.version != REQUIRED_TCB_INFO_VERSION {
 <a href=#206 id=206 data-nosnippet>206</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(
 <a href=#207 id=207 data-nosnippet>207</a>                <span class="string">"unexpected TCB info version"
 <a href=#208 id=208 data-nosnippet>208</a>            </span>)));
@@ -255,7 +255,7 @@
 <a href=#255 id=255 data-nosnippet>255</a>            </span>.fmspc
 <a href=#256 id=256 data-nosnippet>256</a>            .from_hex()
 <a href=#257 id=257 data-nosnippet>257</a>            .map_err(|err| Error::TCBParseError(err.into()))<span class="question-mark">?</span>;
-<a href=#258 id=258 data-nosnippet>258</a>        <span class="kw">if </span><span class="macro">fmspc !</span>= expected_fmspc {
+<a href=#258 id=258 data-nosnippet>258</a>        <span class="kw">if </span>fmspc != expected_fmspc {
 <a href=#259 id=259 data-nosnippet>259</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBMismatch);
 <a href=#260 id=260 data-nosnippet>260</a>        }
 <a href=#261 id=261 data-nosnippet>261</a>
@@ -294,7 +294,7 @@
 <a href=#294 id=294 data-nosnippet>294</a>                    .iter()
 <a href=#295 id=295 data-nosnippet>295</a>                    .find(|level| level.tcb.isv_svn <span class="kw">as </span>u32 &lt;= tdx_comp_svn[<span class="number">0</span>])
 <a href=#296 id=296 data-nosnippet>296</a>                    .ok_or(Error::TCBOutOfDate)<span class="question-mark">?</span>;
-<a href=#297 id=297 data-nosnippet>297</a>                <span class="kw">if </span>tdx_module_level.<span class="macro">status !</span>= TCBStatus::UpToDate {
+<a href=#297 id=297 data-nosnippet>297</a>                <span class="kw">if </span>tdx_module_level.status != TCBStatus::UpToDate {
 <a href=#298 id=298 data-nosnippet>298</a>                    <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBOutOfDate);
 <a href=#299 id=299 data-nosnippet>299</a>                }
 <a href=#300 id=300 data-nosnippet>300</a>            }
@@ -546,7 +546,7 @@
 <a href=#546 id=546 data-nosnippet>546</a>            <span class="kw">_ </span>=&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(<span class="string">"unexpected QE ID"</span>))),
 <a href=#547 id=547 data-nosnippet>547</a>        }
 <a href=#548 id=548 data-nosnippet>548</a>
-<a href=#549 id=549 data-nosnippet>549</a>        <span class="kw">if </span><span class="self">self</span>.<span class="macro">version !</span>= REQUIRED_QE_IDENTITY_VERSION {
+<a href=#549 id=549 data-nosnippet>549</a>        <span class="kw">if </span><span class="self">self</span>.version != REQUIRED_QE_IDENTITY_VERSION {
 <a href=#550 id=550 data-nosnippet>550</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(
 <a href=#551 id=551 data-nosnippet>551</a>                <span class="string">"unexpected QE identity version"
 <a href=#552 id=552 data-nosnippet>552</a>            </span>)));
@@ -584,13 +584,13 @@
 <a href=#584 id=584 data-nosnippet>584</a>            </span>.mr_signer
 <a href=#585 id=585 data-nosnippet>585</a>            .from_hex()
 <a href=#586 id=586 data-nosnippet>586</a>            .map_err(|<span class="kw">_</span>| Error::TCBParseError(<span class="macro">anyhow::anyhow!</span>(<span class="string">"malformed QE MRSIGNER"</span>)))<span class="question-mark">?</span>;
-<a href=#587 id=587 data-nosnippet>587</a>        <span class="kw">if </span><span class="macro">expected_mr_signer !</span>= report.mrsigner {
+<a href=#587 id=587 data-nosnippet>587</a>        <span class="kw">if </span>expected_mr_signer != report.mrsigner {
 <a href=#588 id=588 data-nosnippet>588</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBVerificationFailed);
 <a href=#589 id=589 data-nosnippet>589</a>        }
 <a href=#590 id=590 data-nosnippet>590</a>
 <a href=#591 id=591 data-nosnippet>591</a>        <span class="comment">// Verify if ISVPRODID field retrieved from SGX Enclave Report is equal to the value of
 <a href=#592 id=592 data-nosnippet>592</a>        // isvprodid field in QE Identity.
-<a href=#593 id=593 data-nosnippet>593</a>        </span><span class="kw">if </span><span class="self">self</span>.<span class="macro">isv_prod_id !</span>= report.isvprodid {
+<a href=#593 id=593 data-nosnippet>593</a>        </span><span class="kw">if </span><span class="self">self</span>.isv_prod_id != report.isvprodid {
 <a href=#594 id=594 data-nosnippet>594</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBVerificationFailed);
 <a href=#595 id=595 data-nosnippet>595</a>        }
 <a href=#596 id=596 data-nosnippet>596</a>
@@ -617,7 +617,7 @@
 <a href=#617 id=617 data-nosnippet>617</a>        }
 <a href=#618 id=618 data-nosnippet>618</a>        <span class="kw">let </span>expected_miscselect = LittleEndian::read_u32(<span class="kw-2">&amp;</span>raw_miscselect);
 <a href=#619 id=619 data-nosnippet>619</a>        <span class="kw">let </span>miscselect_mask = LittleEndian::read_u32(<span class="kw-2">&amp;</span>raw_miscselect_mask);
-<a href=#620 id=620 data-nosnippet>620</a>        <span class="kw">if </span>report.miscselect.bits() &amp; <span class="macro">miscselect_mask !</span>= expected_miscselect {
+<a href=#620 id=620 data-nosnippet>620</a>        <span class="kw">if </span>report.miscselect.bits() &amp; miscselect_mask != expected_miscselect {
 <a href=#621 id=621 data-nosnippet>621</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBVerificationFailed);
 <a href=#622 id=622 data-nosnippet>622</a>        }
 <a href=#623 id=623 data-nosnippet>623</a>
@@ -646,10 +646,10 @@
 <a href=#646 id=646 data-nosnippet>646</a>        <span class="kw">let </span>expected_xfrm = LittleEndian::read_u64(<span class="kw-2">&amp;</span>raw_attributes[<span class="number">8</span>..]);
 <a href=#647 id=647 data-nosnippet>647</a>        <span class="kw">let </span>flags_mask = LittleEndian::read_u64(<span class="kw-2">&amp;</span>raw_attributes_mask[..<span class="number">8</span>]);
 <a href=#648 id=648 data-nosnippet>648</a>        <span class="kw">let </span>xfrm_mask = LittleEndian::read_u64(<span class="kw-2">&amp;</span>raw_attributes_mask[<span class="number">8</span>..]);
-<a href=#649 id=649 data-nosnippet>649</a>        <span class="kw">if </span>report.attributes.flags.bits() &amp; <span class="macro">flags_mask !</span>= expected_flags {
+<a href=#649 id=649 data-nosnippet>649</a>        <span class="kw">if </span>report.attributes.flags.bits() &amp; flags_mask != expected_flags {
 <a href=#650 id=650 data-nosnippet>650</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBVerificationFailed);
 <a href=#651 id=651 data-nosnippet>651</a>        }
-<a href=#652 id=652 data-nosnippet>652</a>        <span class="kw">if </span>report.attributes.xfrm &amp; <span class="macro">xfrm_mask !</span>= expected_xfrm {
+<a href=#652 id=652 data-nosnippet>652</a>        <span class="kw">if </span>report.attributes.xfrm &amp; xfrm_mask != expected_xfrm {
 <a href=#653 id=653 data-nosnippet>653</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(Error::TCBVerificationFailed);
 <a href=#654 id=654 data-nosnippet>654</a>        }
 <a href=#655 id=655 data-nosnippet>655</a>
@@ -697,7 +697,7 @@
 <a href=#697 id=697 data-nosnippet>697</a>
 <a href=#698 id=698 data-nosnippet>698</a><span class="attr">#[cfg(test)]
 <a href=#699 id=699 data-nosnippet>699</a></span><span class="kw">mod </span>tests {
-<a href=#700 id=700 data-nosnippet>700</a>    <span class="kw">use </span>super::<span class="kw-2">*</span>;
+<a href=#700 id=700 data-nosnippet>700</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#701 id=701 data-nosnippet>701</a>
 <a href=#702 id=702 data-nosnippet>702</a>    <span class="attr">#[test]
 <a href=#703 id=703 data-nosnippet>703</a>    </span><span class="kw">fn </span>test_tcb_level_matches() {
