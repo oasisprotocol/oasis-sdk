@@ -26,18 +26,7 @@ impl App for AppdLocalnetApp {
             return Ok(BTreeMap::new());
         };
 
-        // Namespace user-provided metadata for on-chain registration.
-        Ok(metadata
-            .get()
-            .await?
-            .into_iter()
-            .map(|(key, value)| {
-                (
-                    format!("{}.{}", services::metadata::METADATA_NAMESPACE, key),
-                    value,
-                )
-            })
-            .collect())
+        Ok(metadata.get_registration_metadata().await?)
     }
 
     async fn post_registration_init(self: Arc<Self>, env: Environment<Self>) {
