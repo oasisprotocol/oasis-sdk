@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+use rand::rngs::SysRng;
 use tokio::sync::{mpsc, oneshot};
 
 use oasis_runtime_sdk::{
@@ -13,7 +14,6 @@ use oasis_runtime_sdk::{
     },
     crypto::signature::{secp256k1, Signer},
 };
-use rand::rngs::OsRng;
 
 use super::{notifier, registration, watchdog, App, Environment};
 
@@ -77,7 +77,7 @@ where
         // Provision keys. Currently we provision a random key for signing transactions to avoid
         // using the RAK directly as the RAK is an Ed25519 key which cannot easily be used for EVM
         // calls due to the limitations of the current implementation.
-        let signer = secp256k1::MemorySigner::random(&mut OsRng).unwrap();
+        let signer = secp256k1::MemorySigner::random(&mut SysRng).unwrap();
 
         // Prepare state.
         let state = Arc::new(State {

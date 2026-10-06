@@ -4,7 +4,7 @@ use std::convert::TryInto;
 use anyhow::anyhow;
 use byteorder::{BigEndian, WriteBytesExt};
 use oasis_core_runtime::consensus::beacon;
-use rand_core::{OsRng, RngCore};
+use rand::{rngs::SysRng, TryRng};
 
 use crate::{
     context::Context,
@@ -280,7 +280,7 @@ pub fn encrypt_result_x25519_deoxysii<C: Context>(
     } else {
         // In non-execution mode randomize the nonce to facilitate private queries.
         nonce.resize(deoxysii::NONCE_SIZE, 0);
-        OsRng.fill_bytes(&mut nonce);
+        SysRng.try_fill_bytes(&mut nonce).unwrap();
     }
     let nonce = nonce.try_into().unwrap();
     let result = cbor::to_vec(result);

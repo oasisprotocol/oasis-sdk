@@ -1,3 +1,4 @@
+//nolint:goconst // Constants would reduce readability in this file.
 package contracts
 
 import (

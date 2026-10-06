@@ -1,4 +1,4 @@
-package types //nolint:revive
+package types
 
 import (
 	"bytes"
@@ -15,6 +15,8 @@ import (
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature"
 	"github.com/oasisprotocol/oasis-sdk/client-sdk/go/crypto/signature/ed25519"
 )
+
+const symbolTEST = "TEST"
 
 func TestTransactionBasicValidation(t *testing.T) {
 	require := require.New(t)
@@ -91,7 +93,7 @@ func TestPrettyPrintTransaction(t *testing.T) {
 	ptCfg := &config.ParaTime{
 		Denominations: map[string]*config.DenominationInfo{
 			"_": {
-				Symbol:   "TEST",
+				Symbol:   symbolTEST,
 				Decimals: 18,
 			},
 		},
@@ -153,7 +155,7 @@ func TestPrettyPrintFee(t *testing.T) {
 	ptCfg := &config.ParaTime{
 		Denominations: map[string]*config.DenominationInfo{
 			"_": {
-				Symbol:   "TEST",
+				Symbol:   symbolTEST,
 				Decimals: 18,
 			},
 		},

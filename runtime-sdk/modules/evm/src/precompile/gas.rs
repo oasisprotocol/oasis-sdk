@@ -82,7 +82,7 @@ mod test {
 
         let gas_usage_big: u128 =
             solabi::decode(&ret.unwrap().output).expect("call should return gas usage");
-        let gas_usage: u64 = gas_usage_big.try_into().unwrap_or(u64::max_value());
+        let gas_usage: u64 = gas_usage_big.try_into().unwrap_or(u64::MAX);
         assert_eq!(gas_usage, 10, "call should return gas usage");
 
         // Test use gas in contract.

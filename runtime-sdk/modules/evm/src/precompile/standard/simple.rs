@@ -72,7 +72,7 @@ pub fn call_ecrecover(handle: &mut impl PrecompileHandle) -> PrecompileResult {
     let output = match k256::ecdsa::VerifyingKey::recover_from_prehash(&prehash, &sig, recid) {
         Ok(recovered_key) => {
             // Convert Ethereum style address
-            let p = recovered_key.to_encoded_point(false);
+            let p = recovered_key.to_sec1_point(false);
             let mut hasher = Keccak256::new();
             hasher.update(&p.as_bytes()[1..]);
             let mut address = hasher.finalize();

@@ -184,7 +184,7 @@ pub fn derive_evm_contract(input: ItemImpl) -> TokenStream {
                 .iter()
                 .any(|attr| attr.path().is_ident("evm_method"))
             {
-                methods.extend(get_method(f).into_iter());
+                methods.extend(get_method(f));
             }
             if f.attrs
                 .iter()

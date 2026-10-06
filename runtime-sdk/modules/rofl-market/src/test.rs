@@ -5,7 +5,7 @@ use base64::prelude::*;
 use oasis_runtime_sdk::{
     core::{
         common::crypto::signature::SignatureBundle,
-        consensus::registry::EndorsedCapabilityTEE,
+        consensus::{registry::EndorsedCapabilityTEE, roothash::Header},
         host::attestation::{LabelAttestation, ATTEST_LABELS_SIGNATURE_CONTEXT},
     },
     crypto::signature::Signer,
@@ -309,9 +309,14 @@ fn test_provider_management() {
 
 #[test]
 fn test_instance_management() {
-    let mut mock = mock::Mock::default();
-    mock.epoch = 42;
-    mock.runtime_header.timestamp = 1741778021;
+    let mut mock = mock::Mock {
+        epoch: 42,
+        runtime_header: Header {
+            timestamp: 1741778021,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
 
     TestRuntime::migrate(&ctx);
@@ -1072,9 +1077,14 @@ fn test_instance_change_admin() {
 
 #[test]
 fn test_instance_accept_timeout() {
-    let mut mock = mock::Mock::default();
-    mock.epoch = 42;
-    mock.runtime_header.timestamp = 1741778021;
+    let mut mock = mock::Mock {
+        epoch: 42,
+        runtime_header: Header {
+            timestamp: 1741778021,
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
 
     TestRuntime::migrate(&ctx);

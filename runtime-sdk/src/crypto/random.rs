@@ -1,9 +1,10 @@
 //! Random number generator based on root VRF key and Merlin transcripts.
-use std::cell::RefCell;
+use std::{cell::RefCell, convert::Infallible};
 
 use anyhow::anyhow;
 use merlin::{Transcript, TranscriptRng};
-use rand_core::{CryptoRng, OsRng, RngCore};
+use rand::{rngs::SysRng, TryCryptoRng, TryRng};
+use rand_core::RngCore;
 use schnorrkel::keys::{ExpansionMode, Keypair, MiniSecretKey};
 
 use oasis_core_runtime::common::crypto::hash::Hash;
@@ -96,7 +97,7 @@ impl RootRng {
         }
 
         let mut bytes = [0u8; 32];
-        OsRng.fill_bytes(&mut bytes);
+        SysRng.try_fill_bytes(&mut bytes).unwrap();
 
         let mut inner = self.inner.borrow_mut();
         inner.transcript.append_message(b"local-rng", &bytes);
@@ -156,25 +157,24 @@ impl RootRng {
 /// A leaf RNG.
 pub struct LeafRng(TranscriptRng);
 
-impl RngCore for LeafRng {
-    fn next_u32(&mut self) -> u32 {
-        self.0.next_u32()
+impl TryRng for LeafRng {
+    type Error = Infallible;
+
+    fn try_next_u32(&mut self) -> Result<u32, Self::Error> {
+        Ok(self.0.next_u32())
     }
 
-    fn next_u64(&mut self) -> u64 {
-        self.0.next_u64()
+    fn try_next_u64(&mut self) -> Result<u64, Self::Error> {
+        Ok(self.0.next_u64())
     }
 
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.0.fill_bytes(dest)
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core::Error> {
-        self.0.try_fill_bytes(dest)
+    fn try_fill_bytes(&mut self, dst: &mut [u8]) -> Result<(), Self::Error> {
+        self.0.fill_bytes(dst);
+        Ok(())
     }
 }
 
-impl CryptoRng for LeafRng {}
+impl TryCryptoRng for LeafRng {}
 
 #[cfg(test)]
 mod test {
@@ -192,11 +192,11 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes1);
+        leaf_rng.try_fill_bytes(&mut bytes1).unwrap();
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes1_1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes1_1);
+        leaf_rng.try_fill_bytes(&mut bytes1_1).unwrap();
 
         assert_ne!(bytes1, bytes1_1, "rng should apply domain separation");
 
@@ -205,13 +205,13 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes2 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes2);
+        leaf_rng.try_fill_bytes(&mut bytes2).unwrap();
 
         assert_eq!(bytes1, bytes2, "rng should be deterministic");
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes2_1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes2_1);
+        leaf_rng.try_fill_bytes(&mut bytes2_1).unwrap();
 
         assert_ne!(bytes2, bytes2_1, "rng should apply domain separation");
         assert_eq!(bytes1_1, bytes2_1, "rng should be deterministic");
@@ -223,7 +223,7 @@ mod test {
             .fork(&ctx, b"domsep")
             .expect("rng fork should work");
         let mut bytes3 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes3);
+        leaf_rng.try_fill_bytes(&mut bytes3).unwrap();
 
         assert_ne!(bytes2, bytes3, "rng should apply domain separation");
 
@@ -234,7 +234,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes4 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes4);
+        leaf_rng.try_fill_bytes(&mut bytes4).unwrap();
 
         assert_ne!(bytes2, bytes4, "rng should apply domain separation");
 
@@ -245,7 +245,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes5 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes5);
+        leaf_rng.try_fill_bytes(&mut bytes5).unwrap();
 
         assert_ne!(bytes4, bytes5, "rng should apply domain separation");
 
@@ -256,7 +256,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes6 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes6);
+        leaf_rng.try_fill_bytes(&mut bytes6).unwrap();
 
         assert_eq!(bytes4, bytes6, "rng should be deterministic");
 
@@ -269,7 +269,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes7 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes7);
+        leaf_rng.try_fill_bytes(&mut bytes7).unwrap();
 
         assert_ne!(bytes4, bytes7, "rng should apply domain separation");
 
@@ -283,7 +283,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes8 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes8);
+        leaf_rng.try_fill_bytes(&mut bytes8).unwrap();
 
         assert_ne!(bytes7, bytes8, "rng should apply domain separation");
         assert_ne!(bytes6, bytes8, "rng should apply domain separation");
@@ -311,7 +311,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes1);
+        leaf_rng.try_fill_bytes(&mut bytes1).unwrap();
 
         // Create second root RNG using the same context, but mix in local entropy.
         let root_rng = RootRng::new(Mode::Execute);
@@ -319,7 +319,7 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, &[]).expect("rng fork should work");
         let mut bytes2 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes2);
+        leaf_rng.try_fill_bytes(&mut bytes2).unwrap();
 
         assert_ne!(bytes1, bytes2, "rng should apply domain separation");
     }
@@ -334,22 +334,22 @@ mod test {
 
         let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
         let mut bytes1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes1);
+        leaf_rng.try_fill_bytes(&mut bytes1).unwrap();
 
         let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
         let mut bytes1_1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes1_1);
+        leaf_rng.try_fill_bytes(&mut bytes1_1).unwrap();
 
         // Create second root RNG.
         let root_rng = RootRng::new(Mode::Execute);
 
         let mut leaf_rng = root_rng.fork(&ctx, b"b").expect("rng fork should work");
         let mut bytes2 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes2);
+        leaf_rng.try_fill_bytes(&mut bytes2).unwrap();
 
         let mut leaf_rng = root_rng.fork(&ctx, b"a").expect("rng fork should work");
         let mut bytes2_1 = [0u8; 32];
-        leaf_rng.fill_bytes(&mut bytes2_1);
+        leaf_rng.try_fill_bytes(&mut bytes2_1).unwrap();
 
         assert_ne!(
             bytes1_1, bytes2_1,

@@ -16,6 +16,7 @@ const RESERVED_METADATA_SLOTS: usize = 10;
 ///
 /// User-provided metadata is stored without prefixes and automatically
 /// namespaced with "net.oasis.app." when included in on-chain registration.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait MetadataService: Send + Sync {
     /// Set metadata.

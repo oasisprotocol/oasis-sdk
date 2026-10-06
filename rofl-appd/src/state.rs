@@ -2,6 +2,7 @@ use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
 use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 
 /// ROFL app environment.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait Env: Send + Sync {
     /// ROFL app identifier of the running application.

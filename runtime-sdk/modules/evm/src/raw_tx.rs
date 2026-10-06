@@ -178,7 +178,7 @@ pub fn decode(
                 address_spec: transaction::AddressSpec::Signature(
                     address::SignatureAddressSpec::Secp256k1Eth(
                         signature::secp256k1::PublicKey::from_bytes(
-                            k256::EncodedPoint::from(&key).as_bytes(),
+                            k256::Sec1Point::from(&key).as_bytes(),
                         )
                         .with_context(|| "sdk secp256k1 public key from bytes")?,
                     ),
@@ -228,7 +228,7 @@ mod test {
             &token::Denomination::NATIVE,
         )
         .unwrap();
-        println!("{:?}", &tx);
+        println!("{:?}", tx);
         assert_eq!(tx.call.method, "evm.Call");
         let body: types::Call = cbor::from_value(tx.call.body).unwrap();
         assert_eq!(body.address, types::H160::from_str(expected_to).unwrap());
@@ -267,7 +267,7 @@ mod test {
             &token::Denomination::NATIVE,
         )
         .unwrap();
-        println!("{:?}", &tx);
+        println!("{:?}", tx);
         assert_eq!(tx.call.method, "evm.Create");
         let body: types::Create = cbor::from_value(tx.call.body).unwrap();
         assert_eq!(body.value, types::U256::from(expected_value));

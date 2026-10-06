@@ -14,9 +14,9 @@ const KEY: &[u8] = include_bytes!("../data/key.bin");
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 fn verify_signature() -> Result<(), ()> {
-    let key = k256::EncodedPoint::from_bytes(KEY).map_err(|_| ())?;
+    let key = k256::Sec1Point::from_bytes(KEY).map_err(|_| ())?;
     let sig = ecdsa::Signature::from_der(SIGNATURE).map_err(|_| ())?;
-    let verifying_key = ecdsa::VerifyingKey::from_encoded_point(&key).map_err(|_| ())?;
+    let verifying_key = ecdsa::VerifyingKey::from_sec1_point(&key).map_err(|_| ())?;
     verifying_key.verify(MESSAGE, &sig).map_err(|_| ())?;
     Ok(())
 }

@@ -1,20 +1,23 @@
 //! Secp384r1 signatures.
 use base64::prelude::*;
-use digest::{consts::U48, core_api::BlockSizeUser, Digest, FixedOutput, FixedOutputReset};
+use digest::{common::BlockSizeUser, consts::U48, Digest, FixedOutput, FixedOutputReset};
 use p384::{
     self,
     ecdsa::{
         self,
-        signature::{DigestSigner as _, DigestVerifier, Signer as _, Verifier as _},
+        signature::{
+            hazmat::{PrehashSigner, PrehashVerifier},
+            Signer as _, Verifier as _,
+        },
     },
 };
-use rand_core::{CryptoRng, RngCore};
+use rand::TryCryptoRng;
 
 use crate::crypto::signature::{Error, Signature};
 
 /// A Secp384r1 public key (in compressed form).
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PublicKey(p384::EncodedPoint);
+pub struct PublicKey(p384::Sec1Point);
 
 impl PublicKey {
     /// Return a byte representation of this public key.
@@ -24,7 +27,7 @@ impl PublicKey {
 
     /// Construct a public key from a slice of bytes.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        p384::EncodedPoint::from_bytes(bytes)
+        p384::Sec1Point::from_bytes(bytes)
             .map_err(|_| Error::MalformedPublicKey)
             .map(PublicKey)
     }
@@ -46,8 +49,8 @@ impl PublicKey {
     pub fn verify_raw(&self, message: &[u8], signature: &Signature) -> Result<(), Error> {
         let sig = ecdsa::Signature::from_der(signature.0.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
-        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
-            .map_err(|_| Error::MalformedPublicKey)?;
+        let verify_key =
+            ecdsa::VerifyingKey::from_sec1_point(&self.0).map_err(|_| Error::MalformedPublicKey)?;
         verify_key
             .verify(message, &sig)
             .map_err(|_| Error::VerificationFailed)
@@ -60,10 +63,11 @@ impl PublicKey {
     {
         let sig = ecdsa::Signature::from_der(signature.as_ref())
             .map_err(|_| Error::MalformedSignature)?;
-        let verify_key = ecdsa::VerifyingKey::from_encoded_point(&self.0)
-            .map_err(|_| Error::MalformedPublicKey)?;
+        let verify_key =
+            ecdsa::VerifyingKey::from_sec1_point(&self.0).map_err(|_| Error::MalformedPublicKey)?;
+        let prehash = digest.finalize_fixed();
         verify_key
-            .verify_digest(digest, &sig)
+            .verify_prehash(&prehash, &sig)
             .map_err(|_| Error::VerificationFailed)
     }
 }
@@ -101,15 +105,19 @@ impl MemorySigner {
     where
         D: Digest + FixedOutput<OutputSize = U48> + BlockSizeUser + FixedOutputReset,
     {
-        let signature: ecdsa::Signature = self.sk.sign_digest(digest);
+        let prehash = digest.finalize_fixed();
+        let signature: ecdsa::Signature = self
+            .sk
+            .sign_prehash(&prehash)
+            .map_err(|_| Error::SigningError)?;
         Ok(signature.to_der().as_bytes().to_vec().into())
     }
 }
 
 impl super::Signer for MemorySigner {
-    fn random(rng: &mut (impl RngCore + CryptoRng)) -> Result<Self, Error> {
+    fn random(rng: &mut impl TryCryptoRng) -> Result<Self, Error> {
         let mut seed = [0u8; 48];
-        rng.fill_bytes(&mut seed);
+        rng.try_fill_bytes(&mut seed).map_err(|_| Error::RngError)?;
         Self::new_from_seed(&seed)
     }
 
@@ -129,14 +137,18 @@ impl super::Signer for MemorySigner {
     }
 
     fn public_key(&self) -> super::PublicKey {
-        super::PublicKey::Secp384r1(PublicKey(self.sk.verifying_key().to_encoded_point(true)))
+        super::PublicKey::Secp384r1(PublicKey(self.sk.verifying_key().to_sec1_point(true)))
     }
 
     fn sign(&self, context: &[u8], message: &[u8]) -> Result<Signature, Error> {
         let digest = sha2::Sha384::new()
             .chain_update(context)
             .chain_update(message);
-        let signature: ecdsa::Signature = self.sk.sign_digest(digest);
+        let prehash = digest.finalize_fixed();
+        let signature: ecdsa::Signature = self
+            .sk
+            .sign_prehash(&prehash)
+            .map_err(|_| Error::SigningError)?;
         Ok(signature.to_der().as_bytes().to_vec().into())
     }
 

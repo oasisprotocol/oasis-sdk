@@ -1,4 +1,5 @@
 //! EVM module.
+#![allow(unused_features)]
 #![feature(test)]
 // NOTE: Needed due to the buggy fixed-hash macros used in types.
 #![allow(unexpected_cfgs)]

@@ -15,6 +15,7 @@ use rofl_app_core::prelude::*;
 ///
 /// This trait should be implemented by components that need to be notified when
 /// domain verification completes.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait CustomDomainVerificationNotifier: Send + Sync {
     /// Called when a domain verification completes successfully.

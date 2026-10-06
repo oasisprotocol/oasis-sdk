@@ -19,6 +19,7 @@ use rofl_app_core::{
 };
 
 /// A key management service.
+#[allow(clippy::double_must_use)]
 #[async_trait]
 pub trait KmsService: Send + Sync {
     /// Start the KMS service.
@@ -191,7 +192,7 @@ impl<A: App> KmsService for OasisKmsService<A> {
 
         // Generate the root key for the application and store it in memory to derive all other
         // requested keys.
-        let root_key_task = tokio_retry::Retry::spawn(retry_strategy(), || {
+        let root_key_task = tokio_retry::Retry::start(retry_strategy(), || {
             self.env.client().derive_key(
                 self.env.signer(),
                 DeriveKeyRequest {
@@ -204,7 +205,7 @@ impl<A: App> KmsService for OasisKmsService<A> {
 
         // Generate the secrets encryption key (SEK) and store it in memory.
         // TODO: Consider caching key in encrypted persistent storage.
-        let sek_task = tokio_retry::Retry::spawn(retry_strategy(), || {
+        let sek_task = tokio_retry::Retry::start(retry_strategy(), || {
             self.env.client().derive_key(
                 self.env.identity(),
                 DeriveKeyRequest {

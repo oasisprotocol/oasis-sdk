@@ -8,7 +8,7 @@ use axum_extra::{
 };
 use base64::{prelude::BASE64_STANDARD, Engine};
 use chrono::{prelude::*, Duration};
-use rand::RngCore;
+use rand::{rngs::SysRng, TryRng};
 use rustc_hex::FromHex;
 
 use oasis_runtime_sdk::{
@@ -31,7 +31,7 @@ impl Keys {
     /// Generate a new pair of JWT keys.
     fn generate() -> Self {
         let mut key = [0; 32];
-        rand::rngs::OsRng.fill_bytes(&mut key);
+        SysRng.try_fill_bytes(&mut key).unwrap();
 
         Self {
             encoding: jsonwebtoken::EncodingKey::from_secret(&key),

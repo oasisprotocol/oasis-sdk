@@ -8,9 +8,10 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use defguard_wireguard_rs::{
-    host::{self, Peer},
+    host::{self},
     key::Key,
     net::IpAddrMask,
+    peer::Peer,
     InterfaceConfiguration, Kernel, WGApi, WireguardInterfaceApi,
 };
 use oasis_runtime_sdk::core::common::crypto::x25519;
@@ -53,7 +54,7 @@ pub struct Hub {
 impl Hub {
     /// Create a new instance of the Wireguard hub.
     pub fn new(cfg: HubConfig) -> Result<Self> {
-        let wg = WGApi::new(WG_INTERFACE_NAME.to_string())?;
+        let mut wg = WGApi::new(WG_INTERFACE_NAME.to_string())?;
         wg.create_interface()?;
 
         let sk = x25519::PrivateKey::generate();
@@ -71,9 +72,10 @@ impl Hub {
             name: WG_INTERFACE_NAME.to_string(),
             prvkey: sk.to_lower_hex(),
             addresses: vec![address.clone()],
-            port: cfg.external_port.into(),
+            port: cfg.external_port,
             peers: vec![],
             mtu: None,
+            fwmark: None,
         };
         wg.configure_interface(&if_cfg)?;
 
@@ -107,11 +109,11 @@ impl Hub {
         peer.persistent_keepalive_interval = Some(WG_KEEPALIVE_INTERVAL_SECS);
 
         if let Err(err) = self.wg.configure_peer(&peer) {
-            state.pool.return_allocated_host(host.ip);
+            state.pool.return_allocated_host(host.address);
             return Err(err.into());
         }
 
-        state.clients.insert(pk, host.ip);
+        state.clients.insert(pk, host.address);
 
         // Update CIDR in client configuration so the client doesn't need extra routes.
         host.cidr = self.address.cidr;
@@ -192,9 +194,10 @@ impl Client {
             name: WG_INTERFACE_NAME.to_string(),
             prvkey: sk.to_lower_hex(),
             addresses: vec![cfg.address.parse()?],
-            port: cfg.listen_port.into(),
+            port: cfg.listen_port,
             peers: vec![peer_hub],
             mtu: None,
+            fwmark: None,
         };
         self.wg.configure_interface(&cfg)?;
 

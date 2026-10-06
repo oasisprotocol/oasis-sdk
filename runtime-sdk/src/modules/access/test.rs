@@ -125,7 +125,6 @@ fn dispatch_test<C: Context>(
                 ..Default::default()
             },
             encrypted,
-            ..Default::default()
         },
     );
     if should_fail {

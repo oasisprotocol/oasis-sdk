@@ -54,11 +54,11 @@ where
     type OutputSize = <D as digest::OutputSizeUser>::OutputSize;
 }
 
-impl<D> digest::core_api::BlockSizeUser for DummyDigest<D>
+impl<D> digest::common::BlockSizeUser for DummyDigest<D>
 where
-    D: digest::core_api::BlockSizeUser,
+    D: digest::common::BlockSizeUser,
 {
-    type BlockSize = <D as digest::core_api::BlockSizeUser>::BlockSize;
+    type BlockSize = <D as digest::common::BlockSizeUser>::BlockSize;
 }
 
 impl<D> digest::FixedOutput for DummyDigest<D>

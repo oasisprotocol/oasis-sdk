@@ -10,6 +10,7 @@ use oasis_contract_sdk as sdk;
 
 use types::{Error, Request, Response};
 
+#[allow(dead_code)]
 struct Ownable;
 
 impl sdk::Contract for Ownable {

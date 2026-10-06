@@ -23,6 +23,7 @@ use oasis_runtime_sdk::{
     types::token,
     Runtime,
 };
+use rand::TryRng;
 
 use crate::{state, types, Config};
 
@@ -99,7 +100,7 @@ impl<C: Context, Cfg: Config> EVMBackendExt for OasisBackend<'_, C, Cfg> {
                 .rng()
                 .fork(self.ctx, pers)
                 .expect("unable to access RNG");
-            rand_core::RngCore::try_fill_bytes(&mut rng, &mut rand_bytes)
+            rng.try_fill_bytes(&mut rand_bytes)
                 .expect("RNG is inoperable");
         });
 

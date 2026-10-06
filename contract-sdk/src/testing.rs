@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use rand_core::{RngCore as _, SeedableRng as _};
+use rand::{SeedableRng, TryRng};
 use rand_xorshift::XorShiftRng;
 
 use oasis_contract_sdk_crypto as crypto;
@@ -173,7 +173,7 @@ impl Crypto for MockEnv {
     }
 
     fn random_bytes(&self, _pers: &[u8], dst: &mut [u8]) -> usize {
-        self.rng.lock().unwrap().fill_bytes(dst);
+        self.rng.lock().unwrap().try_fill_bytes(dst).unwrap();
         dst.len()
     }
 }
