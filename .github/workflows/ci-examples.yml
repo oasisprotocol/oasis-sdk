@@ -73,6 +73,9 @@ jobs:
       - name: Build ${{ matrix.example }}
         working-directory: examples/${{ matrix.example }}
         run: oasis rofl build --deployment testnet
+        env:
+          CFLAGS_x86_64_fortanix_unknown_sgx: -isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening
+          CC_x86_64_fortanix_unknown_sgx: clang-18
 
   lint-test-contract-sdk:
     name: lint-test-contract-sdk
