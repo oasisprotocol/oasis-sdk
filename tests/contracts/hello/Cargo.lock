@@ -941,7 +941,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1626,9 +1626,9 @@ dependencies = [
 
 [[package]]
 name = "mbedtls-platform-support"
-version = "0.1.1"
+version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be354d52c70402fbfb37bad9ae2aa99ab52af79f37423cb9d6c41c8fb863abc7"
+checksum = "844620df168baa0a4fd1ddde9805080fc3eed92c118707e1e3129598db260c94"
 dependencies = [
  "cc",
  "cfg-if 1.0.4",
@@ -3582,7 +3582,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
