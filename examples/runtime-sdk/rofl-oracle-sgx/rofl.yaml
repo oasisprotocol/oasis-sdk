@@ -6,7 +6,7 @@ resources:
   memory: 512
   cpus: 1
 artifacts:
-  builder: ghcr.io/oasisprotocol/rofl-dev:v0.1.0@sha256:1d2b77c25811f70219f366153265702417e0e4a08067a68cce4d132e253d7607
+  builder: ghcr.io/oasisprotocol/rofl-dev:v0.6.0@sha256:658ae4cdbf7b86fcdb5957d78db16cdba8e49951be8ed471a43b8cc2259552da
 deployments:
   testnet:
     app_id: rofl1qpp0rk6zwnqjjapj20wwr4fmnx806rzm6uqtf3fx
