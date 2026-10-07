@@ -39,6 +39,10 @@ rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
 [test]
 rustflags = ["-C", "target-feature=+aes,+ssse3"]
 rustdocflags = ["-C", "target-feature=+aes,+ssse3"]
+
+[env]
+CFLAGS_x86_64_fortanix_unknown_sgx = "-isystem/usr/include/x86_64-linux-gnu -mlvi-hardening -mllvm -x86-experimental-lvi-inline-asm-hardening"
+CC_x86_64_fortanix_unknown_sgx = "clang-18"
 ```
 
 After you complete this guide, the minimal runtime directory structure will look
