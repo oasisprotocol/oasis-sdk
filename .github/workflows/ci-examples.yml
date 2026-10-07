@@ -61,7 +61,7 @@ jobs:
     strategy:
       matrix:
         example:
-          # - runtime-sdk/rofl-oracle-sgx
+          - runtime-sdk/rofl-oracle-sgx
           - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout
