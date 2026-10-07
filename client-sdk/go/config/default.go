@@ -153,5 +153,43 @@ var DefaultNetworks = Networks{
 				},
 			},
 		},
+		// Oasis Protocol Foundation Localnet parameters.
+		// See https://docs.oasis.io/build/tools/localnet.
+		"localnet": {
+			ChainContext: "0000000000000000000000000000000000000000000000000000000000000000",
+			RPC:          "localhost:8544",
+			Denomination: DenominationInfo{
+				Symbol:   symbolTEST,
+				Decimals: 9,
+			},
+			ParaTimes: ParaTimes{
+				Default: paratimeSapphire,
+				All: map[string]*ParaTime{
+					// Emerald on Localnet.
+					paratimeEmerald: {
+						ID: "8000000000000000000000000000000000000000000000000000000000000000",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   symbolTEST,
+								Decimals: 18,
+							},
+						},
+						ConsensusDenomination: NativeDenominationKey,
+					},
+
+					// Sapphire on Localnet.
+					paratimeSapphire: {
+						ID: "8000000000000000000000000000000000000000000000000000000000000000",
+						Denominations: map[string]*DenominationInfo{
+							NativeDenominationKey: {
+								Symbol:   symbolTEST,
+								Decimals: 18,
+							},
+						},
+						ConsensusDenomination: NativeDenominationKey,
+					},
+				},
+			},
+		},
 	},
 }
