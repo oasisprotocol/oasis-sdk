@@ -1,4 +1,6 @@
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
+
+use tokio::sync::OnceCell;
 
 use oasis_runtime_sdk::core::common::{logger::get_logger, process};
 use rofl_app_core::prelude::*;
@@ -7,12 +9,25 @@ use rofl_appd::services;
 /// UNIX socket address where the REST API server will listen on.
 const ROFL_APPD_ADDRESS: &str = "unix:/rofls/rofl-appd.sock";
 
-struct AppdLocalnetApp;
+struct AppdLocalnetApp {
+    metadata: OnceCell<Arc<dyn services::metadata::MetadataService>>,
+}
 
 #[async_trait]
 impl App for AppdLocalnetApp {
     /// Application version.
     const VERSION: Version = sdk::version_from_cargo!();
+
+    async fn get_metadata(
+        self: Arc<Self>,
+        _env: Environment<Self>,
+    ) -> Result<BTreeMap<String, String>> {
+        let Some(metadata) = self.metadata.get() else {
+            return Ok(BTreeMap::new());
+        };
+
+        Ok(metadata.get_registration_metadata().await?)
+    }
 
     async fn post_registration_init(self: Arc<Self>, env: Environment<Self>) {
         let logger = get_logger("post_registration_init");
@@ -32,6 +47,10 @@ impl App for AppdLocalnetApp {
                 process::abort();
             }
         };
+        if self.metadata.set(metadata.clone()).is_err() {
+            slog::error!(logger, "metadata service was already set");
+            process::abort();
+        }
 
         // Start the REST API server.
         slog::info!(logger, "starting the API server");
@@ -50,5 +69,8 @@ impl App for AppdLocalnetApp {
 }
 
 fn main() {
-    AppdLocalnetApp.start();
+    AppdLocalnetApp {
+        metadata: OnceCell::new(),
+    }
+    .start();
 }

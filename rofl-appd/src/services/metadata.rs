@@ -39,6 +39,16 @@ pub trait MetadataService: Send + Sync {
 
     /// Get all user-set metadata key-value pairs.
     async fn get(&self) -> Result<BTreeMap<String, String>, Error>;
+
+    /// Get user-set metadata with namespaced keys for on-chain registration.
+    async fn get_registration_metadata(&self) -> Result<BTreeMap<String, String>, Error> {
+        Ok(self
+            .get()
+            .await?
+            .into_iter()
+            .map(|(key, value)| (format!("{METADATA_NAMESPACE}.{key}"), value))
+            .collect())
+    }
 }
 
 /// Error returned by the metadata service.

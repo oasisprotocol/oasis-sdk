@@ -67,15 +67,7 @@ impl App for ContainersApp {
 
         // Get user-provided metadata from the service.
         if let Some(metadata_service) = self.metadata.get() {
-            metadata_service.get().await.map(|m| {
-                // Namespace user-provided metadata.
-                meta.extend(m.into_iter().map(|(k, v)| {
-                    (
-                        format!("{}.{}", services::metadata::METADATA_NAMESPACE, k),
-                        v,
-                    )
-                }));
-            })?;
+            meta.extend(metadata_service.get_registration_metadata().await?);
         }
 
         Ok(meta)
