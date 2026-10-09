@@ -31,3 +31,4 @@ tokio = { version = "1.38", features = [
     "macros",
 ] }
 yaml-rust2 = "0.10.3"
+zeroize = "1.9.1"
