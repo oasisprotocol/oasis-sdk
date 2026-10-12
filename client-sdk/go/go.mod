@@ -1,6 +1,6 @@
 module github.com/oasisprotocol/oasis-sdk/client-sdk/go
 
-go 1.27.1
+go 1.27.2
 
 // Should be synced with Oasis Core as replace directives are not propagated.
 replace (
