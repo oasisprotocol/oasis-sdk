@@ -83,7 +83,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v2.13
+          version: v2.14
           working-directory: client-sdk/go
 
   lint-go-tests-e2e:
@@ -112,7 +112,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v2.13
+          version: v2.14
           working-directory: tests/e2e
 
   lint-go-reflect:
@@ -131,7 +131,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           # NOTE: The version must be specified without the patch version.
-          version: v2.13
+          version: v2.14
           working-directory: client-sdk/ts-web/core/reflect-go
 
   lint-ts-web:
