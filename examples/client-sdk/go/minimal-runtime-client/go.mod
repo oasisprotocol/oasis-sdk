@@ -2,8 +2,18 @@ module example.com/oasisprotocol/minimal-runtime-client
 
 go 1.27.2
 
+replace (
+	// Should be synced with Oasis Core as replace directives are not propagated.
+	github.com/cometbft/cometbft => github.com/oasisprotocol/cometbft v0.37.18-oasis3
+	github.com/powerman/rpc-codec => github.com/oasisprotocol/rpc-codec v0.0.0-20260821192426-8771fbee5115
+	github.com/spf13/cast => github.com/oasisprotocol/cast v0.0.0-20220606122631-eba453e69641
+	github.com/spf13/viper => github.com/spf13/viper v1.17.0
+	golang.org/x/crypto/curve25519 => github.com/oasisprotocol/curve25519-voi/primitives/x25519 v0.0.0-20251114093237-2ab5a27a1729
+	golang.org/x/crypto/ed25519 => github.com/oasisprotocol/curve25519-voi/primitives/ed25519 v0.0.0-20251114093237-2ab5a27a1729
+)
+
 require (
-	github.com/oasisprotocol/oasis-core/go v0.2602.0
+	github.com/oasisprotocol/oasis-core/go v0.2603.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.16.1
 	google.golang.org/grpc v1.83.2
 )
@@ -87,12 +97,12 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/exp v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	google.golang.org/grpc/security/advancedtls v0.0.0-20221004221323-12db695f1648 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
