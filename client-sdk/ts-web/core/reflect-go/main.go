@@ -208,13 +208,15 @@ func getMethodLookupVisitEmbedded(methodsByName map[string]*ast.Field, elem *ast
 		}
 		getMethodLookupVisitInterface(methodsByName, ts, info, typeSpecs)
 	case *ast.SelectorExpr:
-		typ := info.TypeOf(t)
-		named, ok := typ.(*types.Named)
+		pkgIdent, ok := t.X.(*ast.Ident)
 		if !ok {
-			panic(fmt.Sprintf("expected named type for %v", t))
+			panic(fmt.Sprintf("unexpected selector: %v", t))
 		}
-		importedPkg := named.Obj().Pkg()
-		pkgPath := importedPkg.Path()
+		pkgObj, ok := info.Uses[pkgIdent].(*types.PkgName)
+		if !ok {
+			panic(fmt.Sprintf("cannot resolve imported package %s", pkgIdent.Name))
+		}
+		pkgPath := pkgObj.Imported().Path()
 		parseDocs(pkgPath)
 		dt := packageTypes[pkgPath][t.Sel.Name]
 		info = packageInfos[pkgPath]
