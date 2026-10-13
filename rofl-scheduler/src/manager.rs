@@ -1584,7 +1584,7 @@ impl Manager {
                     .env
                     .host()
                     .bundle_manager()
-                    .bundle_write(bundle_manager::BundleWriteRequest {
+                    .bundle_temporary_write(bundle_manager::BundleTemporaryWriteRequest {
                         temporary_name: tmp_name.clone(), // This is suboptimal.
                         create,
                         data: buffer.to_vec(), // This is suboptimal.
