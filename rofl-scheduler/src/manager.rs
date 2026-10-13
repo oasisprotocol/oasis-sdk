@@ -1621,6 +1621,15 @@ impl Manager {
             layer_pull_task.abort();
             bundle_stream_task.abort();
 
+            let _ = self
+                .env
+                .host()
+                .bundle_manager()
+                .bundle_temporary_delete(bundle_manager::BundleTemporaryDeleteRequest {
+                    temporary_name: tmp_name.clone(), // This is suboptimal.
+                })
+                .await; // Ignore error.
+
             return Err(e);
         }
 
