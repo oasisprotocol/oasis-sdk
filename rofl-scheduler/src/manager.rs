@@ -9,6 +9,7 @@ use anyhow::{anyhow, Context as _};
 use backoff::backoff::Backoff;
 use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::BufMut;
+use cbor::Encode;
 use futures_util::StreamExt;
 use oasis_runtime_sdk::{
     core::{
@@ -1431,7 +1432,7 @@ impl Manager {
         // Start task to pull images and generate an ORC archive.
         let mgr = self.clone();
         let instance_id = instance.id;
-        let layer_pull_task = tokio::spawn(async move {
+        let mut layer_pull_task = tokio::spawn(async move {
             let mut zip_writer = async_zip::base::write::ZipFileWriter::with_tokio(writer);
             let mut total_storage_size = 0u64;
             let mut total_orc_size = 0usize;
@@ -1550,7 +1551,7 @@ impl Manager {
         const CHUNK_SIZE: usize = 128 * 1024;
         let tmp_name = temporary_name.clone();
         let mgr = self.clone();
-        let bundle_stream_task = tokio::spawn(async move {
+        let mut bundle_stream_task = tokio::spawn(async move {
             let mut create = true;
             let mut buffer = bytes::BytesMut::with_capacity(CHUNK_SIZE);
             let mut total_bundle_size = 0usize;
@@ -1598,16 +1599,30 @@ impl Manager {
         });
 
         // Wait for completion.
-        async fn flatten(handle: tokio::task::JoinHandle<Result<()>>) -> Result<()> {
+        async fn flatten(handle: &mut tokio::task::JoinHandle<Result<()>>) -> Result<()> {
             handle.await?
         }
 
-        time::timeout(
+        let result = time::timeout(
             time::Duration::from_secs(self.cfg.deploy_pull_timeout),
-            async move { tokio::try_join!(flatten(layer_pull_task), flatten(bundle_stream_task)) },
+            async {
+                tokio::try_join!(
+                    flatten(&mut layer_pull_task),
+                    flatten(&mut bundle_stream_task),
+                )
+            },
         )
         .await
-        .map_err(|_| anyhow!("timed out while pulling bundle"))??;
+        .map_err(|_| anyhow!("timed out while pulling bundle"))
+        .and_then(|r| r.map_err(|e| anyhow!("failed pulling bundle: {e}")));
+
+        // Cancel tasks on timeout or task error.
+        if let Err(e) = result {
+            layer_pull_task.abort();
+            bundle_stream_task.abort();
+
+            return Err(e);
+        }
 
         Ok(DeploymentInfo {
             temporary_name,
