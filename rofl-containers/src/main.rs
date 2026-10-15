@@ -17,9 +17,9 @@ use rofl_app_core::prelude::*;
 use rofl_appd::services;
 
 mod containers;
+mod metadata;
 mod proxy;
 mod reaper;
-mod secrets;
 mod storage;
 mod utils;
 
@@ -139,6 +139,16 @@ impl App for ContainersApp {
             process::abort();
         }
 
+        // Initialize environment from app metadata.
+        slog::info!(logger, "initializing environment from app metadata");
+        let mut initial = match metadata::start(env.clone(), kms.clone()).await {
+            Ok(initial) => initial,
+            Err(err) => {
+                slog::error!(logger, "failed to initialize environment from app metadata"; "err" => ?err);
+                process::abort();
+            }
+        };
+
         // Initialize the proxy when enabled and available.
         match env::var(PROXY_DISABLED_ENV_NAME) {
             Ok(value) if ["1", "yes"].contains(&value.as_str()) => {
@@ -146,36 +156,21 @@ impl App for ContainersApp {
             }
             _ => {
                 slog::info!(logger, "starting proxy");
-                proxy::start(env.clone(), kms.clone()).await;
+
+                match proxy::start(env.clone(), kms.clone()).await {
+                    Ok(state) => {
+                        initial.environment.extend(state.extra_environment);
+                    }
+                    Err(err) => {
+                        slog::error!(logger, "failed to start proxy"; "err" => ?err);
+                    }
+                }
             }
-        }
-
-        // Fetch app config.
-        let app_cfg = match env.client().app_cfg().await {
-            Ok(cfg) => cfg,
-            Err(err) => {
-                slog::error!(logger, "failed to fetch app config"; "err" => ?err);
-                process::abort();
-            }
-        };
-
-        // Initialize environment variables from deployment metadata (env.* keys).
-        slog::info!(logger, "initializing container environment variables");
-        for (name, value) in containers::env_from_metadata(&app_cfg.metadata) {
-            containers::env().set(&name, &value);
-            slog::info!(logger, "provisioned environment variable"; "name" => name);
-        }
-
-        // Initialize secrets (runs after env vars so secrets take precedence on collision).
-        slog::info!(logger, "initializing container secrets");
-        if let Err(err) = secrets::init(&app_cfg.secrets, kms.clone()).await {
-            slog::error!(logger, "failed to initialize container secrets"; "err" => ?err);
-            process::abort();
         }
 
         // Start containers.
         slog::info!(logger, "starting containers");
-        if let Err(err) = containers::start().await {
+        if let Err(err) = containers::start(initial).await {
             slog::error!(logger, "failed to start containers"; "err" => ?err);
             process::abort();
         }

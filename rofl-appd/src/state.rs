@@ -1,4 +1,4 @@
-use oasis_runtime_sdk::{crypto::signature::Signer, types::transaction};
+use oasis_runtime_sdk::{crypto::signature::Signer, modules, types::transaction};
 use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 
 /// ROFL app environment.
@@ -7,6 +7,9 @@ use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 pub trait Env: Send + Sync {
     /// ROFL app identifier of the running application.
     fn app_id(&self) -> AppId;
+
+    /// ROFL app configuration.
+    async fn app_cfg(&self) -> Result<modules::rofl::types::AppConfig>;
 
     /// Transaction signer.
     fn signer(&self) -> Arc<dyn Signer>;
@@ -37,6 +40,10 @@ impl<A: App> EnvImpl<A> {
 impl<A: App> Env for EnvImpl<A> {
     fn app_id(&self) -> AppId {
         A::id()
+    }
+
+    async fn app_cfg(&self) -> Result<modules::rofl::types::AppConfig> {
+        self.env.client().app_cfg().await
     }
 
     fn signer(&self) -> Arc<dyn Signer> {
