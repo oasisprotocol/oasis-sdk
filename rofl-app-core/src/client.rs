@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -23,6 +23,7 @@ use oasis_runtime_sdk::{
         enclave_rpc::{client::RpcClient, session},
         host::{self, Host as _},
         storage::mkvs,
+        types,
     },
     crypto::signature::{PublicKey, Signer},
     enclave_rpc::{QueryRequest, METHOD_QUERY},
@@ -406,6 +407,208 @@ enum Cmd {
     ),
 }
 
+impl Cmd {
+    /// Public keys of the command's signers.
+    fn public_keys(&self) -> Vec<PublicKey> {
+        match self {
+            Cmd::SubmitTx(signers, ..) => {
+                signers.iter().map(|signer| signer.public_key()).collect()
+            }
+        }
+    }
+}
+
+/// Notification from a submission task to the submission manager task.
+enum Notify {
+    /// The first submission of a session read the signer's nonce from chain state.
+    Seeded(PublicKey, u64),
+    /// A submission takes the next nonce of its signer's session.
+    TakeNonce(PublicKey, oneshot::Sender<u64>),
+    /// A submission has finished.
+    Finished(Vec<PublicKey>, Outcome),
+}
+
+/// Where a submission takes its nonces from.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum NonceSource {
+    /// Read the nonces of all signers from chain state.
+    Chain,
+    /// Read the single signer's nonce from chain state and start its session with it.
+    Seed,
+    /// Take the single signer's nonce from its session.
+    Session,
+}
+
+/// How a submission ended, as far as nonces are concerned.
+#[derive(Clone)]
+enum Outcome {
+    /// The submission failed before taking a nonce.
+    Unprepared,
+    /// The transaction landed, or it will not land and its nonces came from chain state.
+    Done,
+    /// The single signer's nonce is unused, as the transaction never reached the node or the node
+    /// rejected it in its check.
+    Unused(u64),
+    /// The transaction may still land with these nonces, one per signer.
+    Unknown(Vec<u64>),
+}
+
+/// Nonce session of a signer with running submissions.
+#[derive(Default)]
+struct Session {
+    /// Number of running submissions.
+    running: usize,
+    /// Whether a submission has yet to take its nonce. Later ones wait, so nonces are taken in
+    /// arrival order.
+    preparing: bool,
+    /// Next fresh nonce. Unset until the first submission has read it from chain state, and while
+    /// earlier transactions in doubt can still be pending.
+    next: Option<u64>,
+    /// Unused nonces, taken before fresh ones.
+    unused: BTreeSet<u64>,
+}
+
+/// Nonce sessions of all signers with running submissions.
+///
+/// A session starts when an idle signer reads its nonce from chain state and ends when the signer
+/// has nothing running. Within a session, nonces are handed out without waiting for inclusion. Once
+/// a transaction may or may not land, nothing new starts until the session ends, so the next
+/// submission reads the nonce from chain state again. Until the chain nonce passes the nonces of
+/// such transactions, sessions of the signer run a single submission, as those transactions can
+/// still be pending.
+struct Sessions {
+    max_in_flight: usize,
+    sessions: HashMap<PublicKey, Session>,
+    /// Per signer, one above the highest nonce of its transactions that may still land.
+    in_doubt_until: HashMap<PublicKey, u64>,
+}
+
+impl Sessions {
+    fn new(max_in_flight: usize) -> Self {
+        Self {
+            max_in_flight,
+            sessions: HashMap::new(),
+            in_doubt_until: HashMap::new(),
+        }
+    }
+
+    /// Start queued submissions in arrival order. A waiting submission holds back later ones that
+    /// share a signer with it. Returns the waiting submissions and the started ones.
+    fn start_ready<T>(
+        &mut self,
+        queue: Vec<T>,
+        public_keys: impl Fn(&T) -> Vec<PublicKey>,
+    ) -> (Vec<T>, Vec<(T, NonceSource)>) {
+        let mut waiting = Vec::new();
+        let mut started = Vec::new();
+        let mut held = HashSet::new();
+        for item in queue {
+            let pks = public_keys(&item);
+            if pks.iter().all(|pk| !held.contains(pk)) {
+                if let Some(source) = self.start(&pks) {
+                    started.push((item, source));
+                    continue;
+                }
+            }
+            held.extend(pks);
+            waiting.push(item);
+        }
+        (waiting, started)
+    }
+
+    /// Start a submission if its signers' sessions allow it.
+    fn start(&mut self, pks: &[PublicKey]) -> Option<NonceSource> {
+        if let [pk] = pks {
+            let Some(session) = self.sessions.get_mut(pk) else {
+                self.sessions.insert(
+                    pk.clone(),
+                    Session {
+                        running: 1,
+                        ..Default::default()
+                    },
+                );
+                return Some(NonceSource::Seed);
+            };
+            if session.preparing
+                || session.next.is_none()
+                || session.running >= self.max_in_flight
+                || self.in_doubt_until.contains_key(pk)
+            {
+                return None;
+            }
+            session.running += 1;
+            session.preparing = true;
+            return Some(NonceSource::Session);
+        }
+
+        // Submissions with multiple signers run alone.
+        if pks.iter().any(|pk| self.sessions.contains_key(pk)) {
+            return None;
+        }
+        for pk in pks {
+            self.sessions.entry(pk.clone()).or_default().running += 1;
+        }
+        Some(NonceSource::Chain)
+    }
+
+    /// Record the nonce that the first submission of a session read from chain state.
+    fn seeded(&mut self, pk: &PublicKey, nonce: u64) {
+        if matches!(self.in_doubt_until.get(pk), Some(&until) if nonce < until) {
+            return;
+        }
+        self.in_doubt_until.remove(pk);
+        if let Some(session) = self.sessions.get_mut(pk) {
+            session.next = nonce.checked_add(1);
+        }
+    }
+
+    /// Take the next nonce of a seeded session.
+    fn take_nonce(&mut self, pk: &PublicKey) -> Option<u64> {
+        let session = self.sessions.get_mut(pk)?;
+        session.preparing = false;
+        if let Some(nonce) = session.unused.pop_first() {
+            return Some(nonce);
+        }
+        let nonce = session.next?;
+        session.next = nonce.checked_add(1);
+        Some(nonce)
+    }
+
+    /// Record a finished submission.
+    fn finished(&mut self, pks: &[PublicKey], outcome: Outcome) {
+        for (i, pk) in pks.iter().enumerate() {
+            let Some(session) = self.sessions.get_mut(pk) else {
+                continue;
+            };
+            session.running -= 1;
+            match &outcome {
+                Outcome::Unprepared => session.preparing = false,
+                Outcome::Done => {}
+                Outcome::Unused(nonce) => {
+                    session.unused.insert(*nonce);
+                }
+                Outcome::Unknown(nonces) => {
+                    let until = self.in_doubt_until.entry(pk.clone()).or_default();
+                    *until = (*until).max(nonces[i].saturating_add(1));
+                }
+            }
+            if session.running == 0 {
+                self.sessions.remove(pk);
+            }
+        }
+    }
+}
+
+/// Whether the node rejected a transaction in its check for a reason other than its nonce. Such a
+/// transaction is neither pooled nor gossiped.
+fn is_check_rejection(err: &types::Error) -> bool {
+    // Oasis Core reports a failed check as runtime/client error 5 with the runtime error in the
+    // message, and the runtime reports an invalid nonce as core error 4.
+    err.module == "runtime/client"
+        && err.code == 5
+        && !err.message.contains("module: core code: 4 message:")
+}
+
 /// Transaction submission manager for avoiding nonce conflicts.
 struct SubmissionManager<A: App> {
     imp: Option<SubmissionManagerImpl<A>>,
@@ -467,66 +670,71 @@ where
 
     /// Run the submission manager task.
     async fn run(mut self) {
-        let (notify_tx, mut notify_rx) = mpsc::channel::<HashSet<PublicKey>>(CMDQ_BACKLOG);
+        let (notify_tx, mut notify_rx) = mpsc::channel::<Notify>(CMDQ_BACKLOG);
         let mut queue: Vec<Cmd> = Vec::new();
-        let mut pending: HashSet<PublicKey> = HashSet::new();
+        let mut sessions = Sessions::new(A::max_in_flight_txs_per_signer());
 
         loop {
             tokio::select! {
                 // Process incoming commands.
                 Some(cmd) = self.cmdq_rx.recv() => queue.push(cmd),
 
-                // Process incoming completion notifications.
-                Some(signers) = notify_rx.recv() => {
-                    for pk in signers {
-                        pending.remove(&pk);
+                // Process incoming notifications.
+                Some(notify) = notify_rx.recv() => match notify {
+                    Notify::Seeded(pk, nonce) => sessions.seeded(&pk, nonce),
+                    Notify::TakeNonce(pk, ch) => {
+                        if let Some(nonce) = sessions.take_nonce(&pk) {
+                            let _ = ch.send(nonce);
+                        }
                     }
+                    Notify::Finished(pks, outcome) => sessions.finished(&pks, outcome),
                 },
 
                 else => break,
             }
 
-            // Check if there is anything in the queue that can be executed without conflicts.
-            let mut new_queue = Vec::with_capacity(queue.len());
-            for cmd in queue {
-                match cmd {
-                    Cmd::SubmitTx(signers, tx, opts, ch) => {
-                        // Check if transaction can be executed (no conflicts with in-flight txs).
-                        let signer_set =
-                            HashSet::from_iter(signers.iter().map(|signer| signer.public_key()));
-                        if !signer_set.is_disjoint(&pending) {
-                            // Defer any non-executable commands.
-                            new_queue.push(Cmd::SubmitTx(signers, tx, opts, ch));
-                            continue;
-                        }
-                        // Include all signers in the pending set.
-                        pending.extend(signer_set.iter().cloned());
+            // Start everything in the queue that the signers' sessions allow.
+            let (waiting, started) = sessions.start_ready(queue, Cmd::public_keys);
+            queue = waiting;
+            for (Cmd::SubmitTx(signers, tx, opts, ch), source) in started {
+                // Execute in a separate task.
+                let client = self.client.clone();
+                let notify_tx = notify_tx.clone();
 
-                        // Execute in a separate task.
-                        let client = self.client.clone();
-                        let notify_tx = notify_tx.clone();
+                tokio::spawn(async move {
+                    let pks = signers.iter().map(|signer| signer.public_key()).collect();
+                    let mut outcome = Outcome::Unprepared;
+                    let result = Self::multi_sign_and_submit_tx(
+                        client,
+                        &signers,
+                        tx,
+                        opts,
+                        source,
+                        &notify_tx,
+                        &mut outcome,
+                    )
+                    .await;
 
-                        tokio::spawn(async move {
-                            let result =
-                                Self::multi_sign_and_submit_tx(client, &signers, tx, opts).await;
-                            let _ = ch.send(result);
-
-                            // Notify the submission manager task that submission is done.
-                            let _ = notify_tx.send(signer_set).await;
-                        });
-                    }
-                }
+                    // Notify the submission manager task before replying, so that a follow-up
+                    // submission does not wait for this one.
+                    let _ = notify_tx.send(Notify::Finished(pks, outcome)).await;
+                    let _ = ch.send(result);
+                });
             }
-            queue = new_queue;
         }
     }
 
     /// Sign a given transaction, submit it and wait for block inclusion.
+    ///
+    /// Records in `outcome` whether the transaction may still land.
     async fn multi_sign_and_submit_tx(
         client: ClientImpl<A>,
         signers: &[Arc<dyn Signer>],
         mut tx: transaction::Transaction,
         opts: SubmitTxOpts,
+        source: NonceSource,
+        notify_tx: &mpsc::Sender<Notify>,
+        outcome: &mut Outcome,
     ) -> Result<transaction::CallResult> {
         if signers.is_empty() {
             return Err(anyhow!("no signers specified"));
@@ -544,16 +752,13 @@ where
 
         let round = client.latest_round().await?;
 
-        // Resolve account nonces.
-        for (address, sigspec) in &addresses {
-            let nonce = client.account_nonce(round, *address).await?;
-
-            tx.append_auth_signature(sigspec.clone(), nonce);
-        }
-
-        // Perform gas estimation after all signer infos have been added as otherwise we may
-        // underestimate the amount of gas needed.
+        // Perform gas estimation with all signer infos added as otherwise we may underestimate the
+        // amount of gas needed. Nonces are resolved last, so use placeholders of maximum size.
         if tx.fee_gas() == 0 {
+            let mut estimate_tx = tx.clone();
+            for (_, sigspec) in &addresses {
+                estimate_tx.append_auth_signature(sigspec.clone(), u64::MAX);
+            }
             let signer = &signers[0]; // Checked to have at least one signer above.
             let gas = client
                 .estimate_gas(EstimateGasQuery {
@@ -564,7 +769,7 @@ where
                     } else {
                         Some(CallerAddress::Address(addresses[0].0)) // Checked above.
                     },
-                    tx: tx.clone(),
+                    tx: estimate_tx,
                     propagate_failures: false,
                 })
                 .await?;
@@ -639,6 +844,39 @@ where
             tx.set_fee_amount(token::BaseUnits::native(fee));
         }
 
+        // Resolve account nonces last, so that a failure above leaves no nonce unused.
+        let nonce = match source {
+            NonceSource::Chain => None,
+            NonceSource::Seed => {
+                let nonce = client.account_nonce(round, addresses[0].0).await?;
+                let _ = notify_tx
+                    .send(Notify::Seeded(signers[0].public_key(), nonce))
+                    .await;
+                Some(nonce)
+            }
+            NonceSource::Session => {
+                let (ch, rx) = oneshot::channel();
+                notify_tx
+                    .send(Notify::TakeNonce(signers[0].public_key(), ch))
+                    .await?;
+                Some(rx.await?)
+            }
+        };
+        let mut nonces = Vec::with_capacity(addresses.len());
+        for (address, sigspec) in &addresses {
+            let nonce = match nonce {
+                Some(nonce) => nonce,
+                None => client.account_nonce(round, *address).await?,
+            };
+
+            tx.append_auth_signature(sigspec.clone(), nonce);
+            nonces.push(nonce);
+        }
+
+        // The nonce stays unused until the transaction reaches the node.
+        let unused = nonce.map_or(Outcome::Done, Outcome::Unused);
+        *outcome = unused.clone();
+
         // Sign the transaction.
         let mut tx = tx.prepare_for_signing();
         for signer in signers {
@@ -649,6 +887,7 @@ where
         let tx_hash = Hash::digest_bytes(&raw_tx);
 
         // Submit the transaction.
+        *outcome = Outcome::Unknown(nonces);
         let submit_tx_task = client.state.host.submit_tx(
             raw_tx,
             host::SubmitTxOpts {
@@ -661,6 +900,11 @@ where
         } else {
             submit_tx_task.await
         };
+        if let Err(host::Error::Host(err)) = &result {
+            if is_check_rejection(err) {
+                *outcome = unused;
+            }
+        }
         let result = result?.ok_or(anyhow!("missing result"))?;
 
         if opts.verify {
@@ -693,6 +937,7 @@ where
                 return Err(anyhow!("failed to verify transaction result"));
             }
         }
+        *outcome = Outcome::Done;
 
         // Update latest known round.
         client
@@ -720,5 +965,419 @@ where
             }
             _ => Ok(result),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use oasis_runtime_sdk::testing::keys;
+
+    use super::*;
+
+    #[test]
+    fn test_max_one_reads_every_nonce_from_chain() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(1);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        assert_eq!(sessions.start(alice), None);
+        sessions.seeded(&alice[0], 5);
+        assert_eq!(sessions.start(alice), None);
+        sessions.finished(alice, Outcome::Done);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+    }
+
+    #[test]
+    fn test_session_window() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        // Nothing else starts until the first submission has read the nonce.
+        assert_eq!(sessions.start(alice), None);
+        sessions.seeded(&alice[0], 5);
+        for nonce in 6..15 {
+            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
+        }
+        // The 11th waits for one of the 10 to finish.
+        assert_eq!(sessions.start(alice), None);
+        sessions.finished(alice, Outcome::Done);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(15));
+    }
+
+    #[test]
+    fn test_unused_nonce_is_taken_first() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 5);
+        for nonce in 6..9 {
+            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
+        }
+        sessions.finished(alice, Outcome::Unused(6));
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(9));
+    }
+
+    #[test]
+    fn test_unknown_outcome_drains_session() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 5);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        sessions.finished(alice, Outcome::Unknown(vec![6]));
+
+        // Nothing new starts, but a running submission still gets its nonce.
+        assert_eq!(sessions.start(alice), None);
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(7));
+        sessions.finished(alice, Outcome::Unused(7));
+        assert_eq!(sessions.start(alice), None);
+
+        // Once nothing runs, the next submission reads the nonce from chain state.
+        sessions.finished(alice, Outcome::Done);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+
+        // It runs alone until the chain nonce passes the nonce in doubt.
+        sessions.seeded(&alice[0], 6);
+        assert_eq!(sessions.start(alice), None);
+        sessions.finished(alice, Outcome::Done);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 7);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+    }
+
+    #[test]
+    fn test_doubt_mark_keeps_highest_nonce() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 5);
+        for nonce in 6..8 {
+            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
+        }
+        // A lower nonce in doubt does not lower the mark.
+        sessions.finished(alice, Outcome::Unknown(vec![7]));
+        sessions.finished(alice, Outcome::Unknown(vec![6]));
+        sessions.finished(alice, Outcome::Done);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 7);
+        assert_eq!(sessions.start(alice), None);
+    }
+
+    #[test]
+    fn test_unknown_registration_marks_each_signer() {
+        let (rak, app) = (keys::alice::pk(), keys::bob::pk());
+        let (registration, app_only) = ([rak.clone(), app.clone()], [app.clone()]);
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(&registration), Some(NonceSource::Chain));
+        sessions.finished(&registration, Outcome::Unknown(vec![3, 5]));
+
+        // Each signer runs alone until the chain nonce passes its nonce in doubt.
+        for (pks, nonce) in [([rak.clone()], 3), ([app.clone()], 5)] {
+            assert_eq!(sessions.start(&pks), Some(NonceSource::Seed));
+            sessions.seeded(&pks[0], nonce);
+            assert_eq!(sessions.start(&pks), None);
+            sessions.finished(&pks, Outcome::Done);
+        }
+
+        // Registration does not wait for the doubt to clear.
+        assert_eq!(sessions.start(&registration), Some(NonceSource::Chain));
+        sessions.finished(&registration, Outcome::Done);
+
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Seed));
+        sessions.seeded(&app, 6);
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session));
+    }
+
+    #[test]
+    fn test_nonces_are_taken_in_arrival_order() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.seeded(&alice[0], 5);
+        let (waiting, started) = sessions.start_ready(vec!["first", "second"], |_| alice.to_vec());
+        assert_eq!(started, vec![("first", NonceSource::Session)]);
+        assert_eq!(waiting, vec!["second"]);
+
+        // The second starts once the first has taken its nonce.
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
+        let (waiting, started) = sessions.start_ready(waiting, |_| alice.to_vec());
+        assert_eq!(started, vec![("second", NonceSource::Session)]);
+        assert!(waiting.is_empty());
+
+        // A submission that fails before taking its nonce lets the next one start.
+        sessions.finished(alice, Outcome::Unprepared);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        assert_eq!(sessions.take_nonce(&alice[0]), Some(7));
+    }
+
+    #[test]
+    fn test_failed_seed_ends_session() {
+        let alice = &[keys::alice::pk()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        sessions.finished(alice, Outcome::Unprepared);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+    }
+
+    #[test]
+    fn test_multiple_signers_run_alone() {
+        let (alice, bob) = (&[keys::alice::pk()], &[keys::bob::pk()]);
+        let both = &[alice[0].clone(), bob[0].clone()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(both), Some(NonceSource::Chain));
+        assert_eq!(sessions.start(alice), None);
+        assert_eq!(sessions.start(bob), None);
+        sessions.finished(both, Outcome::Done);
+
+        assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
+        assert_eq!(sessions.start(both), None);
+        assert_eq!(sessions.start(bob), Some(NonceSource::Seed));
+    }
+
+    #[test]
+    fn test_waiting_submission_holds_back_later_ones() {
+        // Registration (RAK and app key) while the app key is busy.
+        let (rak, app, other) = (keys::alice::pk(), keys::bob::pk(), keys::charlie::pk());
+        let app_only = [app.clone()];
+        let mut sessions = Sessions::new(10);
+
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Seed));
+        sessions.seeded(&app, 0);
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session));
+
+        let queue = vec![
+            vec![rak.clone(), app.clone()],
+            vec![app.clone()],
+            vec![rak.clone()],
+            vec![other.clone()],
+        ];
+        let (waiting, started) = sessions.start_ready(queue, Vec::clone);
+        assert_eq!(started, vec![(vec![other.clone()], NonceSource::Seed)]);
+        assert_eq!(
+            waiting,
+            vec![
+                vec![rak.clone(), app.clone()],
+                vec![app.clone()],
+                vec![rak.clone()]
+            ]
+        );
+
+        // Registration runs once the app key's submissions finish.
+        sessions.finished(&app_only, Outcome::Done);
+        sessions.finished(&app_only, Outcome::Done);
+        let (waiting, started) = sessions.start_ready(waiting, Vec::clone);
+        assert_eq!(
+            started,
+            vec![(vec![rak.clone(), app.clone()], NonceSource::Chain)]
+        );
+        assert_eq!(waiting, vec![vec![app.clone()], vec![rak.clone()]]);
+    }
+
+    #[test]
+    fn test_is_check_rejection() {
+        let err = |module: &str, code, message: &str| types::Error {
+            module: module.to_string(),
+            code,
+            message: message.to_string(),
+        };
+
+        assert!(is_check_rejection(&err(
+            "runtime/client",
+            5,
+            "client: transaction check failed: runtime error: module: evm code: 8 message: reverted: AAAA",
+        )));
+        assert!(is_check_rejection(&err(
+            "runtime/client",
+            5,
+            "client: transaction check failed: runtime error: module: core code: 5 message: insufficient balance to pay fees",
+        )));
+        assert!(!is_check_rejection(&err(
+            "runtime/client",
+            5,
+            "client: transaction check failed: runtime error: module: core code: 4 message: invalid nonce",
+        )));
+        assert!(!is_check_rejection(&err(
+            "runtime/client",
+            4,
+            "client: not finished initial sync",
+        )));
+        assert!(!is_check_rejection(&err("", 1, "duplicate transaction")));
+    }
+
+    /// Deterministic random number generator for the model test.
+    struct Rng(u64);
+
+    impl Rng {
+        fn below(&mut self, n: u64) -> u64 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            self.0 % n
+        }
+    }
+
+    #[test]
+    fn test_model() {
+        const MAX_IN_FLIGHT: u64 = 10;
+        const MAX_FUTURE_DELTA: u64 = 9;
+        const ARRIVAL_STEPS: usize = 100_000;
+
+        enum State {
+            Preparing(NonceSource),
+            Submitted(u64),
+        }
+
+        let (app, rak) = (keys::alice::pk(), keys::bob::pk());
+        let mut rng = Rng(2551);
+        let mut sessions = Sessions::new(MAX_IN_FLIGHT as usize);
+        let mut queue: Vec<Vec<PublicKey>> = Vec::new();
+        let mut tasks: BTreeMap<usize, (Vec<PublicKey>, State)> = BTreeMap::new();
+        let mut next_id = 0;
+        // The app key's account nonce and its pooled transactions by nonce.
+        let mut chain = 0;
+        let mut pool: BTreeMap<u64, usize> = BTreeMap::new();
+        let mut landed: HashSet<usize> = HashSet::new();
+        let (mut done, mut max_submitted) = (0, 0);
+
+        for step in 0.. {
+            if step >= ARRIVAL_STEPS && queue.is_empty() && tasks.is_empty() {
+                break;
+            }
+            assert!(step < 2 * ARRIVAL_STEPS, "submissions stalled");
+
+            match rng.below(20) {
+                0 if step < ARRIVAL_STEPS && rng.below(10) == 0 => {
+                    // A burst of submissions, where registration is signed by the RAK and the
+                    // app key.
+                    for _ in 0..=rng.below(15) {
+                        let pks = if rng.below(20) == 0 {
+                            vec![rak.clone(), app.clone()]
+                        } else {
+                            vec![app.clone()]
+                        };
+                        queue.push(pks);
+                    }
+                }
+                1..=3 => {
+                    if let Some(id) = pool.remove(&chain) {
+                        landed.insert(id);
+                        chain += 1;
+                    }
+                }
+                5 if rng.below(100) == 0 => {
+                    // The node loses a pooled transaction.
+                    let nonce = chain + rng.below(MAX_IN_FLIGHT);
+                    pool.remove(&nonce);
+                }
+                _ if !tasks.is_empty() => {
+                    let id = *tasks
+                        .keys()
+                        .nth(rng.below(tasks.len() as u64) as usize)
+                        .unwrap();
+                    let signers = tasks[&id].0.len();
+                    let outcome = match tasks[&id].1 {
+                        State::Preparing(_) if rng.below(10) == 0 => {
+                            // Preparation failed before taking a nonce.
+                            Some(Outcome::Unprepared)
+                        }
+                        State::Preparing(source) => {
+                            assert!(
+                                tasks
+                                    .range(..id)
+                                    .all(|(_, (_, state))| !matches!(state, State::Preparing(_))),
+                                "nonce taken out of arrival order"
+                            );
+                            let nonce = match source {
+                                NonceSource::Chain => chain,
+                                NonceSource::Seed => {
+                                    sessions.seeded(&app, chain);
+                                    chain
+                                }
+                                NonceSource::Session => sessions.take_nonce(&app).unwrap(),
+                            };
+                            assert!(nonce < chain + MAX_IN_FLIGHT, "nonce beyond the window");
+                            if source == NonceSource::Session {
+                                assert!(
+                                    pool.get(&nonce).is_none_or(|id| tasks.contains_key(id)),
+                                    "nonce of a transaction that can still land"
+                                );
+                            }
+                            assert!(
+                                tasks
+                                    .values()
+                                    .all(|(_, state)| !matches!(state, State::Submitted(n) if *n == nonce)),
+                                "nonce shared by running submissions"
+                            );
+                            let unused = match source {
+                                NonceSource::Chain => Outcome::Done,
+                                _ => Outcome::Unused(nonce),
+                            };
+
+                            if nonce < chain || nonce > chain + MAX_FUTURE_DELTA {
+                                // The node rejects an invalid nonce in its check.
+                                Some(Outcome::Unknown(vec![nonce; signers]))
+                            } else if rng.below(20) == 0 {
+                                // The node rejects the transaction in its check.
+                                Some(unused)
+                            } else {
+                                // A transaction with a pooled nonce is dropped as an underpriced
+                                // replacement, but reported as accepted.
+                                pool.entry(nonce).or_insert(id);
+                                tasks.get_mut(&id).unwrap().1 = State::Submitted(nonce);
+                                let submitted = tasks
+                                    .values()
+                                    .filter(|(_, state)| matches!(state, State::Submitted(_)))
+                                    .count();
+                                max_submitted = max_submitted.max(submitted);
+                                None
+                            }
+                        }
+                        State::Submitted(_) if landed.remove(&id) => {
+                            done += 1;
+                            Some(Outcome::Done)
+                        }
+                        // The submission times out.
+                        State::Submitted(nonce) if rng.below(50) == 0 => {
+                            Some(Outcome::Unknown(vec![nonce; signers]))
+                        }
+                        State::Submitted(_) => None,
+                    };
+                    if let Some(outcome) = outcome {
+                        let (pks, _) = tasks.remove(&id).unwrap();
+                        sessions.finished(&pks, outcome);
+                    }
+                }
+                _ => {}
+            }
+
+            let (waiting, started) = sessions.start_ready(std::mem::take(&mut queue), Vec::clone);
+            queue = waiting;
+            for (pks, source) in started {
+                tasks.insert(next_id, (pks, State::Preparing(source)));
+                next_id += 1;
+            }
+        }
+
+        assert!(sessions.sessions.is_empty());
+        assert_eq!(max_submitted, MAX_IN_FLIGHT as usize);
+        assert!(done > next_id / 2, "too few landed: {done} of {next_id}");
     }
 }

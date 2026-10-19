@@ -194,6 +194,11 @@ For example:
 
 [call result]: https://api.docs.oasis.io/rust/oasis_runtime_sdk/types/transaction/enum.CallResult.html
 
+Up to 10 transactions are in flight at a time, without waiting for earlier ones
+to be included. A transaction can land before one sent earlier, and its gas
+estimation does not see the effects of pending ones. When a transaction depends
+on an earlier one, send it after the earlier call succeeds.
+
 ### Replica Metadata
 
 Replica metadata allows apps to publish arbitrary key-value pairs that are

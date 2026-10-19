@@ -56,6 +56,11 @@ impl App for ContainersApp {
         .expect("Corrupted ROFL_CONSENSUS_TRUST_ROOT (must be Base64-encoded CBOR).")
     }
 
+    fn max_in_flight_txs_per_signer() -> usize {
+        // Sapphire accepts nonces up to 9 ahead of the account nonce.
+        10
+    }
+
     async fn get_metadata(
         self: Arc<Self>,
         _env: Environment<Self>,

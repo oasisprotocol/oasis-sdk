@@ -18,6 +18,11 @@ impl App for AppdLocalnetApp {
     /// Application version.
     const VERSION: Version = sdk::version_from_cargo!();
 
+    fn max_in_flight_txs_per_signer() -> usize {
+        // Sapphire accepts nonces up to 9 ahead of the account nonce.
+        10
+    }
+
     async fn get_metadata(
         self: Arc<Self>,
         _env: Environment<Self>,

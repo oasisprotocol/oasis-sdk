@@ -66,6 +66,16 @@ pub trait App: Send + Sync + 'static {
         })
     }
 
+    /// Maximum number of transactions that each signer keeps in flight.
+    ///
+    /// It must not exceed the runtime's maximum future nonce delta plus one, as the runtime
+    /// rejects nonces further ahead. The default of one waits for each transaction to be included
+    /// before submitting the next one. Above one, a transaction does not wait for earlier ones to
+    /// be included, so its gas estimation does not see their effects and it can land before them.
+    fn max_in_flight_txs_per_signer() -> usize {
+        1
+    }
+
     /// Create a new unsigned transaction.
     fn new_transaction<B>(&self, method: &str, body: B) -> transaction::Transaction
     where
