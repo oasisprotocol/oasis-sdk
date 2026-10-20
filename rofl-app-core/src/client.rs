@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -45,6 +45,9 @@ use super::{processor, App};
 
 /// Size of various command queues.
 const CMDQ_BACKLOG: usize = 16;
+
+/// Interval for checking whether a submitted transaction has been included.
+const TX_POLL_INTERVAL: Duration = Duration::from_millis(500);
 
 /// EnclaveRPC endpoint for communicating with the RONL component.
 const ENCLAVE_RPC_ENDPOINT_RONL: &str = "ronl";
@@ -274,6 +277,57 @@ where
             .max(round))
     }
 
+    /// Retrieve the output of a transaction from the given round, if it was included there.
+    async fn tx_output(&self, round: u64, tx_hash: Hash) -> Result<Option<Vec<u8>>> {
+        let io_tree = new_mkvs_tree_for_round(
+            self.state.host.clone(),
+            &self.state.consensus_verifier,
+            self.state.host.get_runtime_id(),
+            round,
+            mkvs::RootType::IO,
+        )
+        .await?;
+        // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
+        // TODO: Remove spawn once we have async MKVS.
+        tokio::task::spawn_blocking(move || {
+            let key = [b"T", tx_hash.as_ref(), &[0x02]].concat();
+            let Some(output_artifacts) = io_tree.get(&key)? else {
+                return Ok(None);
+            };
+            let output_artifacts: (Vec<u8>,) = cbor::from_slice(&output_artifacts)
+                .context("malformed output transaction artifacts")?;
+            Ok(Some(output_artifacts.0))
+        })
+        .await?
+    }
+
+    /// Wait until the transaction is included in a round after the given one.
+    async fn wait_for_tx(&self, round: u64, tx_hash: Hash) -> Result<host::TxResult> {
+        let mut checked = round;
+        // Rounds to retry, as an error does not mean that the transaction is missing.
+        let mut failed = Vec::new();
+        loop {
+            let latest = self.latest_round().await?;
+            let mut rounds = std::mem::take(&mut failed);
+            rounds.extend(checked + 1..=latest);
+            checked = latest;
+            for round in rounds {
+                match self.tx_output(round, tx_hash).await {
+                    Ok(Some(output)) => {
+                        return Ok(host::TxResult {
+                            output,
+                            round,
+                            ..Default::default()
+                        })
+                    }
+                    Ok(None) => {}
+                    Err(_) => failed.push(round),
+                }
+            }
+            tokio::time::sleep(TX_POLL_INTERVAL).await;
+        }
+    }
+
     /// Retrieve the nonce for the given account.
     async fn account_nonce(&self, round: u64, address: Address) -> Result<u64> {
         self.query(round, "accounts.Nonce", NonceQuery { address })
@@ -422,8 +476,8 @@ impl Cmd {
 enum Notify {
     /// The first submission of a session read the signer's nonce from chain state.
     Seeded(PublicKey, u64),
-    /// A submission takes the next nonce of its signer's session.
-    TakeNonce(PublicKey, oneshot::Sender<u64>),
+    /// The node accepted the transaction with the next nonce of the signer's session.
+    Accepted(PublicKey),
     /// A submission has finished.
     Finished(Vec<PublicKey>, Outcome),
 }
@@ -435,20 +489,17 @@ enum NonceSource {
     Chain,
     /// Read the single signer's nonce from chain state and start its session with it.
     Seed,
-    /// Take the single signer's nonce from its session.
-    Session,
+    /// Use this nonce from the single signer's session.
+    Session(u64),
 }
 
 /// How a submission ended, as far as nonces are concerned.
-#[derive(Clone)]
 enum Outcome {
-    /// The submission failed before taking a nonce.
-    Unprepared,
-    /// The transaction landed, or it will not land and its nonces came from chain state.
+    /// The transaction was not submitted or the node rejected it in its check, so its nonces are
+    /// unused.
+    Unused,
+    /// The transaction landed.
     Done,
-    /// The single signer's nonce is unused, as the transaction never reached the node or the node
-    /// rejected it in its check.
-    Unused(u64),
     /// The transaction may still land with these nonces, one per signer.
     Unknown(Vec<u64>),
 }
@@ -458,24 +509,22 @@ enum Outcome {
 struct Session {
     /// Number of running submissions.
     running: usize,
-    /// Whether a submission has yet to take its nonce. Later ones wait, so nonces are taken in
-    /// arrival order.
+    /// Whether a submission has yet to be accepted by the node. Later ones wait, so nonces are
+    /// used in arrival order and the nonce of a rejected transaction goes to the next one.
     preparing: bool,
-    /// Next fresh nonce. Unset until the first submission has read it from chain state, and while
-    /// earlier transactions in doubt can still be pending.
+    /// Nonce of the next transaction. Unset until the first submission has read it from chain
+    /// state, and while earlier transactions in doubt can still be pending.
     next: Option<u64>,
-    /// Unused nonces, taken before fresh ones.
-    unused: BTreeSet<u64>,
 }
 
 /// Nonce sessions of all signers with running submissions.
 ///
 /// A session starts when an idle signer reads its nonce from chain state and ends when the signer
-/// has nothing running. Within a session, nonces are handed out without waiting for inclusion. Once
-/// a transaction may or may not land, nothing new starts until the session ends, so the next
-/// submission reads the nonce from chain state again. Until the chain nonce passes the nonces of
-/// such transactions, sessions of the signer run a single submission, as those transactions can
-/// still be pending.
+/// has nothing running. Within a session, a submission starts once the node has accepted the
+/// previous transaction, without waiting for its inclusion. Once a transaction may or may not land,
+/// nothing new starts until the session ends, so the next submission reads the nonce from chain
+/// state again. Until the chain nonce passes the nonces of such transactions, sessions of the
+/// signer run a single submission, as those transactions can still be pending.
 struct Sessions {
     max_in_flight: usize,
     sessions: HashMap<PublicKey, Session>,
@@ -524,21 +573,22 @@ impl Sessions {
                     pk.clone(),
                     Session {
                         running: 1,
+                        preparing: true,
                         ..Default::default()
                     },
                 );
                 return Some(NonceSource::Seed);
             };
             if session.preparing
-                || session.next.is_none()
                 || session.running >= self.max_in_flight
                 || self.in_doubt_until.contains_key(pk)
             {
                 return None;
             }
+            let nonce = session.next?;
             session.running += 1;
             session.preparing = true;
-            return Some(NonceSource::Session);
+            return Some(NonceSource::Session(nonce));
         }
 
         // Submissions with multiple signers run alone.
@@ -558,20 +608,16 @@ impl Sessions {
         }
         self.in_doubt_until.remove(pk);
         if let Some(session) = self.sessions.get_mut(pk) {
-            session.next = nonce.checked_add(1);
+            session.next = Some(nonce);
         }
     }
 
-    /// Take the next nonce of a seeded session.
-    fn take_nonce(&mut self, pk: &PublicKey) -> Option<u64> {
-        let session = self.sessions.get_mut(pk)?;
-        session.preparing = false;
-        if let Some(nonce) = session.unused.pop_first() {
-            return Some(nonce);
+    /// Record that the node accepted the transaction with the session's next nonce.
+    fn accepted(&mut self, pk: &PublicKey) {
+        if let Some(session) = self.sessions.get_mut(pk) {
+            session.preparing = false;
+            session.next = session.next.and_then(|nonce| nonce.checked_add(1));
         }
-        let nonce = session.next?;
-        session.next = nonce.checked_add(1);
-        Some(nonce)
     }
 
     /// Record a finished submission.
@@ -582,11 +628,8 @@ impl Sessions {
             };
             session.running -= 1;
             match &outcome {
-                Outcome::Unprepared => session.preparing = false,
+                Outcome::Unused => session.preparing = false,
                 Outcome::Done => {}
-                Outcome::Unused(nonce) => {
-                    session.unused.insert(*nonce);
-                }
                 Outcome::Unknown(nonces) => {
                     let until = self.in_doubt_until.entry(pk.clone()).or_default();
                     *until = (*until).max(nonces[i].saturating_add(1));
@@ -682,11 +725,7 @@ where
                 // Process incoming notifications.
                 Some(notify) = notify_rx.recv() => match notify {
                     Notify::Seeded(pk, nonce) => sessions.seeded(&pk, nonce),
-                    Notify::TakeNonce(pk, ch) => {
-                        if let Some(nonce) = sessions.take_nonce(&pk) {
-                            let _ = ch.send(nonce);
-                        }
-                    }
+                    Notify::Accepted(pk) => sessions.accepted(&pk),
                     Notify::Finished(pks, outcome) => sessions.finished(&pks, outcome),
                 },
 
@@ -703,7 +742,7 @@ where
 
                 tokio::spawn(async move {
                     let pks = signers.iter().map(|signer| signer.public_key()).collect();
-                    let mut outcome = Outcome::Unprepared;
+                    let mut outcome = Outcome::Unused;
                     let result = Self::multi_sign_and_submit_tx(
                         client,
                         &signers,
@@ -752,13 +791,32 @@ where
 
         let round = client.latest_round().await?;
 
-        // Perform gas estimation with all signer infos added as otherwise we may underestimate the
-        // amount of gas needed. Nonces are resolved last, so use placeholders of maximum size.
-        if tx.fee_gas() == 0 {
-            let mut estimate_tx = tx.clone();
-            for (_, sigspec) in &addresses {
-                estimate_tx.append_auth_signature(sigspec.clone(), u64::MAX);
+        // Resolve account nonces.
+        let nonce = match source {
+            NonceSource::Chain => None,
+            NonceSource::Seed => {
+                let nonce = client.account_nonce(round, addresses[0].0).await?;
+                let _ = notify_tx
+                    .send(Notify::Seeded(signers[0].public_key(), nonce))
+                    .await;
+                Some(nonce)
             }
+            NonceSource::Session(nonce) => Some(nonce),
+        };
+        let mut nonces = Vec::with_capacity(addresses.len());
+        for (address, sigspec) in &addresses {
+            let nonce = match nonce {
+                Some(nonce) => nonce,
+                None => client.account_nonce(round, *address).await?,
+            };
+
+            tx.append_auth_signature(sigspec.clone(), nonce);
+            nonces.push(nonce);
+        }
+
+        // Perform gas estimation after all signer infos have been added as otherwise we may
+        // underestimate the amount of gas needed.
+        if tx.fee_gas() == 0 {
             let signer = &signers[0]; // Checked to have at least one signer above.
             let gas = client
                 .estimate_gas(EstimateGasQuery {
@@ -769,7 +827,7 @@ where
                     } else {
                         Some(CallerAddress::Address(addresses[0].0)) // Checked above.
                     },
-                    tx: estimate_tx,
+                    tx: tx.clone(),
                     propagate_failures: false,
                 })
                 .await?;
@@ -844,39 +902,6 @@ where
             tx.set_fee_amount(token::BaseUnits::native(fee));
         }
 
-        // Resolve account nonces last, so that a failure above leaves no nonce unused.
-        let nonce = match source {
-            NonceSource::Chain => None,
-            NonceSource::Seed => {
-                let nonce = client.account_nonce(round, addresses[0].0).await?;
-                let _ = notify_tx
-                    .send(Notify::Seeded(signers[0].public_key(), nonce))
-                    .await;
-                Some(nonce)
-            }
-            NonceSource::Session => {
-                let (ch, rx) = oneshot::channel();
-                notify_tx
-                    .send(Notify::TakeNonce(signers[0].public_key(), ch))
-                    .await?;
-                Some(rx.await?)
-            }
-        };
-        let mut nonces = Vec::with_capacity(addresses.len());
-        for (address, sigspec) in &addresses {
-            let nonce = match nonce {
-                Some(nonce) => nonce,
-                None => client.account_nonce(round, *address).await?,
-            };
-
-            tx.append_auth_signature(sigspec.clone(), nonce);
-            nonces.push(nonce);
-        }
-
-        // The nonce stays unused until the transaction reaches the node.
-        let unused = nonce.map_or(Outcome::Done, Outcome::Unused);
-        *outcome = unused.clone();
-
         // Sign the transaction.
         let mut tx = tx.prepare_for_signing();
         for signer in signers {
@@ -886,53 +911,59 @@ where
         let raw_tx = cbor::to_vec(tx);
         let tx_hash = Hash::digest_bytes(&raw_tx);
 
-        // Submit the transaction.
+        // Submit the transaction. With several transactions in flight, wait only for the node to
+        // accept it before the signer's next one starts, then look for its verified result in
+        // each new round until the timeout. Otherwise wait for inclusion at the host.
+        let in_flight = source != NonceSource::Chain
+            && opts.timeout.is_some()
+            && opts.verify
+            && A::max_in_flight_txs_per_signer() > 1;
         *outcome = Outcome::Unknown(nonces);
-        let submit_tx_task = client.state.host.submit_tx(
-            raw_tx,
-            host::SubmitTxOpts {
-                wait: true,
-                ..Default::default()
-            },
-        );
+        let submit_tx_task = async {
+            let result = client
+                .state
+                .host
+                .submit_tx(
+                    raw_tx,
+                    host::SubmitTxOpts {
+                        wait: !in_flight,
+                        ..Default::default()
+                    },
+                )
+                .await;
+            if let Err(host::Error::Host(err)) = &result {
+                if is_check_rejection(err) {
+                    *outcome = Outcome::Unused;
+                }
+            }
+            let result = result?;
+            if source != NonceSource::Chain {
+                let _ = notify_tx
+                    .send(Notify::Accepted(signers[0].public_key()))
+                    .await;
+            }
+            if in_flight {
+                return client.wait_for_tx(round, tx_hash).await.map(Some);
+            }
+            Ok(result)
+        };
         let result = if let Some(timeout) = opts.timeout {
             tokio::time::timeout(timeout, submit_tx_task).await?
         } else {
             submit_tx_task.await
         };
-        if let Err(host::Error::Host(err)) = &result {
-            if is_check_rejection(err) {
-                *outcome = unused;
-            }
-        }
         let result = result?.ok_or(anyhow!("missing result"))?;
 
-        if opts.verify {
+        // A result looked up in a round is verified already.
+        if opts.verify && !in_flight {
             // TODO: Ensure consensus verifier is up to date.
 
             // Verify transaction inclusion and result.
-            let io_tree = new_mkvs_tree_for_round(
-                client.state.host.clone(),
-                &client.state.consensus_verifier,
-                client.state.host.get_runtime_id(),
-                result.round,
-                mkvs::RootType::IO,
-            )
-            .await?;
-            // TODO: Add transaction accessors in transaction:Tree in Oasis Core.
-            // TODO: Remove spawn once we have async MKVS.
-            let verified_result = tokio::task::spawn_blocking(move || -> Result<_> {
-                let key = [b"T", tx_hash.as_ref(), &[0x02]].concat();
-                let output_artifacts = io_tree
-                    .get(&key)
-                    .context("failed to verify transaction result")?
-                    .ok_or(anyhow!("failed to verify transaction result"))?;
-
-                let output_artifacts: (Vec<u8>,) = cbor::from_slice(&output_artifacts)
-                    .context("malformed output transaction artifacts")?;
-                Ok(output_artifacts.0)
-            })
-            .await??;
+            let verified_result = client
+                .tx_output(result.round, tx_hash)
+                .await
+                .context("failed to verify transaction result")?
+                .ok_or(anyhow!("failed to verify transaction result"))?;
             if result.output != verified_result {
                 return Err(anyhow!("failed to verify transaction result"));
             }
@@ -993,36 +1024,39 @@ mod test {
         let mut sessions = Sessions::new(10);
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
-        // Nothing else starts until the first submission has read the nonce.
+        // Nothing else starts until the node has accepted the first transaction.
         assert_eq!(sessions.start(alice), None);
         sessions.seeded(&alice[0], 5);
+        assert_eq!(sessions.start(alice), None);
+        sessions.accepted(&alice[0]);
         for nonce in 6..15 {
-            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
+            assert_eq!(sessions.start(alice), Some(NonceSource::Session(nonce)));
+            sessions.accepted(&alice[0]);
         }
         // The 11th waits for one of the 10 to finish.
         assert_eq!(sessions.start(alice), None);
         sessions.finished(alice, Outcome::Done);
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(15));
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(15)));
     }
 
     #[test]
-    fn test_unused_nonce_is_taken_first() {
+    fn test_rejected_nonce_goes_to_next_submission() {
         let alice = &[keys::alice::pk()];
         let mut sessions = Sessions::new(10);
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 5);
-        for nonce in 6..9 {
-            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
-        }
-        sessions.finished(alice, Outcome::Unused(6));
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(9));
+        sessions.accepted(&alice[0]);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(6)));
+        // The next submission waits until the node has checked this one.
+        assert_eq!(sessions.start(alice), None);
+
+        // The node rejects it, so the next submission takes the same nonce and nothing waits
+        // behind a gap.
+        sessions.finished(alice, Outcome::Unused);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(6)));
+        sessions.accepted(&alice[0]);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(7)));
     }
 
     #[test]
@@ -1032,15 +1066,15 @@ mod test {
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 5);
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        sessions.accepted(&alice[0]);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(6)));
+        sessions.accepted(&alice[0]);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(7)));
         sessions.finished(alice, Outcome::Unknown(vec![6]));
 
-        // Nothing new starts, but a running submission still gets its nonce.
+        // Nothing new starts, even once the running submission's transaction is checked.
         assert_eq!(sessions.start(alice), None);
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(7));
-        sessions.finished(alice, Outcome::Unused(7));
+        sessions.finished(alice, Outcome::Unused);
         assert_eq!(sessions.start(alice), None);
 
         // Once nothing runs, the next submission reads the nonce from chain state.
@@ -1049,11 +1083,13 @@ mod test {
 
         // It runs alone until the chain nonce passes the nonce in doubt.
         sessions.seeded(&alice[0], 6);
+        sessions.accepted(&alice[0]);
         assert_eq!(sessions.start(alice), None);
         sessions.finished(alice, Outcome::Done);
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 7);
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
+        sessions.accepted(&alice[0]);
+        assert_eq!(sessions.start(alice), Some(NonceSource::Session(8)));
     }
 
     #[test]
@@ -1063,9 +1099,10 @@ mod test {
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 5);
+        sessions.accepted(&alice[0]);
         for nonce in 6..8 {
-            assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-            assert_eq!(sessions.take_nonce(&alice[0]), Some(nonce));
+            assert_eq!(sessions.start(alice), Some(NonceSource::Session(nonce)));
+            sessions.accepted(&alice[0]);
         }
         // A lower nonce in doubt does not lower the mark.
         sessions.finished(alice, Outcome::Unknown(vec![7]));
@@ -1074,6 +1111,7 @@ mod test {
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 7);
+        sessions.accepted(&alice[0]);
         assert_eq!(sessions.start(alice), None);
     }
 
@@ -1090,6 +1128,7 @@ mod test {
         for (pks, nonce) in [([rak.clone()], 3), ([app.clone()], 5)] {
             assert_eq!(sessions.start(&pks), Some(NonceSource::Seed));
             sessions.seeded(&pks[0], nonce);
+            sessions.accepted(&pks[0]);
             assert_eq!(sessions.start(&pks), None);
             sessions.finished(&pks, Outcome::Done);
         }
@@ -1100,30 +1139,27 @@ mod test {
 
         assert_eq!(sessions.start(&app_only), Some(NonceSource::Seed));
         sessions.seeded(&app, 6);
-        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session));
+        sessions.accepted(&app);
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session(7)));
     }
 
     #[test]
-    fn test_nonces_are_taken_in_arrival_order() {
+    fn test_nonces_are_used_in_arrival_order() {
         let alice = &[keys::alice::pk()];
         let mut sessions = Sessions::new(10);
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
         sessions.seeded(&alice[0], 5);
+        sessions.accepted(&alice[0]);
         let (waiting, started) = sessions.start_ready(vec!["first", "second"], |_| alice.to_vec());
-        assert_eq!(started, vec![("first", NonceSource::Session)]);
+        assert_eq!(started, vec![("first", NonceSource::Session(6))]);
         assert_eq!(waiting, vec!["second"]);
 
-        // The second starts once the first has taken its nonce.
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(6));
+        // The second starts once the node has accepted the first.
+        sessions.accepted(&alice[0]);
         let (waiting, started) = sessions.start_ready(waiting, |_| alice.to_vec());
-        assert_eq!(started, vec![("second", NonceSource::Session)]);
+        assert_eq!(started, vec![("second", NonceSource::Session(7))]);
         assert!(waiting.is_empty());
-
-        // A submission that fails before taking its nonce lets the next one start.
-        sessions.finished(alice, Outcome::Unprepared);
-        assert_eq!(sessions.start(alice), Some(NonceSource::Session));
-        assert_eq!(sessions.take_nonce(&alice[0]), Some(7));
     }
 
     #[test]
@@ -1132,7 +1168,7 @@ mod test {
         let mut sessions = Sessions::new(10);
 
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
-        sessions.finished(alice, Outcome::Unprepared);
+        sessions.finished(alice, Outcome::Unused);
         assert_eq!(sessions.start(alice), Some(NonceSource::Seed));
     }
 
@@ -1161,7 +1197,8 @@ mod test {
 
         assert_eq!(sessions.start(&app_only), Some(NonceSource::Seed));
         sessions.seeded(&app, 0);
-        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session));
+        sessions.accepted(&app);
+        assert_eq!(sessions.start(&app_only), Some(NonceSource::Session(1)));
 
         let queue = vec![
             vec![rak.clone(), app.clone()],
@@ -1295,15 +1332,15 @@ mod test {
                     let signers = tasks[&id].0.len();
                     let outcome = match tasks[&id].1 {
                         State::Preparing(_) if rng.below(10) == 0 => {
-                            // Preparation failed before taking a nonce.
-                            Some(Outcome::Unprepared)
+                            // Preparation failed.
+                            Some(Outcome::Unused)
                         }
                         State::Preparing(source) => {
                             assert!(
                                 tasks
                                     .range(..id)
                                     .all(|(_, (_, state))| !matches!(state, State::Preparing(_))),
-                                "nonce taken out of arrival order"
+                                "nonce used out of arrival order"
                             );
                             let nonce = match source {
                                 NonceSource::Chain => chain,
@@ -1311,10 +1348,10 @@ mod test {
                                     sessions.seeded(&app, chain);
                                     chain
                                 }
-                                NonceSource::Session => sessions.take_nonce(&app).unwrap(),
+                                NonceSource::Session(nonce) => nonce,
                             };
                             assert!(nonce < chain + MAX_IN_FLIGHT, "nonce beyond the window");
-                            if source == NonceSource::Session {
+                            if matches!(source, NonceSource::Session(_)) {
                                 assert!(
                                     pool.get(&nonce).is_none_or(|id| tasks.contains_key(id)),
                                     "nonce of a transaction that can still land"
@@ -1326,21 +1363,30 @@ mod test {
                                     .all(|(_, state)| !matches!(state, State::Submitted(n) if *n == nonce)),
                                 "nonce shared by running submissions"
                             );
-                            let unused = match source {
-                                NonceSource::Chain => Outcome::Done,
-                                _ => Outcome::Unused(nonce),
-                            };
 
                             if nonce < chain || nonce > chain + MAX_FUTURE_DELTA {
                                 // The node rejects an invalid nonce in its check.
                                 Some(Outcome::Unknown(vec![nonce; signers]))
                             } else if rng.below(20) == 0 {
                                 // The node rejects the transaction in its check.
-                                Some(unused)
+                                assert!(
+                                    tasks
+                                        .values()
+                                        .all(|(_, state)| !matches!(state, State::Submitted(n) if *n > nonce)),
+                                    "rejected nonce below a submitted one"
+                                );
+                                Some(Outcome::Unused)
+                            } else if rng.below(50) == 0 {
+                                // The node accepts the transaction, but the reply is lost.
+                                pool.entry(nonce).or_insert(id);
+                                Some(Outcome::Unknown(vec![nonce; signers]))
                             } else {
                                 // A transaction with a pooled nonce is dropped as an underpriced
                                 // replacement, but reported as accepted.
                                 pool.entry(nonce).or_insert(id);
+                                if source != NonceSource::Chain {
+                                    sessions.accepted(&app);
+                                }
                                 tasks.get_mut(&id).unwrap().1 = State::Submitted(nonce);
                                 let submitted = tasks
                                     .values()
