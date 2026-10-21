@@ -6,4 +6,5 @@ ignore = [
 	"RUSTSEC-2026-0099", # Vulnerable crate is only used in rofl-oracle-sgx example.
 	"RUSTSEC-2026-0104", # Vulnerable crate is only used in rofl-oracle-sgx example.
 	"RUSTSEC-2026-0097", # Remove once all upstream dependencies upgrade rand.
+	"RUSTSEC-2026-0382", # Vulnerable crate is only used in rofl-oracle-sgx example.
 ]
