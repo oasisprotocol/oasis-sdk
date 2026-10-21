@@ -1,12 +1,14 @@
 [package]
 name = "test-runtime-benchmarking"
 version = "0.1.0"
-authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+authors = ["Oasis Protocol Foundation <info@oasis.net>"]
 edition = "2021"
 license = "Apache-2.0"
 
 [dependencies]
-oasis-runtime-sdk = { path = "../../../runtime-sdk", features = ["unsafe-allow-debug"] }
+oasis-runtime-sdk = { path = "../../../runtime-sdk", features = [
+    "unsafe-allow-debug",
+] }
 oasis-runtime-sdk-evm = { path = "../../../runtime-sdk/modules/evm" }
 cbor = { version = "0.5.1", package = "oasis-cbor" }
 

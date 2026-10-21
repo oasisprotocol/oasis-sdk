@@ -2,7 +2,7 @@
 name = "oasis-contract-sdk-oas20"
 version = "0.3.0"
 description = "OAS-20 contract"
-authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+authors = ["Oasis Protocol Foundation <info@oasis.net>"]
 edition = "2021"
 license = "Apache-2.0"
 

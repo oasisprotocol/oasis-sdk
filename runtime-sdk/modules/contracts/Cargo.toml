@@ -2,7 +2,7 @@
 name = "oasis-runtime-sdk-contracts"
 description = "Smart contracts module for the Oasis Runtime SDK."
 version = "0.5.0"
-authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+authors = ["Oasis Protocol Foundation <info@oasis.net>"]
 edition = "2021"
 license = "Apache-2.0"
 

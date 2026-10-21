@@ -1,7 +1,7 @@
 [package]
 name = "oasis-runtime-sdk"
 version = "0.15.0"
-authors = ["Oasis Protocol Foundation <info@oasisprotocol.org>"]
+authors = ["Oasis Protocol Foundation <info@oasis.net>"]
 edition = "2021"
 license = "Apache-2.0"
 
