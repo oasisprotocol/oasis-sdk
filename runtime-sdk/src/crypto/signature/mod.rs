@@ -783,10 +783,12 @@ mod test {
 
     #[test]
     fn test_memory_signer_prehashed() {
+        type Hasher = Box<dyn Fn(&[u8]) -> Vec<u8>>;
+
         let message = b"this is a message";
         let corrupt_message = b"this isn't a message";
 
-        let sig_types: &[(SignatureType, Box<dyn Fn(&[u8]) -> Vec<u8>>)] = &[
+        let sig_types: &[(SignatureType, Hasher)] = &[
             (
                 SignatureType::Ed25519_PrehashedSha512,
                 Box::new(|message| sha2::Sha512::digest(message).to_vec()),
