@@ -13,9 +13,9 @@ oasis-runtime-sdk-macros = { path = "../../../runtime-sdk-macros" }
 
 # Third party.
 anyhow = "1.0"
-base64 = "0.22.1"
+base64 = "0.23.1"
 blake3 = { version = "1.8.7", features = ["traits-preview"] }
-thiserror = "1.0"
+thiserror = "2.0"
 hex = "0.4.2"
 sha2 = "0.11.0"
 substrate-bn = "0.6.0"
@@ -31,15 +31,15 @@ rand = "0.10.3"
 # Ethereum.
 solabi = "0.3.1"
 ethabi = { version = "18.0.0", default-features = false, features = ["std"] }
-ethereum = "0.15"
+ethereum = "0.18"
 evm = { git = "https://github.com/oasisprotocol/evm", tag = "v0.39.1-oasis" }
 fixed-hash = "0.8.0"
-primitive-types = { version = "0.12", default-features = false, features = [
+primitive-types = { version = "0.13", default-features = false, features = [
     "rlp",
     "num-traits",
 ] }
-rlp = "0.5.2"
-uint = "0.9.1"
+rlp = "0.6.1"
+uint = "0.10.2"
 
 # Fuzzing.
 honggfuzz = "0.5.56"
@@ -47,7 +47,7 @@ serde = { version = "1.0.203", features = ["derive"], optional = true }
 serde_json = { version = "1.0.116", features = ["raw_value"], optional = true }
 
 [dev-dependencies]
-criterion = "0.5.1"
+criterion = "0.8.2"
 oasis-runtime-sdk = { path = "../..", features = ["test"] }
 rand = "0.10.3"
 serde = { version = "1.0.203", features = ["derive"] }
