@@ -47,12 +47,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "allocator-api2"
-version = "0.2.21"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
-
-[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -182,12 +176,6 @@ name = "base64ct"
 version = "1.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
-
-[[package]]
-name = "bech32"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32637268377fc7b10a8c6d51de3e7fba1ce5dd371a96e342b34e6078db558e7f"
 
 [[package]]
 name = "bech32"
@@ -1219,8 +1207,6 @@ version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
 dependencies = [
- "allocator-api2",
- "equivalent",
  "foldhash 0.1.5",
 ]
 
@@ -1594,15 +1580,6 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "lru"
-version = "0.12.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "234cf4f4a04dc1f57e24b96cc0cd600cf2af460d4161ac5ecdd0af8e1f3b2a38"
-dependencies = [
- "hashbrown 0.15.5",
-]
-
-[[package]]
-name = "lru"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef9ac18847474e638e3702b76c65d4eb93428471a74778ef0f1be711717f89b5"
@@ -1818,7 +1795,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "rand 0.10.3",
  "rand_xorshift",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
  "wee_alloc",
 ]
 
@@ -1831,7 +1808,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "sha2 0.11.0",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
  "x25519-dalek",
 ]
 
@@ -1870,9 +1847,9 @@ dependencies = [
 name = "oasis-contract-sdk-types"
 version = "0.3.0"
 dependencies = [
- "bech32 0.11.1",
+ "bech32",
  "oasis-cbor",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1886,7 +1863,7 @@ dependencies = [
  "futures",
  "group",
  "lazy_static",
- "lru 0.18.5",
+ "lru",
  "oasis-cbor",
  "oasis-core-runtime",
  "p256",
@@ -1913,7 +1890,7 @@ dependencies = [
  "async-trait",
  "base64 0.23.1",
  "base64-serde",
- "bech32 0.12.0",
+ "bech32",
  "bitflags 2.13.0",
  "byteorder",
  "cfg-if 1.0.4",
@@ -1929,7 +1906,7 @@ dependencies = [
  "intrusive-collections",
  "lazy_static",
  "log",
- "lru 0.18.5",
+ "lru",
  "mbedtls",
  "num-bigint 0.4.8",
  "num-derive",
@@ -1970,8 +1947,8 @@ version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "base64 0.22.1",
- "bech32 0.11.1",
+ "base64 0.23.1",
+ "bech32",
  "byteorder",
  "curve25519-dalek 5.0.0",
  "digest 0.11.3",
@@ -1980,7 +1957,7 @@ dependencies = [
  "hmac",
  "impl-trait-for-tuples",
  "k256",
- "lru 0.12.5",
+ "lru",
  "merlin",
  "num-traits",
  "oasis-cbor",
@@ -1997,7 +1974,7 @@ dependencies = [
  "sha2 0.11.0",
  "sha3",
  "slog",
- "thiserror 1.0.69",
+ "thiserror 2.0.21",
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
