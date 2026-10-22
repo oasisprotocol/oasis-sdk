@@ -815,9 +815,10 @@ mod test {
     fn test_basic_roundtrip_prehashed() {
         use sha2::Digest as _;
 
-        let message = b"test message";
+        type Hasher = Box<dyn Fn(&[u8]) -> Vec<u8>>;
 
-        let sig_types: &[(SignatureType, Box<dyn Fn(&[u8]) -> Vec<u8>>)] = &[
+        let message = b"test message";
+        let sig_types: &[(SignatureType, Hasher)] = &[
             (
                 SignatureType::Ed25519_PrehashedSha512,
                 Box::new(|message| sha2::Sha512::digest(message).to_vec()),
