@@ -263,14 +263,16 @@ impl fmt::Debug for RustlsTransport {
 
 #[cfg(test)]
 mod test {
-    use mockito::{mock, server_url};
+    use mockito::Server;
 
     use super::{agent, agent_with_config};
 
     #[test]
     fn test_get_request() {
         // Set up a mock server
-        let _mock = mock("GET", "/test")
+        let mut server = Server::new();
+        let _mock = server
+            .mock("GET", "/test")
             .with_status(200)
             .with_header("content-type", "text/plain")
             .with_body("Hello, world!")
@@ -280,7 +282,7 @@ mod test {
         let agent = agent_with_config(Default::default());
 
         // Make a GET request to the mock server
-        let url = format!("{}/test", server_url());
+        let url = format!("{}/test", server.url());
         let mut response = agent.get(&url).call().unwrap();
 
         // Verify the response
@@ -294,7 +296,9 @@ mod test {
     #[test]
     fn test_post_request() {
         // Set up a mock server for POST request
-        let _mock = mock("POST", "/submit")
+        let mut server = Server::new();
+        let _mock = server
+            .mock("POST", "/submit")
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(r#"{"success":true}"#)
@@ -304,7 +308,7 @@ mod test {
         let agent = agent_with_config(Default::default());
 
         // Make a POST request to the mock server
-        let url = format!("{}/submit", server_url());
+        let url = format!("{}/submit", server.url());
         let mut response = agent
             .post(&url)
             .content_type("application/json")
