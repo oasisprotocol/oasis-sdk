@@ -180,8 +180,7 @@ mod eth {
 
             impl cbor::Encode for $name {
                 fn into_cbor_value(self) -> cbor::Value {
-                    let mut out = [0u8; $num_words * 8];
-                    self.to_big_endian(&mut out);
+                    let out = self.to_big_endian();
                     cbor::Value::ByteString(out.to_vec())
                 }
             }
