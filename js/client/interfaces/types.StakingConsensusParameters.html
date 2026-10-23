@@ -16,7 +16,7 @@
 </div></section>
 <div class="tsd-signature"><span class="tsd-signature-keyword">interface</span> <span class="tsd-kind-interface">StakingConsensusParameters</span> <span class="tsd-signature-symbol">{</span><br/>    <a class="tsd-kind-property" href="#allow_escrow_messages">allow_escrow_messages</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#commission_schedule_rules">commission_schedule_rules</a><span class="tsd-signature-symbol">?:</span> <a href="types.StakingCommissionScheduleRules.html" class="tsd-signature-type tsd-kind-interface">StakingCommissionScheduleRules</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#debonding_interval">debonding_interval</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#debug_bypass_stake">debug_bypass_stake</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#disable_delegation">disable_delegation</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#disable_transfers">disable_transfers</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fee_split_weight_next_propose">fee_split_weight_next_propose</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fee_split_weight_propose">fee_split_weight_propose</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#fee_split_weight_vote">fee_split_weight_vote</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#gas_costs">gas_costs</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">op</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a> <span class="tsd-signature-symbol">}</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#max_allowances">max_allowances</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#min_delegation">min_delegation</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#min_transact_balance">min_transact_balance</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#min_transfer">min_transfer</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reward_factor_block_proposed">reward_factor_block_proposed</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reward_factor_epoch_signed">reward_factor_epoch_signed</a><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#reward_schedule">reward_schedule</a><span class="tsd-signature-symbol">?:</span> <a href="types.StakingRewardStep.html" class="tsd-signature-type tsd-kind-interface">StakingRewardStep</a><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#signing_reward_threshold_denominator">signing_reward_threshold_denominator</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#signing_reward_threshold_numerator">signing_reward_threshold_numerator</a><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#slashing">slashing</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <a href="types.StakingSlash.html" class="tsd-signature-type tsd-kind-interface">StakingSlash</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#thresholds">thresholds</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#token_symbol">token_symbol</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#token_value_exponent">token_value_exponent</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">;</span><br/>    <a class="tsd-kind-property" href="#undisable_transfers_from">undisable_transfers_from</a><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol">;</span><br/><span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3711">core/src/types.ts:3711</a></li></ul></aside>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3711">core/src/types.ts:3711</a></li></ul></aside>
 <section class="tsd-panel-group tsd-index-group">
 <section class="tsd-panel tsd-index-panel">
 <details class="tsd-index-content tsd-accordion" open><summary class="tsd-accordion-summary tsd-index-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="../assets/icons.svg#icon-chevronDown"></use></svg>
@@ -59,17 +59,17 @@
 and ReclaimEscrow via runtime messages.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3740">core/src/types.ts:3740</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3740">core/src/types.ts:3740</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="commission_schedule_rules"><code class="tsd-tag">Optional</code><span>commission_<wbr/>schedule_<wbr/>rules</span><a href="#commission_schedule_rules" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">commission_schedule_rules</span><span class="tsd-signature-symbol">?:</span> <a href="types.StakingCommissionScheduleRules.html" class="tsd-signature-type tsd-kind-interface">StakingCommissionScheduleRules</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3727">core/src/types.ts:3727</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3727">core/src/types.ts:3727</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="debonding_interval"><code class="tsd-tag">Optional</code><span>debonding_<wbr/>interval</span><a href="#debonding_interval" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">debonding_interval</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3723">core/src/types.ts:3723</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3723">core/src/types.ts:3723</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="debug_bypass_stake"><code class="tsd-tag">Optional</code><span>debug_<wbr/>bypass_<wbr/>stake</span><a href="#debug_bypass_stake" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">debug_bypass_stake</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div>
@@ -77,65 +77,65 @@ and ReclaimEscrow via runtime messages.</p>
 operations should be bypassed.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3771">core/src/types.ts:3771</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3771">core/src/types.ts:3771</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="disable_delegation"><code class="tsd-tag">Optional</code><span>disable_<wbr/>delegation</span><a href="#disable_delegation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">disable_delegation</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3734">core/src/types.ts:3734</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3734">core/src/types.ts:3734</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="disable_transfers"><code class="tsd-tag">Optional</code><span>disable_<wbr/>transfers</span><a href="#disable_transfers" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">disable_transfers</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">boolean</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3733">core/src/types.ts:3733</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3733">core/src/types.ts:3733</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fee_split_weight_next_propose"><span>fee_<wbr/>split_<wbr/>weight_<wbr/>next_<wbr/>propose</span><a href="#fee_split_weight_next_propose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fee_split_weight_next_propose</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 <div class="tsd-comment tsd-typography"><p>FeeSplitWeightNextPropose is the proportion of block fee portions that go to the next block's proposer.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3756">core/src/types.ts:3756</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3756">core/src/types.ts:3756</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fee_split_weight_propose"><span>fee_<wbr/>split_<wbr/>weight_<wbr/>propose</span><a href="#fee_split_weight_propose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fee_split_weight_propose</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 <div class="tsd-comment tsd-typography"><p>FeeSplitWeightPropose is the proportion of block fee portions that go to the proposer.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3748">core/src/types.ts:3748</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3748">core/src/types.ts:3748</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="fee_split_weight_vote"><span>fee_<wbr/>split_<wbr/>weight_<wbr/>vote</span><a href="#fee_split_weight_vote" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">fee_split_weight_vote</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
 <div class="tsd-comment tsd-typography"><p>FeeSplitWeightVote is the proportion of block fee portions that go to the validator that votes.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3752">core/src/types.ts:3752</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3752">core/src/types.ts:3752</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="gas_costs"><code class="tsd-tag">Optional</code><span>gas_<wbr/>costs</span><a href="#gas_costs" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">gas_costs</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-symbol">{</span> <span class="tsd-signature-symbol">[</span><span class="tsd-kind-index-signature">op</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">]:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a> <span class="tsd-signature-symbol">}</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3729">core/src/types.ts:3729</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3729">core/src/types.ts:3729</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="max_allowances"><code class="tsd-tag">Optional</code><span>max_<wbr/>allowances</span><a href="#max_allowances" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">max_allowances</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
 <div class="tsd-comment tsd-typography"><p>MaxAllowances is the maximum number of allowances an account can have. Zero means disabled.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3744">core/src/types.ts:3744</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3744">core/src/types.ts:3744</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="min_delegation"><span>min_<wbr/>delegation</span><a href="#min_delegation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">min_delegation</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3730">core/src/types.ts:3730</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3730">core/src/types.ts:3730</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="min_transact_balance"><span>min_<wbr/>transact_<wbr/>balance</span><a href="#min_transact_balance" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">min_transact_balance</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3732">core/src/types.ts:3732</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3732">core/src/types.ts:3732</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="min_transfer"><span>min_<wbr/>transfer</span><a href="#min_transfer" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">min_transfer</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3731">core/src/types.ts:3731</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3731">core/src/types.ts:3731</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reward_factor_block_proposed"><span>reward_<wbr/>factor_<wbr/>block_<wbr/>proposed</span><a href="#reward_factor_block_proposed" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reward_factor_block_proposed</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
@@ -143,7 +143,7 @@ operations should be bypassed.</p>
 to the entity that proposed the block.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3766">core/src/types.ts:3766</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3766">core/src/types.ts:3766</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reward_factor_epoch_signed"><span>reward_<wbr/>factor_<wbr/>epoch_<wbr/>signed</span><a href="#reward_factor_epoch_signed" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reward_factor_epoch_signed</span><span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">Uint8Array</span></div>
@@ -151,32 +151,32 @@ to the entity that proposed the block.</p>
 entities that have signed at least a threshold fraction of the blocks.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3761">core/src/types.ts:3761</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3761">core/src/types.ts:3761</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="reward_schedule"><code class="tsd-tag">Optional</code><span>reward_<wbr/>schedule</span><a href="#reward_schedule" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">reward_schedule</span><span class="tsd-signature-symbol">?:</span> <a href="types.StakingRewardStep.html" class="tsd-signature-type tsd-kind-interface">StakingRewardStep</a><span class="tsd-signature-symbol">[]</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3724">core/src/types.ts:3724</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3724">core/src/types.ts:3724</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="signing_reward_threshold_denominator"><code class="tsd-tag">Optional</code><span>signing_<wbr/>reward_<wbr/>threshold_<wbr/>denominator</span><a href="#signing_reward_threshold_denominator" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">signing_reward_threshold_denominator</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3726">core/src/types.ts:3726</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3726">core/src/types.ts:3726</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="signing_reward_threshold_numerator"><code class="tsd-tag">Optional</code><span>signing_<wbr/>reward_<wbr/>threshold_<wbr/>numerator</span><a href="#signing_reward_threshold_numerator" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">signing_reward_threshold_numerator</span><span class="tsd-signature-symbol">?:</span> <a href="../types/types.longnum.html" class="tsd-signature-type tsd-kind-type-alias">longnum</a></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3725">core/src/types.ts:3725</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3725">core/src/types.ts:3725</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="slashing"><code class="tsd-tag">Optional</code><span>slashing</span><a href="#slashing" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">slashing</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <a href="types.StakingSlash.html" class="tsd-signature-type tsd-kind-interface">StakingSlash</a><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3728">core/src/types.ts:3728</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3728">core/src/types.ts:3728</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="thresholds"><code class="tsd-tag">Optional</code><span>thresholds</span><a href="#thresholds" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">thresholds</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3722">core/src/types.ts:3722</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3722">core/src/types.ts:3722</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="token_symbol"><code class="tsd-tag">Optional</code><span>token_<wbr/>symbol</span><a href="#token_symbol" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">token_symbol</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">string</span></div>
@@ -184,7 +184,7 @@ entities that have signed at least a threshold fraction of the blocks.</p>
 Only upper case A-Z characters are allowed.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3716">core/src/types.ts:3716</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3716">core/src/types.ts:3716</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="token_value_exponent"><code class="tsd-tag">Optional</code><span>token_<wbr/>value_<wbr/>exponent</span><a href="#token_value_exponent" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">token_value_exponent</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">number</span></div>
@@ -192,12 +192,12 @@ Only upper case A-Z characters are allowed.</p>
 1 token = 10**TokenValueExponent base units.</p>
 </div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3721">core/src/types.ts:3721</a></li></ul></aside></section>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3721">core/src/types.ts:3721</a></li></ul></aside></section>
 <section class="tsd-panel tsd-member">
 <h3 class="tsd-anchor-link" id="undisable_transfers_from"><code class="tsd-tag">Optional</code><span>undisable_<wbr/>transfers_<wbr/>from</span><a href="#undisable_transfers_from" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="../assets/icons.svg#icon-anchor"></use></svg></a></h3>
 <div class="tsd-signature"><span class="tsd-kind-property">undisable_transfers_from</span><span class="tsd-signature-symbol">?:</span> <span class="tsd-signature-type">Map</span><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">Uint8Array</span><span class="tsd-signature-symbol">,</span> <span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">&gt;</span></div><aside class="tsd-sources">
 <ul>
-<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/2904e5354d73656b2e419bf6b41cc871ad4ad910/client-sdk/ts-web/core/src/types.ts#L3735">core/src/types.ts:3735</a></li></ul></aside></section></section></details></div>
+<li>Defined in <a href="https://github.com/oasisprotocol/oasis-sdk/blob/5f5be144f4d92c97b2c27b0c3cbe41dae7d95549/client-sdk/ts-web/core/src/types.ts#L3735">core/src/types.ts:3735</a></li></ul></aside></section></section></details></div>
 <div class="col-sidebar">
 <div class="page-menu">
 <div class="tsd-navigation settings">
