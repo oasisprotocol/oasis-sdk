@@ -118,7 +118,7 @@ jobs:
 
   test-rust-sgx:
     name: test-rust-sgx
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install gcc-multilib clang-18
+          sudo apt-get install gcc-multilib
 
       - name: Set up Rust
         run: rustup show
