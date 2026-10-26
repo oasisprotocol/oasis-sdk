@@ -27,6 +27,9 @@ jobs:
   lint-rust:
     name: lint-rust
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

@@ -31,6 +31,9 @@ jobs:
   test-rust:
     name: test-rust
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -58,6 +61,9 @@ jobs:
   test-rust-rofl-appd-localnet:
     name: test-rust-rofl-appd-localnet
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,6 +79,9 @@ jobs:
   test-rust-hello-contract:
     name: test-rust-hello-contract
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,6 +101,9 @@ jobs:
   test-rust-oas20-contract:
     name: test-rust-oas20-contract
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -353,6 +365,8 @@ jobs:
       OASIS_UNSAFE_SKIP_AVR_VERIFY: 1
       OASIS_UNSAFE_ALLOW_DEBUG_ENCLAVES: 1
       OASIS_UNSAFE_MOCK_TEE: 1
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -438,6 +452,9 @@ jobs:
   e2e-rt:
     name: e2e-rt
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -456,7 +473,7 @@ jobs:
         with:
           go-version: "1.27.x"
 
-      - name: Install Oasis dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
@@ -593,6 +610,9 @@ jobs:
   benchmark-rt:
     name: benchmark-rt
     runs-on: ubuntu-latest
+    env:
+      # Use clang-21 to avoid mbedtls bindgen issues.
+      LIBCLANG_PATH: /usr/lib/llvm-21/lib
     timeout-minutes: 30
     steps:
       - name: Checkout code
@@ -612,7 +632,7 @@ jobs:
         with:
           go-version: "1.27.x"
 
-      - name: Install Oasis dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install bubblewrap build-essential libseccomp-dev libssl-dev protobuf-compiler
