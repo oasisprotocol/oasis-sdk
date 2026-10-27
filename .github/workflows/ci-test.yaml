@@ -36,7 +36,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Free up disk space
         run: |
@@ -66,7 +66,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -84,7 +84,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -106,7 +106,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -121,7 +121,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # gcc-multilib is required for bindgen to work for SGX.
       - name: Install dependencies
@@ -144,7 +144,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Check versions
         run: ./tests/check-core-versions.sh
@@ -154,7 +154,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -196,7 +196,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
@@ -250,7 +250,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
@@ -325,7 +325,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
@@ -369,7 +369,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Disable AppArmor
         run: |
@@ -457,7 +457,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Disable AppArmor
         run: |
@@ -503,7 +503,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
@@ -525,7 +525,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
@@ -547,7 +547,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js LTS
         uses: actions/setup-node@v4
@@ -573,7 +573,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -599,7 +599,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Diff
         working-directory: client-sdk/ts-web/rt
@@ -616,7 +616,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Disable AppArmor
         run: |
@@ -648,7 +648,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -671,7 +671,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
