@@ -63,12 +63,13 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 			Client: rtc,
 		}
 
+		states = append(states, state)
+
 		if prepareable, ok := benchmark.(Prepareable); ok {
 			if err = prepareable.Prepare(ctx, state); err != nil {
 				return err
 			}
 		}
-		states = append(states, state)
 	}
 	logger.Info("preparation done")
 
@@ -128,7 +129,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 						return
 					}
 
-					logger.Error("iteration failed",
+					logger.Error(
+						"iteration failed",
 						"err", err,
 					)
 					errCh <- err
@@ -197,7 +199,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	throughputInv := float64(midDurMs) / float64(midCount)
 	throughput := float64(midCount) / midDur.Seconds()
 
-	logger.Info("middle 80%",
+	logger.Info(
+		"middle 80%",
 		"calls", midCount,
 		"duration", midDur,
 		"calls_per_sec", throughput,
@@ -210,7 +213,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	// Log the optional (informative) extra results.
 	totalCount := countEnd - countStart
 	totalDur := timeEnd.Sub(timeStart)
-	logger.Info("overall",
+	logger.Info(
+		"overall",
 		"calls", totalCount,
 		"duration", totalDur,
 		"calls_per_sec", float64(totalCount)/totalDur.Seconds(),
@@ -218,7 +222,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	beforeCount := countStart
 	beforeDur := timeStart.Sub(timeBefore)
-	logger.Info("ramp-up",
+	logger.Info(
+		"ramp-up",
 		"calls", beforeCount,
 		"duration", beforeDur,
 		"calls_per_sec", float64(beforeCount)/beforeDur.Seconds(),
@@ -226,7 +231,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	afterCount := countAfter - countEnd
 	afterDur := timeAfter.Sub(timeEnd)
-	logger.Info("ramp-down",
+	logger.Info(
+		"ramp-down",
 		"calls", afterCount,
 		"duration", afterDur,
 		"calls_per_sec", float64(afterCount)/afterDur.Seconds(),
