@@ -83,20 +83,7 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	// Spawn each benchmark go routine.
 	errCh := make(chan error, cfg.Concurrency)
-	stopCh := make(chan struct{})
 	counter := new(atomicCounter)
-	var wg sync.WaitGroup
-
-	var didHalt bool
-	doHalt := func() {
-		if !didHalt {
-			close(stopCh)
-			wg.Wait()
-			didHalt = true
-		}
-	}
-	defer doHalt()
-
 	timeBefore := time.Now()
 
 	var interval time.Duration
@@ -104,6 +91,12 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 		interval = time.Second / time.Duration(cfg.Rate)
 	}
 	interval = max(interval, time.Millisecond)
+
+	var wg sync.WaitGroup
+	defer wg.Wait()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	for i, state := range states {
 		wg.Go(func() {
@@ -115,8 +108,6 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 				select {
 				case <-ctx.Done():
 					logger.Debug(fmt.Sprintf("canceled task %d", i))
-					return
-				case <-stopCh:
 					return
 				case <-ticker.C:
 				}
@@ -147,13 +138,14 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	duration := cfg.Duration
 	timeStart := time.Now()
 	countStart := counter.Get()
-	logger.Info("threads started")
 
-	doSleep := func(sleepDuration time.Duration, descr string) (time.Time, uint64, error) {
-		logger.Info("begin " + descr)
+	doSleep := func(sleepDuration time.Duration, txt string) (time.Time, uint64, error) {
+		logger.Info("begin " + txt)
+		defer logger.Info("end " + txt)
+
 		select {
 		case <-ctx.Done():
-			logger.Info("canceled during " + descr)
+			logger.Info("canceled during " + txt)
 			return time.Time{}, 0, context.Canceled
 		case err := <-errCh:
 			return time.Time{}, 0, err
@@ -162,6 +154,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 		return time.Now(), counter.Get(), nil
 	}
+
+	logger.Info("threads started")
 
 	// First 10% of time will be discarded.
 	timeMidBefore, countMidBefore, err := doSleep(duration/10, "first 10%")
@@ -182,10 +176,14 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	}
 
 	// Signal end of run and wait for everything to finish.
-	doHalt()
+	cancel()
+	logger.Info("threads canceled")
+
+	wg.Wait()
+	logger.Info("threads joined")
+
 	timeAfter := time.Now()
 	countAfter := counter.Get()
-	logger.Info("threads joined")
 
 	// Derive the actually useful results.
 	midCount := countMidAfter - countMidBefore
