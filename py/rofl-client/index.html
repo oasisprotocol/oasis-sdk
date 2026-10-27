@@ -241,7 +241,7 @@
 Oasis ROFL services, including key generation and transaction submission.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="oasis_rofl_client.AsyncRoflClient">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">oasis_rofl_client.</span></span><span class="sig-name descname"><span class="pre">AsyncRoflClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/oasis_rofl_client/async_rofl_client.html#AsyncRoflClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oasis_rofl_client.AsyncRoflClient" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">oasis_rofl_client.</span></span><span class="sig-name descname"><span class="pre">AsyncRoflClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/oasis_rofl_client/async_rofl_client.html#AsyncRoflClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oasis_rofl_client.AsyncRoflClient" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Async client for interacting with ROFL REST API.</p>
 <p>Provides methods for key fetching through the ROFL REST API.</p>
@@ -394,7 +394,7 @@ refresh if the metadata has changed.</p>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="oasis_rofl_client.RoflClient">
-<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">oasis_rofl_client.</span></span><span class="sig-name descname"><span class="pre">RoflClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/oasis_rofl_client/rofl_client.html#RoflClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oasis_rofl_client.RoflClient" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">oasis_rofl_client.</span></span><span class="sig-name descname"><span class="pre">RoflClient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">url</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeout</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">60.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/oasis_rofl_client/rofl_client.html#RoflClient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#oasis_rofl_client.RoflClient" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Client for interacting with ROFL REST API.</p>
 <p>Provides methods for key fetching through the ROFL REST API.</p>
@@ -555,7 +555,7 @@ refresh if the metadata has changed.</p>
 <p>The main client class for interacting with ROFL runtime services.</p>
 <section id="constructor">
 <h5>Constructor<a class="headerlink" href="#constructor" title="Link to this heading">¶</a></h5>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">RoflClient</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">RoflClient</span><span class="p">(</span><span class="n">url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">,</span> <span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">60.0</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
@@ -564,6 +564,13 @@ refresh if the metadata has changed.</p>
 <li><p>If empty (default): Uses Unix socket at <code class="docutils literal notranslate"><span class="pre">/run/rofl-appd.sock</span></code></p></li>
 <li><p>If starts with <code class="docutils literal notranslate"><span class="pre">http://</span></code> or <code class="docutils literal notranslate"><span class="pre">https://</span></code>: Uses HTTP transport</p></li>
 <li><p>Otherwise: Treats as Unix socket path</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">timeout</span></code>: Request timeout in seconds (default: 60)</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">sign_submit</span></code> waits for the transaction result, including time queued in
+appd, so apps that submit many transactions at once need a longer timeout.
+A timeout does not cancel the transaction, and it can still land.</p></li>
 </ul>
 </li>
 </ul>
