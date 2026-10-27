@@ -170,7 +170,7 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	}
 
 	// Middle 80% of time will be counted.
-	timeMidAfter, countMidAfter, err := doSleep(duration/10*8, "middle 80%")
+	timeMidAfter, countMidAfter, err := doSleep(duration*8/10, "middle 80%")
 	if err != nil {
 		return err
 	}
