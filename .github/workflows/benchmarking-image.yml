@@ -14,7 +14,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-
   build-benchmarking-image:
     # NOTE: This name appears in GitHub's Checks API.
     name: build-benchmarking-images
@@ -47,7 +46,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v7
         with:
-          go-version: "1.22.x"
+          go-version: "1.27.x"
 
       - name: Install Oasis dependencies
         run: |
