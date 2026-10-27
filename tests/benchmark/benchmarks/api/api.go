@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -96,57 +97,51 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	}
 	defer doHalt()
 
-	wg.Add(cfg.Concurrency)
 	timeBefore := time.Now()
 
-	var interval int64
-	if cfg.Rate != 0 {
-		interval = time.Second.Nanoseconds() / int64(cfg.Rate)
+	var interval time.Duration
+	if cfg.Rate > 0 {
+		interval = time.Second / time.Duration(cfg.Rate)
 	}
+	interval = max(interval, time.Millisecond)
 
-	for i := 0; i < cfg.Concurrency; i++ {
-		go func(state *State) {
-			defer wg.Done()
+	for i, state := range states {
+		wg.Go(func() {
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
 
-			began, count := time.Now(), int64(0)
 			for {
+				// Rate-limit before executing the scenario.
 				select {
 				case <-ctx.Done():
-					logger.Debug("canceled")
+					logger.Debug(fmt.Sprintf("canceled task %d", i))
 					return
 				case <-stopCh:
-					logger.Debug("finished")
 					return
-				default:
+				case <-ticker.C:
 				}
 
 				iters, err := benchmark.Scenario(ctx, state)
 				if err != nil {
-					// The cancelation can also interrupt a scenario in
+					// The cancellation can also interrupt a scenario in
 					// progress.
-					if err == context.Canceled {
-						logger.Debug("canceled")
+					if err == context.Canceled || err == context.DeadlineExceeded {
+						logger.Debug(fmt.Sprintf("canceled task %d", i))
 						return
 					}
 
 					logger.Error(
 						"iteration failed",
 						"err", err,
+						"task", i,
 					)
 					errCh <- err
 					return
 				}
+
 				counter.Add(iters)
-
-				if interval != 0 {
-					// Rate limit
-					now, next := time.Now(), began.Add(time.Duration(count*interval))
-					time.Sleep(next.Sub(now))
-					count++
-				}
-
 			}
-		}(states[i])
+		})
 	}
 
 	duration := cfg.Duration
