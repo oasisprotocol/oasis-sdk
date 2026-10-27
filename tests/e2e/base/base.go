@@ -36,5 +36,5 @@ const (
 func init() {
 	Runtime.Flags.Int(cfgTxGenNumAccounts, 10, "number of accounts to use in txgen test")
 	Runtime.Flags.Uint64(cfgTxGenCoinsPerAcct, 1_000_000, "number of coins to allocate to each account in txgen test")
-	Runtime.Flags.Duration(cfgTxGenDuration, 60*time.Second, "duration of txgen test")
+	Runtime.Flags.Duration(cfgTxGenDuration, time.Minute, "duration of txgen test")
 }

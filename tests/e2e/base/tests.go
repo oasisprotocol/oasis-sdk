@@ -635,7 +635,8 @@ WaitInsertLoop:
 
 			events, err := env.Client.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
-				env.Logger.Error("failed to get events",
+				env.Logger.Error(
+					"failed to get events",
 					"err", err,
 					"round", blk.Block.Header.Round,
 				)
@@ -647,7 +648,8 @@ WaitInsertLoop:
 				case kvInsertEventKey.IsEqual(ev.Key()):
 					var ies []*kvInsertEvent
 					if err = cbor.Unmarshal(ev.Value, &ies); err != nil {
-						env.Logger.Error("failed to unmarshal insert event",
+						env.Logger.Error(
+							"failed to unmarshal insert event",
 							"err", err,
 						)
 						continue
@@ -692,7 +694,8 @@ WaitRemoveLoop:
 
 			events, err := env.Client.GetEventsRaw(ctx, blk.Block.Header.Round)
 			if err != nil {
-				env.Logger.Error("failed to get events",
+				env.Logger.Error(
+					"failed to get events",
 					"err", err,
 					"round", blk.Block.Header.Round,
 				)
@@ -704,7 +707,8 @@ WaitRemoveLoop:
 				case kvRemoveEventKey.IsEqual(ev.Key()):
 					var res []*kvRemoveEvent
 					if err = cbor.Unmarshal(ev.Value, &res); err != nil {
-						env.Logger.Error("failed to unmarshal remove event",
+						env.Logger.Error(
+							"failed to unmarshal remove event",
 							"err", err,
 						)
 						continue
@@ -820,7 +824,8 @@ func KVTransferTest(ctx context.Context, env *scenario.Env) error {
 	}
 	event := cevs[0]
 	if event.GasUsed.Amount != expectedKVTransferGasUsed {
-		return fmt.Errorf("unexpected transaction used amount: expected: %v, got: %v",
+		return fmt.Errorf(
+			"unexpected transaction used amount: expected: %v, got: %v",
 			expectedKVTransferGasUsed,
 			event.GasUsed.Amount,
 		)
@@ -940,7 +945,8 @@ func KVTransferFailTest(ctx context.Context, env *scenario.Env) error {
 	}
 	event := cevs[0]
 	if event.GasUsed.Amount != expectedKVTransferFailGasUsed {
-		return fmt.Errorf("unexpected transaction used amount: expected: %v, got: %v",
+		return fmt.Errorf(
+			"unexpected transaction used amount: expected: %v, got: %v",
 			expectedKVTransferFailGasUsed,
 			event.GasUsed.Amount,
 		)
@@ -1130,7 +1136,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 
 	// Create RNG.
 	seed := time.Now().UnixNano()
-	rngSrc, err := drbg.New(crypto.SHA512, []byte(fmt.Sprintf("%d%d%d%d", seed, seed, seed, seed)), nil, []byte("KVTxGenTest1min"))
+	rngSrc, err := drbg.New(crypto.SHA512, fmt.Appendf(nil, "%d%d%d%d", seed, seed, seed, seed), nil, []byte("KVTxGenTest1min"))
 	if err != nil {
 		return err
 	}
@@ -1158,7 +1164,7 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 	txgenCtx, cancel := context.WithTimeout(ctx, testDuration)
 	defer cancel()
 
-	// Generate a new random tx every 250ms until txgenCtx timeouts.
+	// Generate a new random tx every few ms until txgenCtx timeouts.
 	gens := append([]txgen.GenerateTx{}, txgen.DefaultTxGenerators...)
 	gens = append(gens, DefaultKVTxGenerators...)
 	genErrs, subErrs, ok, err := txgen.Generate(txgenCtx, env.Client, rng, accts, gens, 250*time.Millisecond)
@@ -1176,7 +1182,8 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 		return fmt.Errorf("failed to fetch latest block: %w", err)
 	}
 
-	env.Logger.Info("verifying transaction priority order",
+	env.Logger.Info(
+		"verifying transaction priority order",
 		"round_start", initialRound,
 		"round_end", blk.Header.Round,
 	)
@@ -1216,7 +1223,8 @@ func KVTxGenTest(ctx context.Context, env *scenario.Env) error {
 			results = append(results, rtx.Result.IsSuccess())
 		}
 
-		env.Logger.Info("got batch gas information",
+		env.Logger.Info(
+			"got batch gas information",
 			"signers", signers,
 			"nonces", nonces,
 			"round", round,
