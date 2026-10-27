@@ -38,7 +38,7 @@ jobs:
           - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -68,7 +68,7 @@ jobs:
           - runtime-sdk/rofl-oracle-tdx-raw
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Oasis CLI
         uses: oasisprotocol/setup-cli-action@0.0.2
@@ -90,7 +90,7 @@ jobs:
           - contract-sdk/c10l-hello-world
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -123,7 +123,7 @@ jobs:
           - client-sdk/go/minimal-runtime-client
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Go
         uses: actions/setup-go@v7

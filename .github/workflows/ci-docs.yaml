@@ -23,7 +23,7 @@ jobs:
       LIBCLANG_PATH: /usr/lib/llvm-21/lib
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Rust
         run: rustup show
@@ -65,7 +65,7 @@ jobs:
         working-directory: ./rofl-client/py
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js LTS
         uses: actions/setup-node@v4
