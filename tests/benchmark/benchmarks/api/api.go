@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,12 +64,13 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 			Client: rtc,
 		}
 
+		states = append(states, state)
+
 		if prepareable, ok := benchmark.(Prepareable); ok {
 			if err = prepareable.Prepare(ctx, state); err != nil {
 				return err
 			}
 		}
-		states = append(states, state)
 	}
 	logger.Info("preparation done")
 
@@ -81,82 +83,69 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	// Spawn each benchmark go routine.
 	errCh := make(chan error, cfg.Concurrency)
-	stopCh := make(chan struct{})
 	counter := new(atomicCounter)
-	var wg sync.WaitGroup
-
-	var didHalt bool
-	doHalt := func() {
-		if !didHalt {
-			close(stopCh)
-			wg.Wait()
-			didHalt = true
-		}
-	}
-	defer doHalt()
-
-	wg.Add(cfg.Concurrency)
 	timeBefore := time.Now()
 
-	var interval int64
-	if cfg.Rate != 0 {
-		interval = time.Second.Nanoseconds() / int64(cfg.Rate)
+	var interval time.Duration
+	if cfg.Rate > 0 {
+		interval = time.Second / time.Duration(cfg.Rate)
 	}
+	interval = max(interval, time.Millisecond)
 
-	for i := 0; i < cfg.Concurrency; i++ {
-		go func(state *State) {
-			defer wg.Done()
+	var wg sync.WaitGroup
+	defer wg.Wait()
 
-			began, count := time.Now(), int64(0)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	for i, state := range states {
+		wg.Go(func() {
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
+
 			for {
+				// Rate-limit before executing the scenario.
 				select {
 				case <-ctx.Done():
-					logger.Debug("canceled")
+					logger.Debug(fmt.Sprintf("canceled task %d", i))
 					return
-				case <-stopCh:
-					logger.Debug("finished")
-					return
-				default:
+				case <-ticker.C:
 				}
 
 				iters, err := benchmark.Scenario(ctx, state)
 				if err != nil {
-					// The cancelation can also interrupt a scenario in
+					// The cancellation can also interrupt a scenario in
 					// progress.
-					if err == context.Canceled {
-						logger.Debug("canceled")
+					if err == context.Canceled || err == context.DeadlineExceeded {
+						logger.Debug(fmt.Sprintf("canceled task %d", i))
 						return
 					}
 
-					logger.Error("iteration failed",
+					logger.Error(
+						"iteration failed",
 						"err", err,
+						"task", i,
 					)
 					errCh <- err
 					return
 				}
+
 				counter.Add(iters)
-
-				if interval != 0 {
-					// Rate limit
-					now, next := time.Now(), began.Add(time.Duration(count*interval))
-					time.Sleep(next.Sub(now))
-					count++
-				}
-
 			}
-		}(states[i])
+		})
 	}
 
 	duration := cfg.Duration
 	timeStart := time.Now()
 	countStart := counter.Get()
-	logger.Info("threads started")
 
-	doSleep := func(sleepDuration time.Duration, descr string) (time.Time, uint64, error) {
-		logger.Info("begin " + descr)
+	doSleep := func(sleepDuration time.Duration, txt string) (time.Time, uint64, error) {
+		logger.Info("begin " + txt)
+		defer logger.Info("end " + txt)
+
 		select {
 		case <-ctx.Done():
-			logger.Info("canceled during " + descr)
+			logger.Info("canceled during " + txt)
 			return time.Time{}, 0, context.Canceled
 		case err := <-errCh:
 			return time.Time{}, 0, err
@@ -166,6 +155,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 		return time.Now(), counter.Get(), nil
 	}
 
+	logger.Info("threads started")
+
 	// First 10% of time will be discarded.
 	timeMidBefore, countMidBefore, err := doSleep(duration/10, "first 10%")
 	if err != nil {
@@ -173,7 +164,7 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	}
 
 	// Middle 80% of time will be counted.
-	timeMidAfter, countMidAfter, err := doSleep(duration/10*8, "middle 80%")
+	timeMidAfter, countMidAfter, err := doSleep(duration*8/10, "middle 80%")
 	if err != nil {
 		return err
 	}
@@ -185,10 +176,14 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	}
 
 	// Signal end of run and wait for everything to finish.
-	doHalt()
+	cancel()
+	logger.Info("threads canceled")
+
+	wg.Wait()
+	logger.Info("threads joined")
+
 	timeAfter := time.Now()
 	countAfter := counter.Get()
-	logger.Info("threads joined")
 
 	// Derive the actually useful results.
 	midCount := countMidAfter - countMidBefore
@@ -197,7 +192,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	throughputInv := float64(midDurMs) / float64(midCount)
 	throughput := float64(midCount) / midDur.Seconds()
 
-	logger.Info("middle 80%",
+	logger.Info(
+		"middle 80%",
 		"calls", midCount,
 		"duration", midDur,
 		"calls_per_sec", throughput,
@@ -210,7 +206,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 	// Log the optional (informative) extra results.
 	totalCount := countEnd - countStart
 	totalDur := timeEnd.Sub(timeStart)
-	logger.Info("overall",
+	logger.Info(
+		"overall",
 		"calls", totalCount,
 		"duration", totalDur,
 		"calls_per_sec", float64(totalCount)/totalDur.Seconds(),
@@ -218,7 +215,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	beforeCount := countStart
 	beforeDur := timeStart.Sub(timeBefore)
-	logger.Info("ramp-up",
+	logger.Info(
+		"ramp-up",
 		"calls", beforeCount,
 		"duration", beforeDur,
 		"calls_per_sec", float64(beforeCount)/beforeDur.Seconds(),
@@ -226,7 +224,8 @@ func (cfg *Config) RunBenchmark(ctx context.Context, benchmark Benchmark) error 
 
 	afterCount := countAfter - countEnd
 	afterDur := timeAfter.Sub(timeEnd)
-	logger.Info("ramp-down",
+	logger.Info(
+		"ramp-down",
 		"calls", afterCount,
 		"duration", afterDur,
 		"calls_per_sec", float64(afterCount)/afterDur.Seconds(),
