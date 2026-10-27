@@ -55,13 +55,17 @@ The main client class for interacting with ROFL runtime services.
 #### Constructor
 
 ```python
-RoflClient(url: str = '')
+RoflClient(url: str = '', timeout: float = 60.0)
 ```
 
 - `url`: Optional URL or Unix socket path
   - If empty (default): Uses Unix socket at `/run/rofl-appd.sock`
   - If starts with `http://` or `https://`: Uses HTTP transport
   - Otherwise: Treats as Unix socket path
+- `timeout`: Request timeout in seconds (default: 60)
+  - `sign_submit` waits for the transaction result, including time queued in
+    appd, so apps that submit many transactions at once need a longer timeout.
+    A timeout does not cancel the transaction, and it can still land.
 
 #### Methods
 

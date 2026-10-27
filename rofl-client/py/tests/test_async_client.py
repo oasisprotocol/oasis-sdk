@@ -29,6 +29,30 @@ class TestAsyncRoflClient(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(client.url, "/custom/socket.sock")
 
     @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
+    async def test_custom_timeout(self, mock_client_class):
+        """Test a custom timeout reaches GET and POST requests."""
+        # Setup mock
+        mock_response = MagicMock()
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.post.return_value = mock_response
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+
+        client = AsyncRoflClient(timeout=600.0)
+        await client.get_app_id()
+        await client.generate_key("test-key-id")
+
+        # Verify the API calls
+        mock_client.get.assert_called_once_with(
+            "http://localhost/rofl/v1/app/id", timeout=600.0
+        )
+        mock_client.post.assert_called_once_with(
+            "http://localhost/rofl/v1/keys/generate",
+            json={"key_id": "test-key-id", "kind": "secp256k1"},
+            timeout=600.0,
+        )
+
+    @patch("oasis_rofl_client.async_rofl_client.httpx.AsyncClient")
     async def test_generate_key(self, mock_client_class):
         """Test generate_key method."""
         # Setup mock

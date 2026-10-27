@@ -31,12 +31,14 @@ class RoflClient:
     Provides methods for key fetching through the ROFL REST API.
     """
 
-    def __init__(self, url: str = "") -> None:
+    def __init__(self, url: str = "", timeout: float = 60.0) -> None:
         """Initialize ROFL client.
 
         :param url: Optional URL for HTTP transport (defaults to Unix socket)
+        :param timeout: Request timeout in seconds (defaults to 60)
         """
         self.url: str = url
+        self.timeout: float = timeout
 
     def _appd_request(
         self, method: str, path: str, payload: Any = None
@@ -72,10 +74,14 @@ class RoflClient:
 
             if method == "GET":
                 logger.debug(f"Getting from {full_url}")
-                response: httpx.Response = client.get(full_url, timeout=60.0)
+                response: httpx.Response = client.get(
+                    full_url, timeout=self.timeout
+                )
             else:  # POST
                 logger.debug(f"Posting to {full_url}: {json.dumps(payload)}")
-                response = client.post(full_url, json=payload, timeout=60.0)
+                response = client.post(
+                    full_url, json=payload, timeout=self.timeout
+                )
 
             response.raise_for_status()
 
