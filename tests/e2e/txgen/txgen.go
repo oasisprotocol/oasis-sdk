@@ -250,6 +250,13 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 				// Ignore context cancellation as this just means the test should finish.
 				return
 			}
+			if d, ok := ctx.Deadline(); ok && !d.After(time.Now()) {
+				// Ignore context cancellation as this just means the test should finish.
+				//
+				// The gRPC client may report a deadline exceeded error before
+				// ctx.Err() reflects the expired deadline.
+				return
+			}
 
 			select {
 			case errCh <- err:
