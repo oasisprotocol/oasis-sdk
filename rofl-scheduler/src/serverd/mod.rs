@@ -3,7 +3,7 @@ mod auth;
 mod error;
 mod routes;
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::{Context, Result};
 use axum::{http, routing::post, Router};
@@ -65,7 +65,7 @@ pub async fn serve(cfg: Config<'_>) -> Result<()> {
         .with_state(state)
         .layer(ServiceBuilder::new().layer(cors));
 
-    let addr = cfg.address.parse().context("bad address")?;
+    let addr: SocketAddr = cfg.address.parse().context("bad address")?;
     let tls_cfg =
         axum_server::tls_rustls::RustlsConfig::from_config(tls_provisioner.server_config(true));
 
