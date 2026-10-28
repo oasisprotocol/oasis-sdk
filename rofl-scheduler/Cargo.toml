@@ -30,7 +30,7 @@ hickory-resolver = { version = "0.26.1", features = [
     "dnssec-aws-lc-rs",
     "webpki-roots",
 ] }
-jsonwebtoken = "11"
+jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 nix = { version = "0.31.3", features = ["signal"] }
 oci-client = "0.18.0"
 rand = "0.10.3"
