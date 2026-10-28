@@ -263,78 +263,82 @@
 <a href=#263 id=263 data-nosnippet>263</a>
 <a href=#264 id=264 data-nosnippet>264</a><span class="attr">#[cfg(test)]
 <a href=#265 id=265 data-nosnippet>265</a></span><span class="kw">mod </span>test {
-<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">use </span>mockito::{mock, server_url};
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">use </span>mockito::Server;
 <a href=#267 id=267 data-nosnippet>267</a>
 <a href=#268 id=268 data-nosnippet>268</a>    <span class="kw">use super</span>::{agent, agent_with_config};
 <a href=#269 id=269 data-nosnippet>269</a>
 <a href=#270 id=270 data-nosnippet>270</a>    <span class="attr">#[test]
 <a href=#271 id=271 data-nosnippet>271</a>    </span><span class="kw">fn </span>test_get_request() {
 <a href=#272 id=272 data-nosnippet>272</a>        <span class="comment">// Set up a mock server
-<a href=#273 id=273 data-nosnippet>273</a>        </span><span class="kw">let </span>_mock = mock(<span class="string">"GET"</span>, <span class="string">"/test"</span>)
-<a href=#274 id=274 data-nosnippet>274</a>            .with_status(<span class="number">200</span>)
-<a href=#275 id=275 data-nosnippet>275</a>            .with_header(<span class="string">"content-type"</span>, <span class="string">"text/plain"</span>)
-<a href=#276 id=276 data-nosnippet>276</a>            .with_body(<span class="string">"Hello, world!"</span>)
-<a href=#277 id=277 data-nosnippet>277</a>            .create();
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>        <span class="comment">// Create an agent
-<a href=#280 id=280 data-nosnippet>280</a>        </span><span class="kw">let </span>agent = agent_with_config(Default::default());
-<a href=#281 id=281 data-nosnippet>281</a>
-<a href=#282 id=282 data-nosnippet>282</a>        <span class="comment">// Make a GET request to the mock server
-<a href=#283 id=283 data-nosnippet>283</a>        </span><span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"{}/test"</span>, server_url());
-<a href=#284 id=284 data-nosnippet>284</a>        <span class="kw">let </span><span class="kw-2">mut </span>response = agent.get(<span class="kw-2">&amp;</span>url).call().unwrap();
-<a href=#285 id=285 data-nosnippet>285</a>
-<a href=#286 id=286 data-nosnippet>286</a>        <span class="comment">// Verify the response
-<a href=#287 id=287 data-nosnippet>287</a>        </span><span class="macro">assert_eq!</span>(response.status(), <span class="number">200</span>);
-<a href=#288 id=288 data-nosnippet>288</a>        <span class="macro">assert_eq!</span>(
-<a href=#289 id=289 data-nosnippet>289</a>            response.body_mut().read_to_string().unwrap(),
-<a href=#290 id=290 data-nosnippet>290</a>            <span class="string">"Hello, world!"
-<a href=#291 id=291 data-nosnippet>291</a>        </span>);
-<a href=#292 id=292 data-nosnippet>292</a>    }
-<a href=#293 id=293 data-nosnippet>293</a>
-<a href=#294 id=294 data-nosnippet>294</a>    <span class="attr">#[test]
-<a href=#295 id=295 data-nosnippet>295</a>    </span><span class="kw">fn </span>test_post_request() {
-<a href=#296 id=296 data-nosnippet>296</a>        <span class="comment">// Set up a mock server for POST request
-<a href=#297 id=297 data-nosnippet>297</a>        </span><span class="kw">let </span>_mock = mock(<span class="string">"POST"</span>, <span class="string">"/submit"</span>)
-<a href=#298 id=298 data-nosnippet>298</a>            .with_status(<span class="number">201</span>)
-<a href=#299 id=299 data-nosnippet>299</a>            .with_header(<span class="string">"content-type"</span>, <span class="string">"application/json"</span>)
-<a href=#300 id=300 data-nosnippet>300</a>            .with_body(<span class="string">r#"{"success":true}"#</span>)
-<a href=#301 id=301 data-nosnippet>301</a>            .create();
-<a href=#302 id=302 data-nosnippet>302</a>
-<a href=#303 id=303 data-nosnippet>303</a>        <span class="comment">// Create an agent
-<a href=#304 id=304 data-nosnippet>304</a>        </span><span class="kw">let </span>agent = agent_with_config(Default::default());
-<a href=#305 id=305 data-nosnippet>305</a>
-<a href=#306 id=306 data-nosnippet>306</a>        <span class="comment">// Make a POST request to the mock server
-<a href=#307 id=307 data-nosnippet>307</a>        </span><span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"{}/submit"</span>, server_url());
-<a href=#308 id=308 data-nosnippet>308</a>        <span class="kw">let </span><span class="kw-2">mut </span>response = agent
-<a href=#309 id=309 data-nosnippet>309</a>            .post(<span class="kw-2">&amp;</span>url)
-<a href=#310 id=310 data-nosnippet>310</a>            .content_type(<span class="string">"application/json"</span>)
-<a href=#311 id=311 data-nosnippet>311</a>            .send(<span class="string">r#"{"key":"value"}"#</span>)
-<a href=#312 id=312 data-nosnippet>312</a>            .unwrap();
-<a href=#313 id=313 data-nosnippet>313</a>
-<a href=#314 id=314 data-nosnippet>314</a>        <span class="comment">// Verify the response
-<a href=#315 id=315 data-nosnippet>315</a>        </span><span class="macro">assert_eq!</span>(response.status(), <span class="number">201</span>);
-<a href=#316 id=316 data-nosnippet>316</a>        <span class="macro">assert_eq!</span>(
-<a href=#317 id=317 data-nosnippet>317</a>            response.body_mut().read_to_string().unwrap(),
-<a href=#318 id=318 data-nosnippet>318</a>            <span class="string">r#"{"success":true}"#
-<a href=#319 id=319 data-nosnippet>319</a>        </span>);
-<a href=#320 id=320 data-nosnippet>320</a>    }
-<a href=#321 id=321 data-nosnippet>321</a>
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="attr">#[test]
-<a href=#323 id=323 data-nosnippet>323</a>    </span><span class="kw">fn </span>test_get_remote_https() {
-<a href=#324 id=324 data-nosnippet>324</a>        <span class="kw">let </span>response = agent().get(<span class="string">"https://www.google.com/"</span>).call().unwrap();
+<a href=#273 id=273 data-nosnippet>273</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>server = Server::new();
+<a href=#274 id=274 data-nosnippet>274</a>        <span class="kw">let </span>_mock = server
+<a href=#275 id=275 data-nosnippet>275</a>            .mock(<span class="string">"GET"</span>, <span class="string">"/test"</span>)
+<a href=#276 id=276 data-nosnippet>276</a>            .with_status(<span class="number">200</span>)
+<a href=#277 id=277 data-nosnippet>277</a>            .with_header(<span class="string">"content-type"</span>, <span class="string">"text/plain"</span>)
+<a href=#278 id=278 data-nosnippet>278</a>            .with_body(<span class="string">"Hello, world!"</span>)
+<a href=#279 id=279 data-nosnippet>279</a>            .create();
+<a href=#280 id=280 data-nosnippet>280</a>
+<a href=#281 id=281 data-nosnippet>281</a>        <span class="comment">// Create an agent
+<a href=#282 id=282 data-nosnippet>282</a>        </span><span class="kw">let </span>agent = agent_with_config(Default::default());
+<a href=#283 id=283 data-nosnippet>283</a>
+<a href=#284 id=284 data-nosnippet>284</a>        <span class="comment">// Make a GET request to the mock server
+<a href=#285 id=285 data-nosnippet>285</a>        </span><span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"{}/test"</span>, server.url());
+<a href=#286 id=286 data-nosnippet>286</a>        <span class="kw">let </span><span class="kw-2">mut </span>response = agent.get(<span class="kw-2">&amp;</span>url).call().unwrap();
+<a href=#287 id=287 data-nosnippet>287</a>
+<a href=#288 id=288 data-nosnippet>288</a>        <span class="comment">// Verify the response
+<a href=#289 id=289 data-nosnippet>289</a>        </span><span class="macro">assert_eq!</span>(response.status(), <span class="number">200</span>);
+<a href=#290 id=290 data-nosnippet>290</a>        <span class="macro">assert_eq!</span>(
+<a href=#291 id=291 data-nosnippet>291</a>            response.body_mut().read_to_string().unwrap(),
+<a href=#292 id=292 data-nosnippet>292</a>            <span class="string">"Hello, world!"
+<a href=#293 id=293 data-nosnippet>293</a>        </span>);
+<a href=#294 id=294 data-nosnippet>294</a>    }
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>    <span class="attr">#[test]
+<a href=#297 id=297 data-nosnippet>297</a>    </span><span class="kw">fn </span>test_post_request() {
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="comment">// Set up a mock server for POST request
+<a href=#299 id=299 data-nosnippet>299</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>server = Server::new();
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="kw">let </span>_mock = server
+<a href=#301 id=301 data-nosnippet>301</a>            .mock(<span class="string">"POST"</span>, <span class="string">"/submit"</span>)
+<a href=#302 id=302 data-nosnippet>302</a>            .with_status(<span class="number">201</span>)
+<a href=#303 id=303 data-nosnippet>303</a>            .with_header(<span class="string">"content-type"</span>, <span class="string">"application/json"</span>)
+<a href=#304 id=304 data-nosnippet>304</a>            .with_body(<span class="string">r#"{"success":true}"#</span>)
+<a href=#305 id=305 data-nosnippet>305</a>            .create();
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>        <span class="comment">// Create an agent
+<a href=#308 id=308 data-nosnippet>308</a>        </span><span class="kw">let </span>agent = agent_with_config(Default::default());
+<a href=#309 id=309 data-nosnippet>309</a>
+<a href=#310 id=310 data-nosnippet>310</a>        <span class="comment">// Make a POST request to the mock server
+<a href=#311 id=311 data-nosnippet>311</a>        </span><span class="kw">let </span>url = <span class="macro">format!</span>(<span class="string">"{}/submit"</span>, server.url());
+<a href=#312 id=312 data-nosnippet>312</a>        <span class="kw">let </span><span class="kw-2">mut </span>response = agent
+<a href=#313 id=313 data-nosnippet>313</a>            .post(<span class="kw-2">&amp;</span>url)
+<a href=#314 id=314 data-nosnippet>314</a>            .content_type(<span class="string">"application/json"</span>)
+<a href=#315 id=315 data-nosnippet>315</a>            .send(<span class="string">r#"{"key":"value"}"#</span>)
+<a href=#316 id=316 data-nosnippet>316</a>            .unwrap();
+<a href=#317 id=317 data-nosnippet>317</a>
+<a href=#318 id=318 data-nosnippet>318</a>        <span class="comment">// Verify the response
+<a href=#319 id=319 data-nosnippet>319</a>        </span><span class="macro">assert_eq!</span>(response.status(), <span class="number">201</span>);
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="macro">assert_eq!</span>(
+<a href=#321 id=321 data-nosnippet>321</a>            response.body_mut().read_to_string().unwrap(),
+<a href=#322 id=322 data-nosnippet>322</a>            <span class="string">r#"{"success":true}"#
+<a href=#323 id=323 data-nosnippet>323</a>        </span>);
+<a href=#324 id=324 data-nosnippet>324</a>    }
 <a href=#325 id=325 data-nosnippet>325</a>
-<a href=#326 id=326 data-nosnippet>326</a>        <span class="comment">// Verify the response
-<a href=#327 id=327 data-nosnippet>327</a>        </span><span class="macro">assert_eq!</span>(
-<a href=#328 id=328 data-nosnippet>328</a>            <span class="string">"text/html;charset=ISO-8859-1"</span>,
-<a href=#329 id=329 data-nosnippet>329</a>            response
-<a href=#330 id=330 data-nosnippet>330</a>                .headers()
-<a href=#331 id=331 data-nosnippet>331</a>                .get(<span class="string">"content-type"</span>)
-<a href=#332 id=332 data-nosnippet>332</a>                .unwrap()
-<a href=#333 id=333 data-nosnippet>333</a>                .to_str()
-<a href=#334 id=334 data-nosnippet>334</a>                .unwrap()
-<a href=#335 id=335 data-nosnippet>335</a>                .replace(<span class="string">"; "</span>, <span class="string">";"</span>)
-<a href=#336 id=336 data-nosnippet>336</a>        );
-<a href=#337 id=337 data-nosnippet>337</a>        <span class="macro">assert_eq!</span>(response.body().mime_type(), <span class="prelude-val">Some</span>(<span class="string">"text/html"</span>));
-<a href=#338 id=338 data-nosnippet>338</a>    }
-<a href=#339 id=339 data-nosnippet>339</a>}
+<a href=#326 id=326 data-nosnippet>326</a>    <span class="attr">#[test]
+<a href=#327 id=327 data-nosnippet>327</a>    </span><span class="kw">fn </span>test_get_remote_https() {
+<a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">let </span>response = agent().get(<span class="string">"https://www.google.com/"</span>).call().unwrap();
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a>        <span class="comment">// Verify the response
+<a href=#331 id=331 data-nosnippet>331</a>        </span><span class="macro">assert_eq!</span>(
+<a href=#332 id=332 data-nosnippet>332</a>            <span class="string">"text/html;charset=ISO-8859-1"</span>,
+<a href=#333 id=333 data-nosnippet>333</a>            response
+<a href=#334 id=334 data-nosnippet>334</a>                .headers()
+<a href=#335 id=335 data-nosnippet>335</a>                .get(<span class="string">"content-type"</span>)
+<a href=#336 id=336 data-nosnippet>336</a>                .unwrap()
+<a href=#337 id=337 data-nosnippet>337</a>                .to_str()
+<a href=#338 id=338 data-nosnippet>338</a>                .unwrap()
+<a href=#339 id=339 data-nosnippet>339</a>                .replace(<span class="string">"; "</span>, <span class="string">";"</span>)
+<a href=#340 id=340 data-nosnippet>340</a>        );
+<a href=#341 id=341 data-nosnippet>341</a>        <span class="macro">assert_eq!</span>(response.body().mime_type(), <span class="prelude-val">Some</span>(<span class="string">"text/html"</span>));
+<a href=#342 id=342 data-nosnippet>342</a>    }
+<a href=#343 id=343 data-nosnippet>343</a>}
 </code></pre></div></section></main></body></html>
