@@ -217,7 +217,7 @@ dependencies = [
  "nom",
  "num-traits",
  "rusticata-macros",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
 ]
 
@@ -310,7 +310,7 @@ dependencies = [
  "crc32fast",
  "futures-lite",
  "pin-project",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-util",
 ]
@@ -1559,7 +1559,7 @@ dependencies = [
  "rand 0.10.3",
  "ring",
  "socket2 0.6.3",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tracing",
  "x25519-dalek",
 ]
@@ -1582,7 +1582,7 @@ dependencies = [
  "netlink-packet-wireguard",
  "netlink-sys",
  "serde",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "windows 0.62.2",
  "wireguard-nt",
  "x25519-dalek",
@@ -1616,7 +1616,7 @@ version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71958f69fb2de856c5dd51ac9377e986ca1aa5919f931bf5395a807277f889a0"
 dependencies = [
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1642,9 +1642,9 @@ dependencies = [
 
 [[package]]
 name = "der"
-version = "0.8.2"
+version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a878c850e9e421b20262e9b41f9c860e4785fa07541c266b62ff9d1ef998a80a"
+checksum = "6a996a108feb8b427a6e12fcf6af4aa83409b79d72c15337d7741368131ee004"
 dependencies = [
  "const-oid 0.10.2",
  "pem-rfc7468",
@@ -1869,7 +1869,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0681a4fc24c767085329728d8dfba959af91228aa4610cca4f8ce317ba46ae0"
 dependencies = [
- "der 0.8.2",
+ "der 0.8.3",
  "digest 0.11.3",
  "elliptic-curve 0.14.1",
  "rfc6979 0.6.0",
@@ -2827,7 +2827,7 @@ dependencies = [
  "rand 0.10.3",
  "rustls",
  "rustls-pki-types",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
  "tinyvec",
  "tokio",
@@ -2854,7 +2854,7 @@ dependencies = [
  "rand 0.10.3",
  "ring",
  "rustls-pki-types",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
  "tinyvec",
  "tracing",
@@ -2883,7 +2883,7 @@ dependencies = [
  "rustls",
  "smallvec",
  "system-configuration",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-rustls",
  "tracing",
@@ -3336,7 +3336,7 @@ dependencies = [
  "rustls-pki-types",
  "serde",
  "serde_json",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
 ]
 
@@ -3537,7 +3537,7 @@ dependencies = [
  "jni-sys 0.4.1",
  "log",
  "simd_cesu8",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "walkdir",
  "windows-link",
 ]
@@ -3773,6 +3773,15 @@ name = "lru"
 version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef9ac18847474e638e3702b76c65d4eb93428471a74778ef0f1be711717f89b5"
+dependencies = [
+ "hashbrown 0.17.1",
+]
+
+[[package]]
+name = "lru"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9f71e3591c7ec44d3e563e87bf14ddc2bada8519dca046e5b0e560cd004e2d"
 dependencies = [
  "hashbrown 0.17.1",
 ]
@@ -4058,7 +4067,7 @@ checksum = "3176f18d11a1ae46053e59ec89d46ba318ae1343615bd3f8c908bfc84edae35c"
 dependencies = [
  "byteorder",
  "pastey",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4273,7 +4282,7 @@ dependencies = [
  "oasis-runtime-sdk",
  "rand 0.10.3",
  "rand_xorshift",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "wee_alloc",
 ]
 
@@ -4287,7 +4296,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "sha2 0.11.1",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "x25519-dalek",
 ]
 
@@ -4319,7 +4328,7 @@ dependencies = [
  "hex",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4333,7 +4342,7 @@ dependencies = [
  "futures",
  "group 0.14.0",
  "lazy_static",
- "lru",
+ "lru 0.18.5",
  "oasis-cbor",
  "oasis-core-runtime",
  "p256",
@@ -4343,7 +4352,7 @@ dependencies = [
  "secret-sharing",
  "sgx-isa",
  "sp800-185",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tiny-keccak 2.0.2",
  "tokio",
  "x25519-dalek",
@@ -4377,7 +4386,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "log",
- "lru",
+ "lru 0.18.5",
  "mbedtls",
  "nix",
  "num-bigint 0.4.8",
@@ -4403,7 +4412,7 @@ dependencies = [
  "tendermint-light-client",
  "tendermint-proto",
  "tendermint-rpc",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
@@ -4442,7 +4451,7 @@ dependencies = [
  "hmac 0.13.0",
  "impl-trait-for-tuples",
  "k256 0.14.0",
- "lru",
+ "lru 0.19.0",
  "merlin",
  "num-traits",
  "oasis-cbor",
@@ -4459,7 +4468,7 @@ dependencies = [
  "sha2 0.11.1",
  "sha3 0.12.0",
  "slog",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-retry",
@@ -4475,7 +4484,7 @@ dependencies = [
  "blake3",
  "hex",
  "k256 0.14.0",
- "lru",
+ "lru 0.19.0",
  "num-traits",
  "oasis-cbor",
  "oasis-contract-sdk-crypto",
@@ -4485,7 +4494,7 @@ dependencies = [
  "pretty_assertions",
  "rand 0.10.3",
  "snap",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "walrus",
  "wasm3",
  "wasmprinter",
@@ -4523,7 +4532,7 @@ dependencies = [
  "sha3 0.12.0",
  "solabi",
  "substrate-bn",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "uint 0.10.2",
  "x25519-dalek",
 ]
@@ -4553,7 +4562,7 @@ dependencies = [
  "once_cell",
  "rustc-hex",
  "solabi",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "zeroize",
 ]
 
@@ -4577,7 +4586,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.11.1",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "unicase",
@@ -4597,7 +4606,7 @@ dependencies = [
  "serde_json",
  "strum",
  "strum_macros",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4906,7 +4915,7 @@ version = "0.8.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f485dbafe293ea6ccaa7d82bc591651a796eb8a9aec3df040b057b706073dbc3"
 dependencies = [
- "der 0.8.2",
+ "der 0.8.3",
  "spki 0.8.1",
 ]
 
@@ -4926,7 +4935,7 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "451913da69c775a56034ea8d9003d27ee8948e12443eae7c038ba100a4f21cb7"
 dependencies = [
- "der 0.8.2",
+ "der 0.8.3",
  "spki 0.8.1",
 ]
 
@@ -5236,7 +5245,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "rustls",
  "socket2 0.6.3",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "web-time",
@@ -5259,7 +5268,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "slab",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tinyvec",
  "tracing",
  "web-time",
@@ -5780,7 +5789,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sp800-185",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-retry",
  "zeroize",
@@ -5874,7 +5883,7 @@ dependencies = [
  "serde_json",
  "sha2 0.11.1",
  "siwe",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "tiny-keccak 2.0.2",
  "tokio",
  "tokio-mpmc",
@@ -5888,7 +5897,7 @@ dependencies = [
 name = "rofl-utils"
 version = "0.1.1"
 dependencies = [
- "der 0.8.2",
+ "der 0.8.3",
  "mockito",
  "rustls",
  "rustls-mbedcrypto-provider",
@@ -5940,7 +5949,7 @@ dependencies = [
  "nix",
  "regex",
  "rustables-macros",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -6395,7 +6404,7 @@ checksum = "d56d437c2f19203ce5f7122e507831de96f3d2d4d3be5af44a0b0a09d8a80e4d"
 dependencies = [
  "base16ct 1.0.0",
  "ctutils",
- "der 0.8.2",
+ "der 0.8.3",
  "hybrid-array",
  "subtle",
  "zeroize",
@@ -6414,7 +6423,7 @@ dependencies = [
  "rand 0.10.3",
  "sha3 0.12.0",
  "subtle",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "zeroize",
 ]
 
@@ -6759,7 +6768,7 @@ checksum = "0d585997b0ac10be3c5ee635f1bab02d512760d14b7c468801ac8a01d9ae5f1d"
 dependencies = [
  "num-bigint 0.4.8",
  "num-traits",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
 ]
 
@@ -6929,7 +6938,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ef958a98b9d5da290cfc78946e9f3e61e1e62a18db0d92cac0b83cc161491a9"
 dependencies = [
  "base64ct",
- "der 0.8.2",
+ "der 0.8.3",
 ]
 
 [[package]]
@@ -7270,7 +7279,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -7290,7 +7299,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "once_cell",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -7308,7 +7317,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-contracts",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -7318,7 +7327,7 @@ dependencies = [
  "oasis-cbor",
  "oasis-runtime-sdk",
  "oasis-runtime-sdk-evm",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -7329,7 +7338,7 @@ dependencies = [
  "futures",
  "oasis-cbor",
  "oasis-runtime-sdk",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -7343,11 +7352,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.18"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
 dependencies = [
- "thiserror-impl 2.0.18",
+ "thiserror-impl 2.0.21",
 ]
 
 [[package]]
@@ -7363,13 +7372,13 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.18"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.117",
+ "syn 3.0.8",
 ]
 
 [[package]]
@@ -8917,7 +8926,7 @@ dependencies = [
  "nom",
  "oid-registry",
  "rusticata-macros",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
 ]
 
@@ -8936,7 +8945,7 @@ dependencies = [
  "oid-registry",
  "ring",
  "rusticata-macros",
- "thiserror 2.0.18",
+ "thiserror 2.0.21",
  "time",
 ]
 
