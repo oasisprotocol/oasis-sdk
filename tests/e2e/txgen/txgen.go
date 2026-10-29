@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -174,7 +175,7 @@ func CreateAndFundAccount(ctx context.Context, rtc client.RuntimeClient, funder 
 }
 
 // RandomizeFee generates random fee parameters for the transaction.
-func RandomizeFee(_ context.Context, rng *rand.Rand, tx *types.Transaction) error {
+func RandomizeFee(rng *rand.Rand, tx *types.Transaction) error {
 	const maxBaseUnits = 20_000
 	feeAmount := rng.Uint64() % maxBaseUnits
 
@@ -197,71 +198,97 @@ func Generate(ctx context.Context, rtc client.RuntimeClient, rng *rand.Rand, acc
 		return 0, 0, 0, fmt.Errorf("tx delay is too small")
 	}
 
-	ticker := time.NewTicker(txDelay)
-	defer ticker.Stop()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	var (
-		genErrCount uint64
-		subErrCount uint64
-		okCount     uint64
+		genErrCount atomic.Uint64
+		subErrCount atomic.Uint64
+		okCount     atomic.Uint64
+		errCh       = make(chan error, 1)
 	)
 
-	errCh := make(chan error)
+	generateOne := func() {
+		// Choose random account and txn generator.
+		acct := accounts[rng.Intn(len(accounts))]
+		gen := txGens[rng.Intn(len(txGens))]
 
-	for {
-		select {
-		case <-ctx.Done():
-			return genErrCount, subErrCount, okCount, nil
-		case err := <-errCh:
-			return genErrCount, subErrCount, okCount, err
-		case <-ticker.C:
-			// Choose random account and txn generator.
-			acct := accounts[rng.Intn(len(accounts))]
-			gen := txGens[rng.Intn(len(txGens))]
+		// Generate random transaction or perform random query.
+		func() {
+			tx, err := gen(ctx, rtc, rng, acct, accounts)
+			if err != nil {
+				_ = genErrCount.Add(1)
+				return
+			}
 
-			go func(acct signature.Signer, gen GenerateTx) {
-				// Generate random transaction or perform random query.
-				if tx, err := gen(ctx, rtc, rng, acct, accounts); err != nil { //nolint: nestif
-					atomic.AddUint64(&genErrCount, 1)
-				} else {
-					// The tx generator can choose not to generate a tx
-					// (e.g. if it's only testing queries), so count this case
-					// as a success.
-					if tx == nil {
-						atomic.AddUint64(&okCount, 1)
-						return
-					}
+			// The tx generator can choose not to generate a tx
+			// (e.g. if it's only testing queries), so count this case
+			// as a success.
+			if tx == nil {
+				_ = okCount.Add(1)
+				return
+			}
 
-					// Randomize transaction fee.
-					if err = RandomizeFee(ctx, rng, tx); err != nil {
-						atomic.AddUint64(&genErrCount, 1)
-						return
-					}
+			// Randomize transaction fee.
+			if err = RandomizeFee(rng, tx); err != nil {
+				_ = genErrCount.Add(1)
+				return
+			}
 
-					// Sign and submit the generated transaction.
-					if _, err = SignAndSubmitTxRaw(ctx, rtc, acct, *tx, 0); err != nil {
-						atomic.AddUint64(&subErrCount, 1)
-					} else {
-						atomic.AddUint64(&okCount, 1)
-					}
-				}
+			// Sign and submit the generated transaction.
+			if _, err = SignAndSubmitTxRaw(ctx, rtc, acct, *tx, 0); err != nil {
+				_ = subErrCount.Add(1)
+				return
+			}
 
-				// Perform an invariants check.
-				if err := CheckInvariants(ctx, rtc); err != nil {
-					if ctx.Err() != nil {
-						// Ignore context cancellation as this just means the test should finish.
-						return
-					}
+			_ = okCount.Add(1)
+		}()
 
-					// This is wrapped in a select block to make sure that if
-					// multiple goroutines report an error, they don't get
-					// blocked here.
-					select {
-					case errCh <- err:
-					default:
-					}
-				}
-			}(acct, gen)
+		// Perform an invariants check.
+		if err := CheckInvariants(ctx, rtc); err != nil {
+			if ctx.Err() != nil {
+				// Ignore context cancellation as this just means the test should finish.
+				return
+			}
+			if d, ok := ctx.Deadline(); ok && !d.After(time.Now()) {
+				// Ignore context cancellation as this just means the test should finish.
+				//
+				// The gRPC client may report a deadline exceeded error before
+				// ctx.Err() reflects the expired deadline.
+				return
+			}
+
+			select {
+			case errCh <- err:
+				cancel()
+			default:
+			}
 		}
 	}
+
+	func() {
+		var wg sync.WaitGroup
+		defer wg.Wait()
+
+		ticker := time.NewTicker(txDelay)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+
+			wg.Go(generateOne)
+		}
+	}()
+
+	select {
+	case err := <-errCh:
+		return 0, 0, 0, err
+	default:
+	}
+
+	return genErrCount.Load(), subErrCount.Load(), okCount.Load(), nil
 }
