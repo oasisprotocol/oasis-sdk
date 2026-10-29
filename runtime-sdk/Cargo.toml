@@ -51,7 +51,7 @@ tokio = { version = "1.38", features = [
 ] }
 tokio-retry = "0.3.2"
 zeroize = "1.8"
-lru = "0.18.5"
+lru = "0.19.0"
 
 [dev-dependencies]
 blake3 = { version = "1.8.7", features = ["traits-preview"] }
