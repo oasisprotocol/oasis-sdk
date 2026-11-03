@@ -86,7 +86,7 @@ state is erased.
   currently supported:
 
   - `raw-256` to generate 256 bits of entropy.
-  - `raw-386` to generate 384 bits of entropy.
+  - `raw-384` to generate 384 bits of entropy.
   - `ed25519` to generate an Ed25519 private key.
   - `secp256k1` to generate a Secp256k1 private key.
 
