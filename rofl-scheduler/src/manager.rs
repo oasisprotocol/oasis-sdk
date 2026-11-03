@@ -1584,7 +1584,7 @@ impl Manager {
                     .env
                     .host()
                     .bundle_manager()
-                    .bundle_write(bundle_manager::BundleWriteRequest {
+                    .bundle_temporary_write(bundle_manager::BundleTemporaryWriteRequest {
                         temporary_name: tmp_name.clone(), // This is suboptimal.
                         create,
                         data: buffer.to_vec(), // This is suboptimal.
@@ -1620,6 +1620,15 @@ impl Manager {
         if let Err(e) = result {
             layer_pull_task.abort();
             bundle_stream_task.abort();
+
+            let _ = self
+                .env
+                .host()
+                .bundle_manager()
+                .bundle_temporary_delete(bundle_manager::BundleTemporaryDeleteRequest {
+                    temporary_name: tmp_name.clone(), // This is suboptimal.
+                })
+                .await; // Ignore error.
 
             return Err(e);
         }
