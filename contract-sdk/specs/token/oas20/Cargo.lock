@@ -938,7 +938,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1574,15 +1574,6 @@ checksum = "953f07c43838f8e6f9758cab68bf5bed85465e7587ebe0b823f1bcd81978ad3a"
 
 [[package]]
 name = "lru"
-version = "0.18.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef9ac18847474e638e3702b76c65d4eb93428471a74778ef0f1be711717f89b5"
-dependencies = [
- "hashbrown 0.17.1",
-]
-
-[[package]]
-name = "lru"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a9f71e3591c7ec44d3e563e87bf14ddc2bada8519dca046e5b0e560cd004e2d"
@@ -1858,7 +1849,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-keymanager"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.3#b57641b4537363e61e6d118610ae4b8a01d6026c"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.4#03b8c10219a58902520763108c04f415131d3d3d"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1866,7 +1857,7 @@ dependencies = [
  "futures",
  "group",
  "lazy_static",
- "lru 0.18.5",
+ "lru",
  "oasis-cbor",
  "oasis-core-runtime",
  "p256",
@@ -1886,7 +1877,7 @@ dependencies = [
 [[package]]
 name = "oasis-core-runtime"
 version = "0.0.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.3#b57641b4537363e61e6d118610ae4b8a01d6026c"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.4#03b8c10219a58902520763108c04f415131d3d3d"
 dependencies = [
  "anyhow",
  "arbitrary",
@@ -1909,7 +1900,7 @@ dependencies = [
  "intrusive-collections",
  "lazy_static",
  "log",
- "lru 0.18.5",
+ "lru",
  "mbedtls",
  "num-bigint 0.4.8",
  "num-derive",
@@ -1960,7 +1951,7 @@ dependencies = [
  "hmac",
  "impl-trait-for-tuples",
  "k256",
- "lru 0.19.0",
+ "lru",
  "merlin",
  "num-traits",
  "oasis-cbor",
@@ -2581,7 +2572,7 @@ dependencies = [
 [[package]]
 name = "secret-sharing"
 version = "0.1.0"
-source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.3#b57641b4537363e61e6d118610ae4b8a01d6026c"
+source = "git+https://github.com/oasisprotocol/oasis-core?tag=v26.4#03b8c10219a58902520763108c04f415131d3d3d"
 dependencies = [
  "anyhow",
  "group",
@@ -3579,7 +3570,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -3881,9 +3872,9 @@ dependencies = [
 
 [[package]]
 name = "x509-parser"
-version = "0.17.0"
+version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4569f339c0c402346d4a75a9e39cf8dad310e287eef1ff56d4c68e5067f53460"
+checksum = "d43b0f71ce057da06bc0851b23ee24f3f86190b07203dd8f567d0b706a185202"
 dependencies = [
  "asn1-rs",
  "data-encoding",
