@@ -1,14 +1,9 @@
-use std::{
-    fs::{self, File},
-    io::Write,
-    process::Command,
-    time::SystemTime,
-};
+use std::{fs, process::Command, time::SystemTime};
 
 use anyhow::Result;
 use cmd_lib::run_cmd;
 
-use crate::{metadata, utils::RemoveFileOnDrop};
+use crate::metadata;
 
 /// Initialize container environment.
 pub async fn init() -> Result<()> {
@@ -55,24 +50,11 @@ pub async fn init() -> Result<()> {
 
 /// Start containers.
 pub async fn start(initial: metadata::Initial) -> Result<()> {
-    // Initialize the file with environment variables to expose to podman-compose.
-    let mut env_file = File::create("/run/podman/env")?;
-    for (key, value) in initial.environment {
-        writeln!(&mut env_file, "{key}={value}")?;
-    }
-
     // Initialize secrets.
-    for (name, value) in initial.secrets {
+    for (name, value) in &initial.secrets {
         // Create a new Podman secret in temporary storage on /run to avoid it being persisted.
         let _ = run_cmd!(echo -n $value | podman secret create --driver-opts file=/run/podman/secrets --replace $name -);
-        // Also store the secrets in the environment file.
-        let name_upper = name.to_uppercase().replace(" ", "_");
-        let value = value.as_str();
-        writeln!(&mut env_file, "{name_upper}={value}")?;
     }
-
-    drop(env_file); // Close the file.
-    let _guard = RemoveFileOnDrop::new("/run/podman/env");
 
     // Run the podman API service.
     Command::new("podman")
@@ -80,10 +62,27 @@ pub async fn start(initial: metadata::Initial) -> Result<()> {
         .spawn()?;
 
     // Bring containers up.
-    run_cmd!(
-        cd "/etc/oasis/containers";
-        podman-compose --env-file "/run/podman/env" up --detach --remove-orphans --force-recreate --no-build;
-    )?;
+    let status =
+        Command::new("podman-compose")
+            .current_dir("/etc/oasis/containers")
+            .args([
+                "up",
+                "--detach",
+                "--remove-orphans",
+                "--force-recreate",
+                "--no-build",
+            ])
+            .envs(
+                initial
+                    .environment
+                    .iter()
+                    .map(|(key, value)| (key.clone(), value.as_str()))
+                    .chain(initial.secrets.iter().map(|(name, value)| {
+                        (name.to_uppercase().replace(' ', "_"), value.as_str())
+                    })),
+            )
+            .status()?;
+    anyhow::ensure!(status.success(), "failed to bring up containers");
 
     // Follow container logs.
     let now = SystemTime::now()
