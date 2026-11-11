@@ -5,7 +5,7 @@
 #
 
 # Released version from GitHub Releases.
-OASIS_CORE_VERSION='26.3'
+OASIS_CORE_VERSION='26.4'
 
 # Development version from GitHub Actions.
 # e.g. '58512799'
