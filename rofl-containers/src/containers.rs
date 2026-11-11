@@ -58,7 +58,7 @@ pub async fn start(initial: metadata::Initial) -> Result<()> {
     // Initialize the file with environment variables to expose to podman-compose.
     let mut env_file = File::create("/run/podman/env")?;
     for (key, value) in initial.environment {
-        writeln!(&mut env_file, "{key}={value}")?;
+        writeln!(&mut env_file, "{key}={}", quote_podman_env_value(&value))?;
     }
 
     // Initialize secrets.
@@ -67,8 +67,11 @@ pub async fn start(initial: metadata::Initial) -> Result<()> {
         let _ = run_cmd!(echo -n $value | podman secret create --driver-opts file=/run/podman/secrets --replace $name -);
         // Also store the secrets in the environment file.
         let name_upper = name.to_uppercase().replace(" ", "_");
-        let value = value.as_str();
-        writeln!(&mut env_file, "{name_upper}={value}")?;
+        writeln!(
+            &mut env_file,
+            "{name_upper}={}",
+            quote_podman_env_value(value.as_str())
+        )?;
     }
 
     drop(env_file); // Close the file.
@@ -95,4 +98,18 @@ pub async fn start(initial: metadata::Initial) -> Result<()> {
         .spawn()?;
 
     Ok(())
+}
+
+fn quote_podman_env_value(value: &str) -> String {
+    let escaped = value
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
+        .replace('$', "${:-$}");
+
+    // The empty expansion separates any trailing backslash from the quote.
+    // Work around python-dotenv < 1.2.3's quoted-value parser.
+    format!("\"{escaped}${{}}\"")
 }
