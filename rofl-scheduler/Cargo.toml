@@ -16,7 +16,7 @@ anyhow = "1.0.86"
 async_zip = { version = "0.0.19", features = ["deflate", "tokio"] }
 axum = "0.8.4"
 axum-extra = { version = "0.12.6", features = ["typed-header"] }
-axum-server = { version = "0.8.0", features = ["tls-rustls"] }
+axum-server = { version = "0.9.0", features = ["tls-rustls"] }
 backoff = { version = "0.4", features = ["tokio"] }
 base64 = "0.23.1"
 byteorder = "1.5.0"
