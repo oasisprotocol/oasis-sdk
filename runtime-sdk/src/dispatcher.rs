@@ -225,7 +225,7 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         // Decode call based on specified call format.
-        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, opts.tx_index) {
+        let (call, call_format_metadata) = match callformat::decode_call(ctx, call) {
             Ok(Some(result)) => result,
             Ok(None) => {
                 return (
@@ -434,6 +434,7 @@ impl<R: Runtime> Dispatcher<R> {
             ctx,
             dispatch_result.result,
             dispatch_result.call_format_metadata,
+            opts.tx_index,
         );
 
         Ok((output, dispatch_result.tags))

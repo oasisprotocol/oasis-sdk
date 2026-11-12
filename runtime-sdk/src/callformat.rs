@@ -25,7 +25,7 @@ use crate::{
 /// cached and randomized queries could open the scheme to a potential DoS attack.
 const MAX_EPHEMERAL_KEY_AGE: beacon::EpochTime = 5;
 
-/// Additional metadata required by the result encoding function.
+/// Additional metadata returned by the call decoding function.
 pub enum Metadata {
     Empty,
     EncryptedX25519DeoxysII {
@@ -33,8 +33,6 @@ pub enum Metadata {
         pk: x25519::PublicKey,
         /// Secret key.
         sk: x25519::PrivateKey,
-        /// Transaction index within the batch.
-        index: usize,
     },
 }
 
@@ -42,10 +40,9 @@ impl std::fmt::Debug for Metadata {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Empty => f.debug_struct("Metadata::Empty").finish(),
-            Self::EncryptedX25519DeoxysII { pk, index, .. } => f
+            Self::EncryptedX25519DeoxysII { pk, .. } => f
                 .debug_struct("Metadata::EncryptedX25519DeoxysII")
                 .field("pk", pk)
-                .field("index", index)
                 .finish_non_exhaustive(),
         }
     }
@@ -75,12 +72,8 @@ fn verify_epoch<C: Context>(ctx: &C, epoch: beacon::EpochTime) -> Result<(), Err
 ///
 /// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
 /// execution needs to be deferred (e.g., because key manager access is required).
-pub fn decode_call<C: Context>(
-    ctx: &C,
-    call: Call,
-    index: usize,
-) -> Result<Option<(Call, Metadata)>, Error> {
-    decode_call_ex(ctx, call, index, false /* assume_km_reachable */)
+pub fn decode_call<C: Context>(ctx: &C, call: Call) -> Result<Option<(Call, Metadata)>, Error> {
+    decode_call_ex(ctx, call, false)
 }
 
 /// Decode call arguments.
@@ -91,7 +84,6 @@ pub fn decode_call<C: Context>(
 pub fn decode_call_ex<C: Context>(
     ctx: &C,
     call: Call,
-    index: usize,
     assume_km_reachable: bool,
 ) -> Result<Option<(Call, Metadata)>, Error> {
     match call.format {
@@ -164,10 +156,7 @@ pub fn decode_call_ex<C: Context>(
                 return Err(Error::InvalidCallFormat(anyhow!("read-only flag mismatch")));
             }
 
-            Ok(Some((
-                call,
-                Metadata::EncryptedX25519DeoxysII { pk, sk, index },
-            )))
+            Ok(Some((call, Metadata::EncryptedX25519DeoxysII { pk, sk })))
         }
     }
 }
@@ -222,8 +211,9 @@ pub fn encode_result<C: Context>(
     ctx: &C,
     result: module::CallResult,
     metadata: Metadata,
+    index: usize,
 ) -> CallResult {
-    encode_result_ex(ctx, result, metadata, false /* expose_failure */)
+    encode_result_ex(ctx, result, metadata, index, false)
 }
 
 /// Encode call results.
@@ -233,6 +223,7 @@ pub fn encode_result_ex<C: Context>(
     ctx: &C,
     result: module::CallResult,
     metadata: Metadata,
+    index: usize,
     expose_failure: bool,
 ) -> CallResult {
     match metadata {
@@ -240,7 +231,7 @@ pub fn encode_result_ex<C: Context>(
         Metadata::Empty => result.into(),
 
         // Encrypted data format using X25519 key exchange and Deoxys-II symmetric encryption.
-        Metadata::EncryptedX25519DeoxysII { pk, sk, index } => {
+        Metadata::EncryptedX25519DeoxysII { pk, sk } => {
             // Serialize result.
             let result: CallResult = result.into();
 

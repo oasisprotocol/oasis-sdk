@@ -336,15 +336,14 @@ impl<Cfg: Config> API for Module<Cfg> {
             return Ok(vec![]);
         }
 
-        let (tx_call_format, tx_index, is_simulation) = CurrentState::with_env(|env| {
-            (env.tx_call_format(), env.tx_index(), env.is_simulation())
-        });
+        let (tx_call_format, is_simulation) =
+            CurrentState::with_env(|env| (env.tx_call_format(), env.is_simulation()));
 
         // Create output (the contract address) does not need to be encrypted because it's
         // trivially computable by anyone who can observe the create tx and receipt status.
         // Therefore, we don't need the `tx_metadata` or to encode the result.
         let (init_code, _tx_metadata) =
-            Self::decode_call_data(ctx, init_code, tx_call_format, tx_index, true)?
+            Self::decode_call_data(ctx, init_code, tx_call_format, true)?
                 .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -372,9 +371,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             (env.tx_call_format(), env.tx_index(), env.is_simulation())
         });
 
-        let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, tx_call_format, tx_index, true)?
-                .expect("processing always proceeds");
+        let (data, tx_metadata) = Self::decode_call_data(ctx, data, tx_call_format, true)?
+            .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
         // Use estimate mode if not doing binary search for exact gas costs.
@@ -382,7 +380,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             is_simulation && <C::Runtime as Runtime>::Core::estimate_gas_search_max_iters(ctx) == 0;
 
         let evm_result = Self::evm_call(ctx, caller, address, value, data, estimate_gas);
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata, tx_index)
     }
 
     fn get_storage<C: Context>(ctx: &C, address: H160, index: H256) -> Result<Vec<u8>, Error> {
@@ -472,7 +470,7 @@ impl<Cfg: Config> API for Module<Cfg> {
                 .with_mode(Mode::Simulate),
             || TransactionResult::Rollback(exec()),
         );
-        Self::encode_evm_result(ctx, evm_result, tx_metadata)
+        Self::encode_evm_result(ctx, evm_result, tx_metadata, 0)
     }
 }
 
@@ -613,7 +611,6 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         data: Vec<u8>,
         format: transaction::CallFormat, // The tx call format.
-        tx_index: usize,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
         if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
@@ -622,7 +619,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(Some((data, callformat::Metadata::Empty)));
         }
         match cbor::from_slice(&data) {
-            Ok(call) => Self::decode_call(ctx, call, tx_index, assume_km_reachable),
+            Ok(call) => Self::decode_call(ctx, call, assume_km_reachable),
             Err(_) => Ok(Some((data, callformat::Metadata::Empty))), // It's not encrypted.
         }
     }
@@ -632,10 +629,9 @@ impl<Cfg: Config> Module<Cfg> {
     fn decode_call<C: Context>(
         ctx: &C,
         call: transaction::Call,
-        tx_index: usize,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        match callformat::decode_call_ex(ctx, call, tx_index, assume_km_reachable)? {
+        match callformat::decode_call_ex(ctx, call, assume_km_reachable)? {
             Some((
                 transaction::Call {
                     body: cbor::Value::ByteString(data),
@@ -665,7 +661,7 @@ impl<Cfg: Config> Module<Cfg> {
         }) = cbor::from_slice(&call.data)
         {
             let (data, tx_metadata) =
-                Self::decode_call(ctx, data, 0, true)?.expect("processing always proceeds");
+                Self::decode_call(ctx, data, true)?.expect("processing always proceeds");
             return Ok((
                 signed_call::verify::<_, Cfg>(
                     ctx,
@@ -679,7 +675,7 @@ impl<Cfg: Config> Module<Cfg> {
 
         // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
-        let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, 0, true)?
+        let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, true)?
             .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {
@@ -695,6 +691,7 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         evm_result: Result<Vec<u8>, Error>,
         tx_metadata: callformat::Metadata, // Potentially parsed from an inner enveloped tx.
+        tx_index: usize,
     ) -> Result<Vec<u8>, Error> {
         if matches!(tx_metadata, callformat::Metadata::Empty) {
             // Either the runtime is non-confidential and all responses are plaintext,
@@ -708,6 +705,7 @@ impl<Cfg: Config> Module<Cfg> {
             ctx,
             call_result,
             tx_metadata,
+            tx_index,
             true,
         )))
     }
