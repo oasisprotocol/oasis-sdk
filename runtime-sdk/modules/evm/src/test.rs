@@ -431,7 +431,6 @@ fn test_c10l_enc_call_identity_decoded() {
         &ctx,
         data.clone(),
         transaction::CallFormat::EncryptedX25519DeoxysII,
-        0,
         true,
     )
     .expect("decode failed")
