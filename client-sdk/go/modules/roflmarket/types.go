@@ -3,9 +3,12 @@ package roflmarket
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
+	"github.com/oasisprotocol/oasis-core/go/common/cbor"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/hash"
 	"github.com/oasisprotocol/oasis-core/go/common/crypto/signature"
 
@@ -409,12 +412,125 @@ type InstanceExecuteCmds struct {
 	Cmds [][]byte `json:"cmds"`
 }
 
+// PrettyPrint writes a pretty-printed representation of the instance execute commands to the
+// given writer.
+func (iec *InstanceExecuteCmds) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	_, _ = fmt.Fprintf(w, "%sProvider: %s\n", prefix, iec.Provider)
+	_, _ = fmt.Fprintf(w, "%sID:       %s\n", prefix, iec.ID)
+	_, _ = fmt.Fprintf(w, "%sCmds:\n", prefix)
+	for _, raw := range iec.Cmds {
+		prettyPrintSchedulerCommand(prefix+"  ", "- ", raw, w)
+	}
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (iec *InstanceExecuteCmds) PrettyType() (any, error) {
+	return iec, nil
+}
+
 // QueuedCommand is a queued command.
 type QueuedCommand struct {
 	// ID is the command sequence number.
 	ID CommandID `json:"id"`
 	// Cmd is the scheduler-specific command to execute.
 	Cmd []byte `json:"cmd"`
+}
+
+// PrettyPrint writes a pretty-printed representation of the queued command to the given writer.
+func (qc *QueuedCommand) PrettyPrint(ctx context.Context, prefix string, w io.Writer) {
+	_, _ = fmt.Fprintf(w, "%sID: %s\n", prefix, qc.ID)
+	prettyPrintSchedulerCommand(prefix, "", qc.Cmd, w)
+}
+
+// PrettyType returns a representation of the type that can be used for pretty printing.
+func (qc *QueuedCommand) PrettyType() (any, error) {
+	return qc, nil
+}
+
+// Scheduler command method names understood by the reference rofl-scheduler implementation.
+//
+// The on-chain schema treats InstanceExecuteCmds.Cmds/QueuedCommand.Cmd as opaque, scheduler-
+// specific bytes, so a different scheduler implementation could use a different format. These
+// are provided on a best-effort basis for pretty printing.
+const (
+	SchedulerMethodDeploy    = "Deploy"
+	SchedulerMethodRestart   = "Restart"
+	SchedulerMethodTerminate = "Terminate"
+)
+
+// SchedulerCommand is a command to be executed on a specific instance, in the format understood
+// by the reference rofl-scheduler implementation.
+type SchedulerCommand struct {
+	// Method is the method name.
+	Method string `json:"method"`
+	// Args are the method arguments.
+	Args cbor.RawMessage `json:"args"`
+}
+
+// SchedulerDeployRequest is a deployment request, in the format understood by the reference
+// rofl-scheduler implementation.
+type SchedulerDeployRequest struct {
+	// Deployment is the deployment to deploy.
+	Deployment Deployment `json:"deployment"`
+	// WipeStorage is a flag indicating whether persistent storage should be wiped.
+	WipeStorage bool `json:"wipe_storage"`
+}
+
+// SchedulerRestartRequest is an instance restart request, in the format understood by the
+// reference rofl-scheduler implementation.
+type SchedulerRestartRequest struct {
+	// WipeStorage is a flag indicating whether persistent storage should be wiped.
+	WipeStorage bool `json:"wipe_storage"`
+}
+
+// SchedulerTerminateRequest is an instance termination request, in the format understood by the
+// reference rofl-scheduler implementation.
+type SchedulerTerminateRequest struct {
+	// WipeStorage is a flag indicating whether persistent storage should be wiped.
+	WipeStorage bool `json:"wipe_storage"`
+}
+
+// prettyPrintSchedulerCommand pretty-prints a single scheduler command, assuming the format used
+// by the reference rofl-scheduler implementation. Anything that cannot be decoded that way
+// (including commands issued by a different scheduler implementation) is printed as raw hex.
+//
+// The bullet (e.g. "- ") is printed before the first line, with subsequent lines aligned to the
+// same indentation as if bullet was made of spaces instead.
+func prettyPrintSchedulerCommand(prefix, bullet string, raw []byte, w io.Writer) {
+	indent := prefix + strings.Repeat(" ", len(bullet))
+
+	var cmd SchedulerCommand
+	if err := cbor.Unmarshal(raw, &cmd); err != nil {
+		_, _ = fmt.Fprintf(w, "%s%s%X\n", prefix, bullet, raw)
+		return
+	}
+
+	_, _ = fmt.Fprintf(w, "%s%sMethod: %s\n", prefix, bullet, cmd.Method)
+	_, _ = fmt.Fprintf(w, "%sArgs:\n", indent)
+
+	var args any
+	switch cmd.Method {
+	case SchedulerMethodDeploy:
+		args = &SchedulerDeployRequest{}
+	case SchedulerMethodRestart:
+		args = &SchedulerRestartRequest{}
+	case SchedulerMethodTerminate:
+		args = &SchedulerTerminateRequest{}
+	default:
+		args = &map[string]any{}
+	}
+
+	if err := cbor.Unmarshal(cmd.Args, args); err != nil {
+		_, _ = fmt.Fprintf(w, "%s  %X\n", indent, []byte(cmd.Args))
+		return
+	}
+
+	data, err := json.MarshalIndent(args, indent+"  ", "  ")
+	if err != nil {
+		_, _ = fmt.Fprintf(w, "%s  <error: %s>\n", indent, err)
+		return
+	}
+	_, _ = fmt.Fprintf(w, "%s  %s\n", indent, data)
 }
 
 // ProviderQuery is a provider-related query.
