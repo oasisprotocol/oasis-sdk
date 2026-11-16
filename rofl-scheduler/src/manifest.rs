@@ -253,6 +253,9 @@ impl SgxMetadata {
 )]
 #[serde(deny_unknown_fields)]
 pub struct TdxMetadata {
+    #[serde(default)]
+    #[cbor(optional)]
+    pub platform: String,
     pub firmware: String,
     #[cbor(optional)]
     pub kernel: String,
