@@ -1375,6 +1375,14 @@ impl Manager {
                     .ok_or(anyhow!("ORC is missing firmware digest"))?;
                 offer_policy.ensure_artifact_allowed("firmware", firmware_digest)?;
 
+                if !tdx.platform.is_empty() {
+                    let platform_digest = orc_manifest
+                        .digests
+                        .get(&tdx.platform)
+                        .ok_or(anyhow!("ORC is missing platform digest"))?;
+                    offer_policy.ensure_artifact_allowed("platform", platform_digest)?;
+                }
+
                 if !tdx.kernel.is_empty() {
                     let kernel_digest = orc_manifest
                         .digests
