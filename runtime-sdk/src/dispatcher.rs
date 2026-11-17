@@ -434,9 +434,10 @@ impl<R: Runtime> Dispatcher<R> {
         opts: &DispatchOptions<'_>,
     ) -> Result<(types::transaction::CallResult, Tags), Error> {
         let dispatch_result = Self::dispatch_tx_opts(ctx, tx, opts)?;
+        let result = dispatch_result.result.into();
         let output = callformat::encode_result(
             ctx,
-            dispatch_result.result,
+            result,
             dispatch_result.call_format_metadata,
             opts.tx_index,
         );

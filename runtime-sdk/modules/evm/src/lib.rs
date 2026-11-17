@@ -719,10 +719,10 @@ impl<Cfg: Config> Module<Cfg> {
             return evm_result;
         }
         // Always propagate errors in plaintext.
-        let call_result = module::CallResult::Ok(evm_result?.into());
+        let result = module::CallResult::Ok(evm_result?.into());
         Ok(cbor::to_vec(callformat::encode_result_ex(
             ctx,
-            call_result,
+            result.into(),
             tx_metadata,
             tx_index,
             true,
