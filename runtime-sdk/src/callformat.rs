@@ -10,7 +10,7 @@ use crate::{
     context::Context,
     core::common::crypto::{mrae::deoxysii, x25519},
     crypto::signature::context::get_chain_context_for,
-    keymanager, module,
+    keymanager,
     modules::core::Error,
     state::CurrentState,
     types::{
@@ -136,6 +136,9 @@ pub fn decode_call_ex<C: Context>(
                     &envelope.pk.0,
                     &sk.0,
                 )
+                .or_else(|_| {
+                    deoxysii::box_open(&envelope.nonce, envelope.data.clone(), vec![], &pk.0, &sk.0)
+                })
                 .map(|data| (data, sk))
             };
 
@@ -275,7 +278,7 @@ pub fn decode_result<C: Context>(
     format: CallFormat,
     result: CallResult,
     client_keypair: &(x25519_dalek::PublicKey, x25519_dalek::StaticSecret),
-) -> Result<module::CallResult, Error> {
+) -> Result<crate::module::CallResult, Error> {
     if matches!(format, CallFormat::Plain) {
         return Ok(result.into_call_result().expect("CallResult was Unknown"));
     }
@@ -286,7 +289,7 @@ pub fn decode_result<C: Context>(
             code,
             message,
         } => {
-            return Ok(module::CallResult::Failed {
+            return Ok(crate::module::CallResult::Failed {
                 module,
                 code,
                 message,
