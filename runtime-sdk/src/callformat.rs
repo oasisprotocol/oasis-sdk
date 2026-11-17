@@ -209,7 +209,7 @@ pub fn encode_call<C: Context>(
 /// Encode call results.
 pub fn encode_result<C: Context>(
     ctx: &C,
-    result: module::CallResult,
+    result: CallResult,
     metadata: Metadata,
     index: usize,
 ) -> CallResult {
@@ -221,20 +221,17 @@ pub fn encode_result<C: Context>(
 /// If `expose_failure` is set, then this method will not encrypt errors.
 pub fn encode_result_ex<C: Context>(
     ctx: &C,
-    result: module::CallResult,
+    result: CallResult,
     metadata: Metadata,
     index: usize,
     expose_failure: bool,
 ) -> CallResult {
     match metadata {
         // In case of the plain-text data format, we simply pass on the data unchanged.
-        Metadata::Empty => result.into(),
+        Metadata::Empty => result,
 
         // Encrypted data format using X25519 key exchange and Deoxys-II symmetric encryption.
         Metadata::EncryptedX25519DeoxysII { pk, sk } => {
-            // Serialize result.
-            let result: CallResult = result.into();
-
             if expose_failure {
                 if result.is_success() {
                     return CallResult::Ok(encrypt_result_x25519_deoxysii(
