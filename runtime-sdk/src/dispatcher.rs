@@ -260,6 +260,24 @@ impl<R: Runtime> Dispatcher<R> {
         (result, call_format_metadata)
     }
 
+    /// Dispatch a runtime transaction in the given context.
+    pub fn dispatch_tx<C: Context>(
+        ctx: &C,
+        tx_size: u32,
+        tx: types::transaction::Transaction,
+        tx_index: usize,
+    ) -> Result<DispatchResult, Error> {
+        Self::dispatch_tx_opts(
+            ctx,
+            tx,
+            &DispatchOptions {
+                tx_size,
+                tx_index,
+                ..Default::default()
+            },
+        )
+    }
+
     /// Dispatch a runtime transaction in the given context with the provided options.
     pub fn dispatch_tx_opts<C: Context>(
         ctx: &C,
@@ -335,24 +353,6 @@ impl<R: Runtime> Dispatcher<R> {
         Ok(result)
     }
 
-    /// Dispatch a runtime transaction in the given context.
-    pub fn dispatch_tx<C: Context>(
-        ctx: &C,
-        tx_size: u32,
-        tx: types::transaction::Transaction,
-        tx_index: usize,
-    ) -> Result<DispatchResult, Error> {
-        Self::dispatch_tx_opts(
-            ctx,
-            tx,
-            &DispatchOptions {
-                tx_size,
-                tx_index,
-                ..Default::default()
-            },
-        )
-    }
-
     /// Check whether the given transaction is valid.
     pub fn check_tx<C: Context>(
         ctx: &C,
@@ -407,22 +407,6 @@ impl<R: Runtime> Dispatcher<R> {
         }
     }
 
-    /// Execute the given transaction, returning unserialized results.
-    pub fn execute_tx_opts<C: Context>(
-        ctx: &C,
-        tx: Transaction,
-        opts: &DispatchOptions<'_>,
-    ) -> Result<(types::transaction::CallResult, Tags), Error> {
-        let dispatch_result = Self::dispatch_tx_opts(ctx, tx, opts)?;
-        let output: types::transaction::CallResult = callformat::encode_result(
-            ctx,
-            dispatch_result.result,
-            dispatch_result.call_format_metadata,
-        );
-
-        Ok((output, dispatch_result.tags))
-    }
-
     /// Execute the given transaction.
     pub fn execute_tx<C: Context>(
         ctx: &C,
@@ -430,8 +414,8 @@ impl<R: Runtime> Dispatcher<R> {
         tx_hash: Hash,
         tx: Transaction,
         tx_index: usize,
-    ) -> Result<ExecuteTxResult, Error> {
-        let (output, tags) = Self::execute_tx_opts(
+    ) -> Result<(types::transaction::CallResult, Tags), Error> {
+        Self::execute_tx_opts(
             ctx,
             tx,
             &DispatchOptions {
@@ -440,12 +424,23 @@ impl<R: Runtime> Dispatcher<R> {
                 tx_hash,
                 ..Default::default()
             },
-        )?;
+        )
+    }
 
-        Ok(ExecuteTxResult {
-            output: cbor::to_vec(output),
-            tags,
-        })
+    /// Execute the given transaction with the provided options.
+    pub fn execute_tx_opts<C: Context>(
+        ctx: &C,
+        tx: Transaction,
+        opts: &DispatchOptions<'_>,
+    ) -> Result<(types::transaction::CallResult, Tags), Error> {
+        let dispatch_result = Self::dispatch_tx_opts(ctx, tx, opts)?;
+        let output = callformat::encode_result(
+            ctx,
+            dispatch_result.result,
+            dispatch_result.call_format_metadata,
+        );
+
+        Ok((output, dispatch_result.tags))
     }
 
     /// Prefetch prefixes for the given transaction.
@@ -622,6 +617,17 @@ impl<R: Runtime> Dispatcher<R> {
             self.consensus_verifier.clone(),
         );
     }
+
+    /// Serialize call result.
+    fn serialize_result(
+        result: types::transaction::CallResult,
+        tags: Vec<transaction::tags::Tag>,
+    ) -> ExecuteTxResult {
+        ExecuteTxResult {
+            output: cbor::to_vec(result),
+            tags,
+        }
+    }
 }
 
 impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatcher<R> {
@@ -666,7 +672,9 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                 // Execute the batch.
                 let mut results = Vec::with_capacity(batch.len());
                 for (index, (tx_size, tx_hash, tx)) in txs.into_iter().enumerate() {
-                    results.push(Self::execute_tx(ctx, tx_size, tx_hash, tx, index)?);
+                    let (result, tags) = Self::execute_tx(ctx, tx_size, tx_hash, tx, index)?;
+                    let result = Self::serialize_result(result, tags);
+                    results.push(result);
                 }
 
                 Ok(results)
@@ -785,7 +793,10 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                         }
 
                         new_batch.push(raw_tx);
-                        results.push(Self::execute_tx(ctx, tx_size, tx_hash, tx, tx_index)?);
+
+                        let (result, tags) = Self::execute_tx(ctx, tx_size, tx_hash, tx, tx_index)?;
+                        let result = Self::serialize_result(result, tags);
+                        results.push(result);
                     }
 
                     // If there's more room in the block and we got the maximum number of
