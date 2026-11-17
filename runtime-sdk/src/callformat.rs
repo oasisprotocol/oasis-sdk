@@ -207,19 +207,9 @@ pub fn encode_call<C: Context>(
 }
 
 /// Encode call results.
-pub fn encode_result<C: Context>(
-    ctx: &C,
-    result: CallResult,
-    metadata: Metadata,
-    index: usize,
-) -> CallResult {
-    encode_result_ex(ctx, result, metadata, index, false)
-}
-
-/// Encode call results.
 ///
 /// If `expose_failure` is set, then this method will not encrypt errors.
-pub fn encode_result_ex<C: Context>(
+pub fn encode_result<C: Context>(
     ctx: &C,
     result: CallResult,
     metadata: Metadata,
@@ -232,17 +222,13 @@ pub fn encode_result_ex<C: Context>(
 
         // Encrypted data format using X25519 key exchange and Deoxys-II symmetric encryption.
         Metadata::EncryptedX25519DeoxysII { pk, sk } => {
-            if expose_failure {
-                if result.is_success() {
-                    return CallResult::Ok(encrypt_result_x25519_deoxysii(
-                        ctx, result, pk, sk, index,
-                    ));
-                }
-
-                return result;
+            if !expose_failure {
+                CallResult::Unknown(encrypt_result_x25519_deoxysii(ctx, result, pk, sk, index))
+            } else if result.is_success() {
+                CallResult::Ok(encrypt_result_x25519_deoxysii(ctx, result, pk, sk, index))
+            } else {
+                result
             }
-
-            CallResult::Unknown(encrypt_result_x25519_deoxysii(ctx, result, pk, sk, index))
         }
     }
 }

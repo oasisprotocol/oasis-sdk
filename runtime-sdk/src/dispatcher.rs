@@ -436,6 +436,7 @@ impl<R: Runtime> Dispatcher<R> {
             result,
             dispatch_result.call_format_metadata,
             opts.tx_index,
+            false,
         );
 
         Ok((output, dispatch_result.tags))
