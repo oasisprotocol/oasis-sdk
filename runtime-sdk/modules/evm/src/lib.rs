@@ -720,7 +720,7 @@ impl<Cfg: Config> Module<Cfg> {
         }
         // Always propagate errors in plaintext.
         let result = module::CallResult::Ok(evm_result?.into());
-        Ok(cbor::to_vec(callformat::encode_result_ex(
+        Ok(cbor::to_vec(callformat::encode_result(
             ctx,
             result.into(),
             tx_metadata,
