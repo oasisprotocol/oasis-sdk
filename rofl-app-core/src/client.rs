@@ -20,7 +20,10 @@ use oasis_runtime_sdk::{
                 beacon::ImmutableState as BeaconState, registry::ImmutableState as RegistryState,
             },
         },
-        enclave_rpc::{client::RpcClient, session},
+        enclave_rpc::{
+            client::{RpcClient, RpcClientError},
+            session,
+        },
         host::{self, Host as _},
         storage::mkvs,
         types,
@@ -48,6 +51,12 @@ const CMDQ_BACKLOG: usize = 16;
 
 /// Interval for checking whether a submitted transaction has been included.
 const TX_POLL_INTERVAL: Duration = Duration::from_millis(500);
+
+/// Maximum number of retries of a query that the runtime aborted.
+const MAX_QUERY_ABORTED_RETRIES: usize = 3;
+
+/// Interval between retries of a query that the runtime aborted.
+const QUERY_ABORTED_RETRY_INTERVAL: Duration = Duration::from_millis(500);
 
 /// EnclaveRPC endpoint for communicating with the RONL component.
 const ENCLAVE_RPC_ENDPOINT_RONL: &str = "ronl";
@@ -381,19 +390,27 @@ where
         self.rpc.update_enclaves(Some(enclaves)).await;
         self.rpc.update_quote_policy(quote_policy).await;
 
-        let response: Vec<u8> = self
-            .rpc
-            .secure_call(
-                METHOD_QUERY,
-                QueryRequest {
-                    round,
-                    method: method.to_string(),
-                    args: cbor::to_vec(args),
-                },
-                vec![],
-            )
-            .await
-            .into_result()?;
+        let request = QueryRequest {
+            round,
+            method: method.to_string(),
+            args: cbor::to_vec(args),
+        };
+        let mut retries = 0;
+        let response: Vec<u8> = loop {
+            let result = self
+                .rpc
+                .secure_call(METHOD_QUERY, request.clone(), vec![])
+                .await
+                .into_result();
+            match result {
+                // Workaround for https://github.com/oasisprotocol/oasis-sdk/issues/2608.
+                Err(err) if is_query_aborted(&err) && retries < MAX_QUERY_ABORTED_RETRIES => {
+                    retries += 1;
+                    tokio::time::sleep(QUERY_ABORTED_RETRY_INTERVAL).await;
+                }
+                result => break result?,
+            }
+        };
 
         Ok(cbor::from_slice(&response)?)
     }
@@ -650,6 +667,17 @@ fn is_check_rejection(err: &types::Error) -> bool {
     err.module == "runtime/client"
         && err.code == 5
         && !err.message.contains("module: core code: 4 message:")
+}
+
+/// Whether the runtime aborted a query, which it does when the query panics, e.g. on a failed state
+/// read from the node.
+fn is_query_aborted(err: &RpcClientError) -> bool {
+    // Oasis Core reports a failed call with the runtime error as its text, and the runtime reports
+    // an aborted query as dispatcher error 3.
+    match err {
+        RpcClientError::CallFailed(msg) => msg.starts_with("module: dispatcher code: 3 message:"),
+        _ => false,
+    }
 }
 
 /// Transaction submission manager for avoiding nonce conflicts.
@@ -1257,6 +1285,22 @@ mod test {
             "client: not finished initial sync",
         )));
         assert!(!is_check_rejection(&err("", 1, "duplicate transaction")));
+    }
+
+    #[test]
+    fn test_is_query_aborted() {
+        let err = |message: &str| RpcClientError::CallFailed(message.to_string());
+
+        assert!(is_query_aborted(&err(
+            "module: dispatcher code: 3 message: query aborted: Any { .. }",
+        )));
+        assert!(!is_query_aborted(&err(
+            "module: core code: 3 message: invalid method: foo",
+        )));
+        assert!(!is_query_aborted(&err(
+            "module: dispatcher code: 1 message: dispatch aborted",
+        )));
+        assert!(!is_query_aborted(&RpcClientError::Transport));
     }
 
     /// Deterministic random number generator for the model test.
