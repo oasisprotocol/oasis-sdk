@@ -20,7 +20,7 @@ require (
 	github.com/ethereum/go-ethereum v1.14.0
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20251114093237-2ab5a27a1729
 	github.com/oasisprotocol/deoxysii v0.0.0-20220228165953-2091330c22b7
-	github.com/oasisprotocol/oasis-core/go v0.2604.0
+	github.com/oasisprotocol/oasis-core/go v0.2605.0
 	github.com/oasisprotocol/oasis-sdk/client-sdk/go v0.0.0-00010101000000-000000000000
 	google.golang.org/grpc v1.85.0
 )
@@ -122,8 +122,8 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
-	github.com/mdlayher/socket v0.6.0 // indirect
-	github.com/mdlayher/vsock v1.3.0 // indirect
+	github.com/mdlayher/socket v0.8.0 // indirect
+	github.com/mdlayher/vsock v1.4.0 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
@@ -193,7 +193,7 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
@@ -219,7 +219,7 @@ require (
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
 	golang.org/x/text v0.43.0 // indirect
