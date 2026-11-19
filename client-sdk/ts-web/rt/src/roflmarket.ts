@@ -28,6 +28,7 @@ export const METHOD_PROVIDER_UPDATE_OFFERS = 'roflmarket.ProviderUpdateOffers';
 export const METHOD_PROVIDER_REMOVE = 'roflmarket.ProviderRemove';
 export const METHOD_INSTANCE_CREATE = 'roflmarket.InstanceCreate';
 export const METHOD_INSTANCE_CHANGE_ADMIN = 'roflmarket.InstanceChangeAdmin';
+export const METHOD_INSTANCE_ACCEPT_ADMIN = 'roflmarket.InstanceAcceptAdmin';
 export const METHOD_INSTANCE_TOP_UP = 'roflmarket.InstanceTopUp';
 export const METHOD_INSTANCE_ACCEPT = 'roflmarket.InstanceAccept';
 export const METHOD_INSTANCE_UPDATE = 'roflmarket.InstanceUpdate';
@@ -88,9 +89,17 @@ export class Wrapper extends wrapper.Base {
         return this.call<types.RoflmarketInstanceCreate, void>(METHOD_INSTANCE_CREATE);
     }
 
-    /** Changes the admin of a machine instance. */
+    /**
+     * Proposes a new admin of a machine instance. The change only takes effect once the new admin
+     * accepts it via {@link callInstanceAcceptAdmin}.
+     */
     callInstanceChangeAdmin() {
         return this.call<types.RoflmarketInstanceChangeAdmin, void>(METHOD_INSTANCE_CHANGE_ADMIN);
+    }
+
+    /** Accepts a pending admin change of a machine instance. Must be called by the new admin. */
+    callInstanceAcceptAdmin() {
+        return this.call<types.RoflmarketInstanceAcceptAdmin, void>(METHOD_INSTANCE_ACCEPT_ADMIN);
     }
 
     /** Tops up a machine instance. */
@@ -204,6 +213,7 @@ export type TransactionCallHandlers = {
     [METHOD_PROVIDER_REMOVE]?: transaction.CallHandler<types.RoflmarketProviderRemove>;
     [METHOD_INSTANCE_CREATE]?: transaction.CallHandler<types.RoflmarketInstanceCreate>;
     [METHOD_INSTANCE_CHANGE_ADMIN]?: transaction.CallHandler<types.RoflmarketInstanceChangeAdmin>;
+    [METHOD_INSTANCE_ACCEPT_ADMIN]?: transaction.CallHandler<types.RoflmarketInstanceAcceptAdmin>;
     [METHOD_INSTANCE_TOP_UP]?: transaction.CallHandler<types.RoflmarketInstanceTopUp>;
     [METHOD_INSTANCE_ACCEPT]?: transaction.CallHandler<types.RoflmarketInstanceAccept>;
     [METHOD_INSTANCE_UPDATE]?: transaction.CallHandler<types.RoflmarketInstanceUpdate>;

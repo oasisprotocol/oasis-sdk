@@ -19,6 +19,7 @@ var (
 	methodProviderRemove       = types.NewMethodName("roflmarket.ProviderRemove", ProviderRemove{})
 	methodInstanceCreate       = types.NewMethodName("roflmarket.InstanceCreate", InstanceCreate{})
 	methodInstanceChangeAdmin  = types.NewMethodName("roflmarket.InstanceChangeAdmin", InstanceChangeAdmin{})
+	methodInstanceAcceptAdmin  = types.NewMethodName("roflmarket.InstanceAcceptAdmin", InstanceAcceptAdmin{})
 	methodInstanceTopUp        = types.NewMethodName("roflmarket.InstanceTopUp", InstanceTopUp{})
 	methodInstanceCancel       = types.NewMethodName("roflmarket.InstanceCancel", InstanceCancel{})
 	methodInstanceExecuteCmds  = types.NewMethodName("roflmarket.InstanceExecuteCmds", InstanceExecuteCmds{})
@@ -306,8 +307,15 @@ func NewInstanceCreateTx(fee *types.Fee, body *InstanceCreate) *types.Transactio
 }
 
 // NewInstanceChangeAdmin generates a new roflmarket.InstanceChangeAdmin transaction.
+//
+// The change only takes effect once the new admin accepts it via roflmarket.InstanceAcceptAdmin.
 func NewInstanceChangeAdmin(fee *types.Fee, body *InstanceChangeAdmin) *types.Transaction {
 	return types.NewTransaction(fee, methodInstanceChangeAdmin, body)
+}
+
+// NewInstanceAcceptAdminTx generates a new roflmarket.InstanceAcceptAdmin transaction.
+func NewInstanceAcceptAdminTx(fee *types.Fee, body *InstanceAcceptAdmin) *types.Transaction {
+	return types.NewTransaction(fee, methodInstanceAcceptAdmin, body)
 }
 
 // NewInstanceTopUpTx generates a new roflmarket.InstanceTopUp transaction.

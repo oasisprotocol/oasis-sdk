@@ -1011,6 +1011,7 @@ export interface RoflmarketInstance {
     status: RoflmarketInstanceStatus;
     creator: Uint8Array;
     admin: Uint8Array;
+    pending_admin?: Uint8Array;
     node_id?: Uint8Array;
     metadata: {[key: string]: string};
     resources: RoflmarketResources;
@@ -1083,6 +1084,11 @@ export interface RoflmarketInstanceChangeAdmin {
     provider: Uint8Array;
     id: MachineID;
     admin: Uint8Array;
+}
+
+export interface RoflmarketInstanceAcceptAdmin {
+    provider: Uint8Array;
+    id: MachineID;
 }
 
 export interface RoflmarketInstanceTopUp {
