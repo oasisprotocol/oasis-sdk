@@ -1224,6 +1224,8 @@ export interface RoflAllowedEndorsement {
     provider?: Uint8Array;
     /** Any provider instance where the given address is currently the admin. */
     provider_instance_admin?: Uint8Array;
+    /** Any provider instance where the given address is the creator. */
+    provider_instance_creator?: Uint8Array;
     /** Evaluate all of the child endorsement policies and allow in case all accept the node. */
     and?: RoflAllowedEndorsement[];
     /** Evaluate all of the child endorsement policies and allow in case any accepts the node. */

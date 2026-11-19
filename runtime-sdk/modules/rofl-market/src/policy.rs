@@ -63,7 +63,8 @@ impl EndorsementPolicyEvaluator for ProviderEndorsementPolicyEvaluator {
                 }
                 Ok(())
             }
-            AllowedEndorsement::ProviderInstanceAdmin(expected_admin) => {
+            AllowedEndorsement::ProviderInstanceAdmin(_)
+            | AllowedEndorsement::ProviderInstanceCreator(_) => {
                 let pa: ProviderAttestation = cbor::from_slice(
                     &BASE64_STANDARD
                         .decode(
@@ -111,8 +112,18 @@ impl EndorsementPolicyEvaluator for ProviderEndorsementPolicyEvaluator {
                 let instance =
                     state::get_instance(provider_label.provider, provider_label.instance)
                         .ok_or(Error::NodeNotAllowed)?;
-                if &instance.admin != expected_admin {
-                    return Err(Error::NodeNotAllowed);
+                match policy {
+                    AllowedEndorsement::ProviderInstanceAdmin(expected_admin) => {
+                        if &instance.admin != expected_admin {
+                            return Err(Error::NodeNotAllowed);
+                        }
+                    }
+                    AllowedEndorsement::ProviderInstanceCreator(expected_creator) => {
+                        if &instance.creator != expected_creator {
+                            return Err(Error::NodeNotAllowed);
+                        }
+                    }
+                    _ => return Err(Error::NodeNotAllowed),
                 }
 
                 Ok(())

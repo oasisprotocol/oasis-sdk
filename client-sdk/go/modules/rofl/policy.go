@@ -44,6 +44,9 @@ type AllowedEndorsement struct {
 	// ProviderInstanceAdmin specifies that any provider instance where the given address is currently
 	// the admin can endorse the enclave.
 	ProviderInstanceAdmin *types.Address `json:"provider_instance_admin,omitempty" yaml:"provider_instance_admin,omitempty"`
+	// ProviderInstanceCreator specifies that any provider instance where the given address is currently
+	// the creator can endorse the enclave.
+	ProviderInstanceCreator *types.Address `json:"provider_instance_creator,omitempty" yaml:"provider_instance_creator,omitempty"`
 
 	// And evaluates all of the child endorsement policies and allows in case all accept the
 	// endorsement.
