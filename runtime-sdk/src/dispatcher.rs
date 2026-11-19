@@ -225,7 +225,14 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         // Decode call based on specified call format.
-        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, vec![]) {
+        let mode = CurrentState::with_env(|env| match env.mode() {
+            Mode::Execute => callformat::TransactionMode::Execute,
+            _ => callformat::TransactionMode::Simulate,
+        });
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+        let additional_data = Self::build_additional_data(mode, caller);
+        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, additional_data)
+        {
             Ok(Some(result)) => result,
             Ok(None) => {
                 return (
@@ -631,6 +638,19 @@ impl<R: Runtime> Dispatcher<R> {
             output: cbor::to_vec(result),
             tags,
         }
+    }
+
+    /// Builds additional data to bind encrypted call data to its transaction context.
+    fn build_additional_data(
+        mode: callformat::TransactionMode,
+        caller: types::address::Address,
+    ) -> Vec<u8> {
+        let mut additional_data = Vec::with_capacity(55);
+        additional_data.extend_from_slice(callformat::SDK_ADDITIONAL_DATA_DOMAIN.as_bytes());
+        additional_data.push(mode as u8);
+        additional_data.extend_from_slice(&caller.into_bytes());
+
+        additional_data
     }
 }
 
