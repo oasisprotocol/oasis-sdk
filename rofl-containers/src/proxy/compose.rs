@@ -56,9 +56,17 @@ impl ParsedCompose {
                     )
                     .map(|domain| domain.to_string());
 
+                let proxy_protocol = annotations
+                    .get(
+                        &format!("net.oasis.proxy.ports.{}.proxy_protocol", port.host_port)
+                            .as_str(),
+                    )
+                    .map(|version| version.to_string());
+
                 result.port_mappings.push(PortMapping {
                     service: service_name.to_string(),
                     custom_domain,
+                    proxy_protocol,
                     port,
                     mode,
                 });
@@ -112,6 +120,8 @@ pub struct PortMapping {
     pub service: String,
     /// Optional custom domain.
     pub custom_domain: Option<String>,
+    /// Optional PROXY protocol version that the service expects on this port.
+    pub proxy_protocol: Option<String>,
     /// Port descriptor.
     pub port: ParsedPort,
     /// Mode for the proxy behavior on this port.
@@ -339,6 +349,7 @@ services:
             ECHO_TEXT: "hello rofl world"
         annotations:
             net.oasis.proxy.ports.5678.mode: passthrough
+            net.oasis.proxy.ports.5678.proxy_protocol: v2
             net.oasis.proxy.ports.8888.mode: ignore
             net.oasis.proxy.ports.8888.custom_domain: example.com
         ports:
@@ -358,6 +369,7 @@ services:
         assert_eq!(mapping.port.container_port, 5678);
         assert_eq!(mapping.mode, PortMappingMode::Passthrough);
         assert_eq!(mapping.custom_domain, None);
+        assert_eq!(mapping.proxy_protocol, Some("v2".to_string()));
 
         let mapping = &parsed.port_mappings[1];
         assert_eq!(&mapping.service, "frontend");
@@ -367,5 +379,6 @@ services:
         assert_eq!(mapping.port.container_port, 1234);
         assert_eq!(mapping.mode, PortMappingMode::Ignore);
         assert_eq!(mapping.custom_domain, Some("example.com".to_string()));
+        assert_eq!(mapping.proxy_protocol, None);
     }
 }

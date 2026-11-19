@@ -14,7 +14,10 @@ use self::domain::{CancelVerificationsOnDrop, CustomDomainVerifier};
 use crate::{
     config::ProxyConfig,
     proxy::domain::CustomDomainVerificationNotifier,
-    types::{domain_verification_token, METADATA_KEY_PROXY_CUSTOM_DOMAINS},
+    types::{
+        domain_verification_token, METADATA_KEY_PROXY_CUSTOM_DOMAINS, METADATA_KEY_PROXY_PROTOCOL,
+        METADATA_VALUE_PROXY_PROTOCOL_V2,
+    },
 };
 
 /// Maximum number of custom domains that can be configured at the same time by the same
@@ -26,6 +29,7 @@ struct InstanceInfo {
     http_host: String,
     dst_address: String,
     dst_port: u16,
+    proxy_protocol: bool,
     custom_domains: Vec<String>,
     #[allow(dead_code)]
     domain_verification_handle: Arc<CancelVerificationsOnDrop>,
@@ -163,12 +167,19 @@ impl Proxy {
             .ok_or(anyhow!("bad proxy listen address"))?
             .to_string();
 
+        // Check if the deployment expects a PROXY protocol header.
+        let proxy_protocol = deployment
+            .metadata
+            .get(METADATA_KEY_PROXY_PROTOCOL)
+            .is_some_and(|v| v == METADATA_VALUE_PROXY_PROTOCOL_V2);
+
         self.http
             .add_mapping(http::Mapping {
                 name: http_host.clone(),
                 dst_address: dst_address.clone(),
                 dst_port: 443,
                 mode: http::Mode::ForwardOnly,
+                proxy_protocol,
             })
             .await;
 
@@ -181,6 +192,7 @@ impl Proxy {
                 http_host: http_host.clone(),
                 dst_address: dst_address.clone(),
                 dst_port: 443,
+                proxy_protocol,
                 custom_domains: Default::default(),
                 domain_verification_handle: domain_verification_handle.clone(),
             },
@@ -215,6 +227,7 @@ impl Proxy {
             http: HttpConfig {
                 host: http_host,
                 external_address: self.external_address.clone(),
+                proxy_protocol,
             },
         };
 
@@ -281,6 +294,7 @@ impl CustomDomainVerificationNotifier for ProxyDomainVerificationHandler {
                     dst_address: instance.dst_address.clone(),
                     dst_port: instance.dst_port,
                     mode: http::Mode::ForwardOnly,
+                    proxy_protocol: instance.proxy_protocol,
                 })
                 .await;
         }

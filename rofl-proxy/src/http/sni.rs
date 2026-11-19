@@ -112,11 +112,11 @@ fn parse_hello(buf: &[u8]) -> io::Result<Option<String>> {
 }
 
 #[cfg(test)]
-mod test {
+pub(super) mod test {
     use super::*;
 
     // Valid record, including an SNI but no ALPN extension.
-    const RECORD_SNI: &[u8] = &[
+    pub const RECORD_SNI: &[u8] = &[
         22, 3, 1, 1, 54, 1, 0, 1, 50, 3, 3, 203, 69, 166, 24, 168, 5, 235, 3, 40, 94, 250, 34, 63,
         198, 156, 194, 25, 13, 0, 80, 200, 213, 125, 74, 215, 165, 193, 219, 143, 84, 201, 35, 32,
         232, 149, 249, 110, 18, 24, 36, 194, 152, 145, 10, 139, 7, 175, 172, 173, 61, 56, 71, 185,
