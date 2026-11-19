@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::{anyhow, Context, Result};
 
-use yaml_rust2::{Yaml, YamlLoader};
+use yaml_rust2::{yaml, Yaml, YamlLoader};
 
 /// A parsed compose file.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -20,6 +20,7 @@ impl ParsedCompose {
 
         let compose = YamlLoader::load_from_str(data).context("failed to parse compose file")?;
         let compose = compose.first().ok_or(anyhow!("empty compose file"))?;
+        let compose = Self::resolve_merge_keys(compose);
         let services = compose["services"]
             .as_hash()
             .ok_or(anyhow!("bad services definition"))?;
@@ -74,6 +75,34 @@ impl ParsedCompose {
         }
 
         Ok(result)
+    }
+
+    /// Resolve YAML merge keys (`<<`) as the YAML parser does not handle them.
+    fn resolve_merge_keys(yaml: &Yaml) -> Yaml {
+        match yaml {
+            Yaml::Array(list) => Yaml::Array(list.iter().map(Self::resolve_merge_keys).collect()),
+            Yaml::Hash(map) => {
+                let mut result = yaml::Hash::new();
+                let mut merged = Vec::new();
+                for (key, value) in map {
+                    match (key.as_str(), Self::resolve_merge_keys(value)) {
+                        (Some("<<"), Yaml::Hash(map)) => merged.push(map),
+                        (Some("<<"), Yaml::Array(list)) => {
+                            merged.extend(list.into_iter().filter_map(Yaml::into_hash))
+                        }
+                        (_, value) => {
+                            result.insert(key.clone(), value);
+                        }
+                    }
+                }
+                // Explicit keys take precedence, followed by keys from earlier merged mappings.
+                for (key, value) in merged.into_iter().flatten() {
+                    result.entry(key).or_insert(value);
+                }
+                Yaml::Hash(result)
+            }
+            _ => yaml.clone(),
+        }
     }
 
     fn parse_annotations(service: &Yaml) -> BTreeMap<&str, &str> {
@@ -380,5 +409,31 @@ services:
         assert_eq!(mapping.mode, PortMappingMode::Ignore);
         assert_eq!(mapping.custom_domain, Some("example.com".to_string()));
         assert_eq!(mapping.proxy_protocol, None);
+    }
+
+    #[test]
+    fn test_parse_compose_file_merge_keys() {
+        let data = r#"
+x-annotations: &annotations
+    net.oasis.proxy.ports.5678.mode: passthrough
+    net.oasis.proxy.ports.5678.proxy_protocol: v2
+x-service: &service
+    image: docker.io/hashicorp/http-echo:latest
+    ports:
+        - "5678:5678"
+services:
+    frontend:
+        <<: *service
+        annotations:
+            <<: *annotations
+            net.oasis.proxy.ports.5678.mode: terminate-tls
+"#;
+        let parsed = ParsedCompose::parse(data).unwrap();
+        assert_eq!(parsed.port_mappings.len(), 1);
+
+        let mapping = &parsed.port_mappings[0];
+        assert_eq!(mapping.port.host_port, 5678);
+        assert_eq!(mapping.mode, PortMappingMode::TerminateTls);
+        assert_eq!(mapping.proxy_protocol, Some("v2".to_string()));
     }
 }
