@@ -275,6 +275,29 @@ pub enum Event {
     },
 }
 
+/// Transaction mode encoded in the additional data.
+#[repr(u8)]
+enum TransactionMode {
+    Execute = 0,
+    Simulate = 1,
+}
+
+/// Builds additional data to bind encrypted call data to its transaction context.
+fn build_additional_data(mode: TransactionMode, caller: H160, address: Option<H160>) -> Vec<u8> {
+    let cap = if address.is_some() { 44 } else { 24 };
+
+    let mut additional_data = Vec::with_capacity(cap);
+    additional_data.extend_from_slice(b"EVM");
+    additional_data.push(mode as u8);
+    additional_data.extend_from_slice(caller.as_bytes());
+
+    if let Some(address) = address {
+        additional_data.extend_from_slice(address.as_bytes());
+    }
+
+    additional_data
+}
+
 /// Interface that can be called from other modules.
 pub trait API {
     /// Perform an Ethereum CREATE transaction.
@@ -310,7 +333,7 @@ pub trait API {
         -> Result<Vec<u8>, Error>;
 }
 
-/// Whitelisted EVM storge slots.
+/// Whitelisted EVM storage slots.
 ///
 /// These slots are public and can be queried via `evm.Storage` queries.
 static WHITELISTED_MAGIC_SLOTS: Lazy<HashSet<H256>> = Lazy::new(|| {
@@ -339,11 +362,13 @@ impl<Cfg: Config> API for Module<Cfg> {
         let (tx_call_format, is_simulation) =
             CurrentState::with_env(|env| (env.tx_call_format(), env.is_simulation()));
 
+        let additional_data = build_additional_data(TransactionMode::Execute, caller, None);
+
         // Create output (the contract address) does not need to be encrypted because it's
         // trivially computable by anyone who can observe the create tx and receipt status.
         // Therefore, we don't need the `tx_metadata` or to encode the result.
         let (init_code, _tx_metadata) =
-            Self::decode_call_data(ctx, init_code, vec![], tx_call_format, true)?
+            Self::decode_call_data(ctx, init_code, additional_data, tx_call_format, true)?
                 .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -371,8 +396,12 @@ impl<Cfg: Config> API for Module<Cfg> {
             (env.tx_call_format(), env.tx_index(), env.is_simulation())
         });
 
-        let (data, tx_metadata) = Self::decode_call_data(ctx, data, vec![], tx_call_format, true)?
-            .expect("processing always proceeds");
+        let additional_data =
+            build_additional_data(TransactionMode::Execute, caller, Some(address));
+
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, data, additional_data, tx_call_format, true)?
+                .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
         // Use estimate mode if not doing binary search for exact gas costs.
@@ -675,14 +704,17 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok((call, callformat::Metadata::Empty));
         }
 
+        let additional_data =
+            build_additional_data(TransactionMode::Simulate, call.caller, call.address);
+
         if let Ok(types::SignedCallDataPack {
             data,
             leash,
             signature,
         }) = cbor::from_slice(&call.data)
         {
-            let (data, tx_metadata) =
-                Self::decode_call(ctx, data, vec![], true)?.expect("processing always proceeds");
+            let (data, tx_metadata) = Self::decode_call(ctx, data, additional_data, true)?
+                .expect("processing always proceeds");
             return Ok((
                 signed_call::verify::<_, Cfg>(
                     ctx,
@@ -697,7 +729,7 @@ impl<Cfg: Config> Module<Cfg> {
         // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) =
-            Self::decode_call_data(ctx, call.data, vec![], tx_call_format, true)?
+            Self::decode_call_data(ctx, call.data, additional_data, tx_call_format, true)?
                 .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {
