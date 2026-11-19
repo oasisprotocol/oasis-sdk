@@ -110,6 +110,9 @@ pub enum AllowedEndorsement {
     /// Any provider instance where the given address is currently the admin.
     #[cbor(rename = "provider_instance_admin")]
     ProviderInstanceAdmin(Address),
+    /// Any provider instance where the given address is the instance creator.
+    #[cbor(rename = "provider_instance_creator")]
+    ProviderInstanceCreator(Address),
 
     /// Evaluate all of the child endorsement policies and allow in case all accept the node.
     #[cbor(rename = "and")]
