@@ -72,8 +72,12 @@ fn verify_epoch<C: Context>(ctx: &C, epoch: beacon::EpochTime) -> Result<(), Err
 ///
 /// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
 /// execution needs to be deferred (e.g., because key manager access is required).
-pub fn decode_call<C: Context>(ctx: &C, call: Call) -> Result<Option<(Call, Metadata)>, Error> {
-    decode_call_ex(ctx, call, false)
+pub fn decode_call<C: Context>(
+    ctx: &C,
+    call: Call,
+    additional_data: Vec<u8>,
+) -> Result<Option<(Call, Metadata)>, Error> {
+    decode_call_ex(ctx, call, additional_data, false)
 }
 
 /// Decode call arguments.
@@ -84,6 +88,7 @@ pub fn decode_call<C: Context>(ctx: &C, call: Call) -> Result<Option<(Call, Meta
 pub fn decode_call_ex<C: Context>(
     ctx: &C,
     call: Call,
+    additional_data: Vec<u8>,
     assume_km_reachable: bool,
 ) -> Result<Option<(Call, Metadata)>, Error> {
     match call.format {
@@ -127,7 +132,7 @@ pub fn decode_call_ex<C: Context>(
                 deoxysii::box_open(
                     &envelope.nonce,
                     envelope.data.clone(),
-                    vec![],
+                    additional_data.clone(),
                     &envelope.pk.0,
                     &sk.0,
                 )
