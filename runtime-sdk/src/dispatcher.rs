@@ -126,6 +126,32 @@ pub struct DispatchOptions<'a> {
     pub skip_authentication: bool,
 }
 
+/// Transaction mode encoded in the additional data.
+#[repr(u8)]
+enum TransactionMode {
+    Execute = 0,
+    Simulate = 1,
+}
+
+impl From<Mode> for TransactionMode {
+    fn from(value: Mode) -> Self {
+        match value {
+            Mode::Execute => TransactionMode::Execute,
+            _ => TransactionMode::Simulate,
+        }
+    }
+}
+
+/// Builds additional data to bind encrypted call data to its transaction context.
+fn build_additional_data(mode: TransactionMode, caller: types::address::Address) -> Vec<u8> {
+    let mut additional_data = Vec::with_capacity(25);
+    additional_data.extend_from_slice(b"SDK");
+    additional_data.push(mode as u8);
+    additional_data.extend_from_slice(&caller.into_bytes());
+
+    additional_data
+}
+
 /// The runtime dispatcher.
 pub struct Dispatcher<R: Runtime> {
     host_info: HostInfo,
@@ -225,7 +251,11 @@ impl<R: Runtime> Dispatcher<R> {
         }
 
         // Decode call based on specified call format.
-        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, vec![]) {
+        let mode = CurrentState::with_env(|env| env.mode().into());
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+        let additional_data = build_additional_data(mode, caller);
+        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, additional_data)
+        {
             Ok(Some(result)) => result,
             Ok(None) => {
                 return (
