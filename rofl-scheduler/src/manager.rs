@@ -1801,10 +1801,16 @@ mod test {
         let allowed = Hash::digest_bytes(b"allowed-firmware");
         let blocked = Hash::digest_bytes(b"blocked-firmware");
         let kernel = Hash::digest_bytes(b"some-kernel");
-        let metadata = BTreeMap::from([(
-            format!("{METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX}firmware"),
-            format!(" {allowed:x} , garbage "),
-        )]);
+        let metadata = BTreeMap::from([
+            (
+                format!("{METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX}firmware"),
+                format!(" {allowed:x} , garbage "),
+            ),
+            (
+                format!("{METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX}initrd"),
+                format!(""),
+            ),
+        ]);
 
         let policy = OfferPolicy::from_metadata(&metadata, &test_logger());
         // Only the valid firmware hash is parsed; the malformed entry is skipped.
@@ -1813,6 +1819,10 @@ mod test {
         assert!(policy
             .ensure_artifact_allowed("firmware", &blocked)
             .is_err());
+
+        // Initrd is empty so no artifacts are allowed.
+        assert!(policy.ensure_artifact_allowed("initrd", &allowed).is_err());
+
         // Kinds without a configured key are unrestricted.
         assert!(policy.ensure_artifact_allowed("kernel", &kernel).is_ok());
     }
