@@ -631,7 +631,7 @@ mod tests {
 
         // Generate raw 32-byte key from the Mock KMS.
         let response = tokio_test::block_on(kms.generate(&GenerateRequest {
-            key_id: KMS_ACME_KEY_ID,
+            key_id: KMS_ACME_KEY_ID.to_string(),
             kind: KeyKind::Raw256,
         }))
         .expect("failed to generate key");
@@ -666,7 +666,7 @@ mod tests {
                         let key_id = format!("test-acme-account-{}", hex::encode(random_bytes));
                         let response = kms
                             .generate(&GenerateRequest {
-                                key_id: &key_id,
+                                key_id,
                                 kind: KeyKind::Raw256,
                             })
                             .await

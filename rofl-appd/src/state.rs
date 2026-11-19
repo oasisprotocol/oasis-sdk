@@ -1,6 +1,21 @@
 use oasis_runtime_sdk::{crypto::signature::Signer, modules, types::transaction};
 use rofl_app_core::{client::SubmitTxOpts, prelude::*};
 
+use crate::services::{kms::KmsService, metadata::MetadataService};
+
+/// Shared state available to all API handlers.
+pub(crate) struct AppState {
+    /// ROFL app environment.
+    pub env: Arc<dyn Env>,
+    /// Key management service.
+    pub kms: Arc<dyn KmsService>,
+    /// App provided instance metadata service.
+    pub metadata: Arc<dyn MetadataService>,
+    /// Transaction endpoint configuration.
+    #[cfg(feature = "tx")]
+    pub tx: crate::routes::tx::Config,
+}
+
 /// ROFL app environment.
 #[allow(clippy::double_must_use)]
 #[async_trait]

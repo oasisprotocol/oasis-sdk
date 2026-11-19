@@ -52,7 +52,7 @@ pub async fn init(kms: Arc<dyn services::kms::KmsService>) -> Result<()> {
     // Derive storage key.
     let storage_key = kms
         .generate(&GenerateRequest {
-            key_id: STORAGE_ENCRYPTION_KEY_ID,
+            key_id: STORAGE_ENCRYPTION_KEY_ID.to_string(),
             kind: KeyKind::Raw384,
         })
         .await?;
