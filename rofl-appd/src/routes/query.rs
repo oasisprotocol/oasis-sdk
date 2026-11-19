@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use rocket::{http::Status, serde::json::Json, State};
+use axum::{extract::State, http::StatusCode, Json};
 use serde_with::serde_as;
 
-use crate::state::Env;
+use crate::state::AppState;
 
 /// Query request.
 #[serde_as]
@@ -26,15 +26,20 @@ pub struct QueryResponse {
 }
 
 /// Query submits a query to the registration paratime.
-#[rocket::post("/", data = "<body>")]
 pub async fn query(
-    body: Json<QueryRequest>,
-    env: &State<Arc<dyn Env>>,
-) -> Result<Json<QueryResponse>, (Status, String)> {
-    let result = env
-        .query(&body.method, body.args.clone())
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<QueryRequest>,
+) -> Result<Json<QueryResponse>, (StatusCode, String)> {
+    let result = state
+        .env
+        .query(&body.method, body.args)
         .await
-        .map_err(|err| (Status::InternalServerError, format!("Query failed: {err}")))?;
+        .map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Query failed: {err}"),
+            )
+        })?;
 
     // Return the response.
     let response = QueryResponse { data: result };

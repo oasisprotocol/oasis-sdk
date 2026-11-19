@@ -1,6 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use rocket::async_trait;
 use tokio::sync::RwLock;
 
 use oasis_runtime_sdk::modules::rofl::types::MetadataLimits;

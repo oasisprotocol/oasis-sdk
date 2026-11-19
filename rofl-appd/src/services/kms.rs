@@ -29,7 +29,7 @@ pub trait KmsService: Send + Sync {
     async fn wait_ready(&self) -> Result<(), Error>;
 
     /// Generate a key based on the passed parameters.
-    async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error>;
+    async fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, Error>;
 
     /// Decrypt and authenticate a secret using the secret encryption key (SEK).
     async fn open_secret(
@@ -90,9 +90,9 @@ impl KeyKind {
 
 /// Key generation request body.
 #[derive(Clone, Debug, Default, serde::Deserialize)]
-pub struct GenerateRequest<'r> {
+pub struct GenerateRequest {
     /// Domain separator for deriving different keys inside the application.
-    pub key_id: &'r str,
+    pub key_id: String,
     /// Key kind.
     pub kind: KeyKind,
 }
@@ -247,7 +247,7 @@ impl<A: App> KmsService for OasisKmsService<A> {
         Ok(())
     }
 
-    async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error> {
+    async fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, Error> {
         let keys_guard = self.keys.lock().unwrap();
         let root_key = &keys_guard.as_ref().ok_or(Error::NotInitialized)?.root;
 
@@ -294,7 +294,7 @@ impl KmsService for MockKmsService {
         Ok(())
     }
 
-    async fn generate(&self, request: &GenerateRequest<'_>) -> Result<GenerateResponse, Error> {
+    async fn generate(&self, request: &GenerateRequest) -> Result<GenerateResponse, Error> {
         let key = Kdf::derive_key(
             INSECURE_MOCK_ROOT_KEY,
             request.kind,

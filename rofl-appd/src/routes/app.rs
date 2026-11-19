@@ -1,24 +1,24 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use rocket::{http::Status, serde::json::Json, State};
+use axum::{extract::State, http::StatusCode, Json};
 
-use crate::state::Env;
+use crate::state::AppState;
 
-#[rocket::get("/id")]
-pub fn id(env: &State<Arc<dyn Env>>) -> String {
-    env.app_id().to_bech32()
+pub async fn id(State(state): State<Arc<AppState>>) -> String {
+    state.env.app_id().to_bech32()
 }
 
-#[rocket::get("/config/metadata")]
 pub async fn config_metadata(
-    env: &State<Arc<dyn Env>>,
-) -> Result<Json<BTreeMap<String, String>>, (Status, String)> {
-    env.app_cfg()
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<BTreeMap<String, String>>, (StatusCode, String)> {
+    state
+        .env
+        .app_cfg()
         .await
         .map(|app_cfg| Json(app_cfg.metadata))
         .map_err(|_| {
             (
-                Status::InternalServerError,
+                StatusCode::INTERNAL_SERVER_ERROR,
                 "failed to fetch app config metadata".to_string(),
             )
         })

@@ -172,7 +172,7 @@ async fn run(
             async move {
                 let response = kms_acme
                     .generate(&services::kms::GenerateRequest {
-                        key_id: &key_id,
+                        key_id,
                         kind: services::kms::KeyKind::Raw256,
                     })
                     .await

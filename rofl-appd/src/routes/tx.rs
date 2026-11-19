@@ -1,6 +1,6 @@
 use std::{collections::BTreeSet, sync::Arc};
 
-use rocket::{http::Status, serde::json::Json, State};
+use axum::{extract::State, http::StatusCode, Json};
 use serde::Deserialize;
 use serde_with::serde_as;
 
@@ -8,7 +8,7 @@ use oasis_runtime_sdk::types::transaction;
 use oasis_runtime_sdk_evm as evm;
 use rofl_app_core::client::SubmitTxOpts;
 
-use crate::state::Env;
+use crate::state::AppState;
 
 /// Transaction endpoint configuration.
 #[derive(Debug, Clone)]
@@ -197,14 +197,12 @@ pub struct SignAndSubmitResponse {
 
 /// Sign and submit a transaction to the registration paratime. The signer of the transaction
 /// will be a key that is authenticated to represent this ROFL app instance.
-#[rocket::post("/sign-submit", data = "<body>")]
 pub async fn sign_and_submit(
-    body: Json<SignAndSubmitRequest>,
-    env: &State<Arc<dyn Env>>,
-    cfg: &State<Config>,
-) -> Result<Json<SignAndSubmitResponse>, (Status, String)> {
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<SignAndSubmitRequest>,
+) -> Result<Json<SignAndSubmitResponse>, (StatusCode, String)> {
     // Grab the default transaction signer.
-    let signer = env.signer();
+    let signer = state.env.signer();
 
     let opts = SubmitTxOpts {
         encrypt: body.encrypt,
@@ -212,9 +210,9 @@ pub async fn sign_and_submit(
     };
 
     // Deserialize the passed transaction, depending on its kind.
-    let mut tx = match body.into_inner().tx {
+    let mut tx = match body.tx {
         Transaction::Std(data) => {
-            cbor::from_slice(&data).map_err(|err| (Status::BadRequest, err.to_string()))?
+            cbor::from_slice(&data).map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?
         }
         Transaction::Eth {
             gas_limit,
@@ -224,8 +222,10 @@ pub async fn sign_and_submit(
         } => {
             let gas_limit = gas_limit
                 .into_u64("gas_limit")
-                .map_err(|err| (Status::BadRequest, err))?;
-            let value = value.into_u256().map_err(|err| (Status::BadRequest, err))?;
+                .map_err(|err| (StatusCode::BAD_REQUEST, err))?;
+            let value = value
+                .into_u256()
+                .map_err(|err| (StatusCode::BAD_REQUEST, err))?;
             let (method, body) = if to.is_empty() {
                 // Create.
                 (
@@ -240,7 +240,7 @@ pub async fn sign_and_submit(
                 let address = to
                     .as_slice()
                     .try_into()
-                    .map_err(|_| (Status::BadRequest, "malformed address".to_string()))?;
+                    .map_err(|_| (StatusCode::BAD_REQUEST, "malformed address".to_string()))?;
 
                 (
                     "evm.Call",
@@ -275,25 +275,26 @@ pub async fn sign_and_submit(
     if tx.call.format != transaction::CallFormat::Plain {
         // Prevent bypassing the authorization check by encrypting the method name.
         return Err((
-            Status::BadRequest,
+            StatusCode::BAD_REQUEST,
             "use the encrypt flag for encryption".to_string(),
         ));
     }
-    if !cfg.allowed_methods.contains(&tx.call.method) {
+    if !state.tx.allowed_methods.contains(&tx.call.method) {
         return Err((
-            Status::BadRequest,
+            StatusCode::BAD_REQUEST,
             "transaction method not allowed".to_string(),
         ));
     }
 
     // Make the ROFL module resolve the payer for all of our transactions.
-    tx.set_fee_proxy("rofl", env.app_id().as_ref());
+    tx.set_fee_proxy("rofl", state.env.app_id().as_ref());
 
     // Sign and submit transaction.
-    let result = env
+    let result = state
+        .env
         .sign_and_submit_tx(signer, tx, opts)
         .await
-        .map_err(|err| (Status::BadRequest, err.to_string()))?;
+        .map_err(|err| (StatusCode::BAD_REQUEST, err.to_string()))?;
 
     // Encode the response.
     let response = SignAndSubmitResponse {
