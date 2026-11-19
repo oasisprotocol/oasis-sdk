@@ -54,7 +54,8 @@ Each annotation follows this general format:
 Where:
 
 - `<published_port>`: The external port exposed in your compose.yaml
-- `<setting>`: The specific proxy configuration (e.g., `mode`, `custom_domain`)
+- `<setting>`: The specific proxy configuration (e.g., `mode`, `custom_domain`,
+  `proxy_protocol`)
 
 ### Example Configuration
 
@@ -124,3 +125,35 @@ Assigns a custom domain name to the published port.
 
 - If you're using `ignore` mode, the port isn't published, so the
   `custom_domain` setting has no effect.
+
+#### `net.oasis.proxy.ports.<published_port>.proxy_protocol`
+
+Sends a [PROXY protocol] version 2 header to your service at the start of each
+connection, so your service sees the address and port of the client instead of
+the address of the proxy. The only supported value is `v2`. In `passthrough`
+mode the header comes before the TLS handshake, and in `terminate-tls` mode (the
+default) it comes before the decrypted data.
+
+[PROXY protocol]: https://www.haproxy.org/download/3.2/doc/proxy-protocol.txt
+
+```yaml title="compose.yaml"
+services:
+  myservice:
+    image: docker.io/my/service:latest
+    ports:
+      - "127.0.0.1:8080:8080"
+    annotations:
+      net.oasis.proxy.ports.8080.proxy_protocol: v2
+```
+
+- Configure your service to expect the header on this port. A service that
+  does not expect it cannot read the connection. For example, in nginx use
+  `listen 8080 proxy_protocol;`.
+- Publish the port on `127.0.0.1` as in the example, so that the port can only
+  be reached through the proxy. A service that accepts the header trusts
+  whatever address it contains.
+- The address is reported by the provider's proxy. Unlike the TLS traffic, it
+  is not protected from the provider, so do not use it as proof of who the
+  client is.
+- Your app must use a `rofl-containers` version with PROXY protocol support,
+  and the provider must support it too. Otherwise the port is not reachable.
