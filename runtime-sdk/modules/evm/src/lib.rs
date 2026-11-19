@@ -343,7 +343,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         // trivially computable by anyone who can observe the create tx and receipt status.
         // Therefore, we don't need the `tx_metadata` or to encode the result.
         let (init_code, _tx_metadata) =
-            Self::decode_call_data(ctx, init_code, tx_call_format, true)?
+            Self::decode_call_data(ctx, init_code, vec![], tx_call_format, true)?
                 .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -371,7 +371,7 @@ impl<Cfg: Config> API for Module<Cfg> {
             (env.tx_call_format(), env.tx_index(), env.is_simulation())
         });
 
-        let (data, tx_metadata) = Self::decode_call_data(ctx, data, tx_call_format, true)?
+        let (data, tx_metadata) = Self::decode_call_data(ctx, data, vec![], tx_call_format, true)?
             .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -610,6 +610,7 @@ impl<Cfg: Config> Module<Cfg> {
     fn decode_call_data<C: Context>(
         ctx: &C,
         data: Vec<u8>,
+        additional_data: Vec<u8>,
         format: transaction::CallFormat, // The tx call format.
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
@@ -619,7 +620,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(Some((data, callformat::Metadata::Empty)));
         }
         match cbor::from_slice(&data) {
-            Ok(call) => Self::decode_call(ctx, call, assume_km_reachable),
+            Ok(call) => Self::decode_call(ctx, call, additional_data, assume_km_reachable),
             Err(_) => Ok(Some((data, callformat::Metadata::Empty))), // It's not encrypted.
         }
     }
@@ -629,9 +630,10 @@ impl<Cfg: Config> Module<Cfg> {
     fn decode_call<C: Context>(
         ctx: &C,
         call: transaction::Call,
+        additional_data: Vec<u8>,
         assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        match callformat::decode_call_ex(ctx, call, assume_km_reachable)? {
+        match callformat::decode_call_ex(ctx, call, additional_data, assume_km_reachable)? {
             Some((
                 transaction::Call {
                     body: cbor::Value::ByteString(data),
@@ -661,7 +663,7 @@ impl<Cfg: Config> Module<Cfg> {
         }) = cbor::from_slice(&call.data)
         {
             let (data, tx_metadata) =
-                Self::decode_call(ctx, data, true)?.expect("processing always proceeds");
+                Self::decode_call(ctx, data, vec![], true)?.expect("processing always proceeds");
             return Ok((
                 signed_call::verify::<_, Cfg>(
                     ctx,
@@ -675,8 +677,9 @@ impl<Cfg: Config> Module<Cfg> {
 
         // The call is not signed, but it must be encoded as an oasis-sdk call.
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
-        let (data, tx_metadata) = Self::decode_call_data(ctx, call.data, tx_call_format, true)?
-            .expect("processing always proceeds");
+        let (data, tx_metadata) =
+            Self::decode_call_data(ctx, call.data, vec![], tx_call_format, true)?
+                .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {
                 caller: Default::default(), // The sender cannot be spoofed.

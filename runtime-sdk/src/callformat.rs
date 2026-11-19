@@ -19,6 +19,12 @@ use crate::{
     },
 };
 
+/// Domain separation tag for additional data in SDK-encoded calls.
+pub const SDK_ADDITIONAL_DATA_DOMAIN: &str = "oasis-runtime-sdk/callformat: sdk";
+
+/// Domain separation tag for additional data in EVM-encoded calls.
+pub const EVM_ADDITIONAL_DATA_DOMAIN: &str = "oasis-runtime-sdk/callformat: evm";
+
 /// Maximum age of an ephemeral key in the number of epochs.
 ///
 /// This is half the current window as enforced by the key manager as negative results are not
@@ -48,6 +54,13 @@ impl std::fmt::Debug for Metadata {
     }
 }
 
+/// Transaction mode encoded in the additional data.
+#[repr(u8)]
+pub enum TransactionMode {
+    Execute = 0,
+    Simulate = 1,
+}
+
 /// Derive the key pair ID for the call data encryption key pair.
 pub fn get_key_pair_id(epoch: beacon::EpochTime) -> keymanager::KeyPairId {
     keymanager::get_key_pair_id([
@@ -72,8 +85,12 @@ fn verify_epoch<C: Context>(ctx: &C, epoch: beacon::EpochTime) -> Result<(), Err
 ///
 /// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
 /// execution needs to be deferred (e.g., because key manager access is required).
-pub fn decode_call<C: Context>(ctx: &C, call: Call) -> Result<Option<(Call, Metadata)>, Error> {
-    decode_call_ex(ctx, call, false)
+pub fn decode_call<C: Context>(
+    ctx: &C,
+    call: Call,
+    additional_data: Vec<u8>,
+) -> Result<Option<(Call, Metadata)>, Error> {
+    decode_call_ex(ctx, call, additional_data, false)
 }
 
 /// Decode call arguments.
@@ -84,6 +101,7 @@ pub fn decode_call<C: Context>(ctx: &C, call: Call) -> Result<Option<(Call, Meta
 pub fn decode_call_ex<C: Context>(
     ctx: &C,
     call: Call,
+    additional_data: Vec<u8>,
     assume_km_reachable: bool,
 ) -> Result<Option<(Call, Metadata)>, Error> {
     match call.format {
@@ -127,7 +145,7 @@ pub fn decode_call_ex<C: Context>(
                 deoxysii::box_open(
                     &envelope.nonce,
                     envelope.data.clone(),
-                    vec![],
+                    additional_data.clone(),
                     &envelope.pk.0,
                     &sk.0,
                 )
