@@ -35,6 +35,8 @@ const PROXY_HTTPS_LISTEN_PORT: u16 = 443;
 const PROXY_HOST_ENV_NAME: &str = "ROFL_PROXY_HOST";
 /// Name of the environment variable for the external address.
 const PROXY_EXTERNAL_ADDRESS_ENV_NAME: &str = "ROFL_PROXY_EXTERNAL_ADDRESS";
+/// Supported PROXY protocol version.
+const PROXY_PROTOCOL_V2: &str = "v2";
 
 /// State of the initialized proxy.
 #[derive(Debug, Clone, Default)]
@@ -80,7 +82,7 @@ pub(crate) async fn start<A: App>(
     // Parse and process compose file to see if we even need the proxy.
     let data = fs::read_to_string(COMPOSE_FILE_PATH).context("failed to load compose file")?;
     let compose = ParsedCompose::parse(&data).context("failed to parse compose file")?;
-    let compose = postprocess_compose(compose);
+    let compose = postprocess_compose(compose, proxy_label.http.proxy_protocol, &logger);
     if compose.port_mappings.is_empty() {
         slog::info!(
             logger,
@@ -134,6 +136,13 @@ async fn run(
         .split("/")
         .next()
         .ok_or(anyhow!("bad hub address"))?;
+
+    // When the hub sends a PROXY protocol header, only the hub may connect to the proxy.
+    let proxy_protocol_hub = if proxy_label.http.proxy_protocol {
+        Some(hub_address.parse().context("bad hub address")?)
+    } else {
+        None
+    };
 
     // Setup firewall.
     slog::info!(logger, "setting up firewall");
@@ -192,6 +201,7 @@ async fn run(
         http::Config {
             listen_address: listen_address.clone(),
             listen_port: PROXY_HTTPS_LISTEN_PORT,
+            proxy_protocol_hub,
             ..Default::default()
         },
         acme,
@@ -235,6 +245,7 @@ async fn run(
                 PortMappingMode::Passthrough => http::Mode::ForwardOnly,
                 PortMappingMode::Ignore => continue,
             },
+            proxy_protocol: mapping.proxy_protocol.is_some(),
         })
         .await;
     }
@@ -244,14 +255,65 @@ async fn run(
 }
 
 /// Postprocess the parsed compose file.
-fn postprocess_compose(mut compose: ParsedCompose) -> ParsedCompose {
+fn postprocess_compose(
+    mut compose: ParsedCompose,
+    proxy_protocol: bool,
+    logger: &slog::Logger,
+) -> ParsedCompose {
     // Filter out port mappings that we don't care about.
     compose.port_mappings = compose
         .port_mappings
         .into_iter()
         .filter(|mapping| mapping.port.protocol == "tcp")
         .filter(|mapping| mapping.mode != PortMappingMode::Ignore)
+        // Never forward to a port that expects a PROXY protocol header without sending one.
+        .filter(|mapping| match mapping.proxy_protocol.as_deref() {
+            None => true,
+            Some(PROXY_PROTOCOL_V2) if proxy_protocol => true,
+            Some(version) => {
+                slog::warn!(logger, "ignoring mapping with unavailable PROXY protocol";
+                    "service" => &mapping.service,
+                    "host_port" => mapping.port.host_port,
+                    "proxy_protocol" => version,
+                );
+                false
+            }
+        })
         .collect();
 
     compose
+}
+
+#[cfg(test)]
+mod test {
+    use super::{
+        compose::{ParsedPort, PortMapping},
+        *,
+    };
+
+    #[test]
+    fn test_postprocess_compose_proxy_protocol() {
+        let logger = slog::Logger::root(slog::Discard, slog::o!());
+        let mapping = |proxy_protocol: Option<&str>| PortMapping {
+            proxy_protocol: proxy_protocol.map(str::to_string),
+            port: ParsedPort {
+                protocol: "tcp".to_string(),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let compose = ParsedCompose {
+            port_mappings: vec![mapping(None), mapping(Some("v2")), mapping(Some("v1"))],
+        };
+
+        // Mappings that expect a header should be removed when it cannot be sent.
+        let result = postprocess_compose(compose.clone(), false, &logger);
+        assert_eq!(result.port_mappings, vec![mapping(None)]);
+
+        let result = postprocess_compose(compose, true, &logger);
+        assert_eq!(
+            result.port_mappings,
+            vec![mapping(None), mapping(Some("v2"))]
+        );
+    }
 }

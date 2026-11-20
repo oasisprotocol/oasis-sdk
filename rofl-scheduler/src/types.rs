@@ -58,6 +58,11 @@ pub type Permissions = BTreeMap<String, BTreeSet<Address>>;
 /// Metadata key used to configure custom domains for the deployment.
 pub const METADATA_KEY_PROXY_CUSTOM_DOMAINS: &str = "net.oasis.proxy.custom_domains";
 
+/// Metadata key used to configure the PROXY protocol version for the deployment.
+pub const METADATA_KEY_PROXY_PROTOCOL: &str = "net.oasis.proxy.proxy_protocol";
+/// Metadata value that enables PROXY protocol version 2.
+pub const METADATA_VALUE_PROXY_PROTOCOL_V2: &str = "v2";
+
 /// Domain verification token context.
 pub const DOMAIN_VERIFICATION_TOKEN_CONTEXT: &[u8] =
     b"rofl-scheduler/proxy: domain verification token";
