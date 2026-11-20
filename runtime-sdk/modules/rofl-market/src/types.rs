@@ -284,6 +284,9 @@ pub struct Instance {
     pub creator: Address,
     /// Address of the administrator account.
     pub admin: Address,
+    /// Address of the proposed new administrator account which has not yet accepted the change.
+    #[cbor(optional)]
+    pub pending_admin: Option<Address>,
     /// Identifier of the node which has accepted the instance.
     pub node_id: Option<PublicKey>,
     /// Arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
@@ -406,7 +409,10 @@ pub struct InstanceCreate {
     pub provider: Address,
     /// Unique identifier of the provider's offer.
     pub offer: OfferId,
-    /// Optional administrator address. If not given, the caller becomes the instance admin.
+    /// Optional administrator address.
+    ///
+    /// The caller always becomes the initial instance admin. If a different admin is given, it
+    /// becomes the pending admin which must accept the change via `roflmarket.InstanceAcceptAdmin`.
     #[cbor(optional)]
     pub admin: Option<Address>,
     /// Optional deployment that should be made once an instance is accepted by the provider. If not
@@ -421,6 +427,9 @@ pub struct InstanceCreate {
 
 /// A request by the existing instance admin to change the admin.
 ///
+/// The change only takes effect once the new admin accepts it via `roflmarket.InstanceAcceptAdmin`.
+/// Proposing the current admin cancels any pending change.
+///
 /// Only an instance admin can call this method.
 #[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
 pub struct InstanceChangeAdmin {
@@ -430,6 +439,17 @@ pub struct InstanceChangeAdmin {
     pub id: InstanceId,
     /// New administrator address.
     pub admin: Address,
+}
+
+/// A request by the pending instance admin to accept the admin change.
+///
+/// Only the pending instance admin can call this method.
+#[derive(Clone, Debug, Default, cbor::Encode, cbor::Decode)]
+pub struct InstanceAcceptAdmin {
+    /// Provider address.
+    pub provider: Address,
+    /// Target instance identifier.
+    pub id: InstanceId,
 }
 
 /// A request to top-up an instance.

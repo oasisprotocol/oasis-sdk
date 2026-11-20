@@ -21,6 +21,8 @@ pub trait Config: 'static {
     const GAS_COST_CALL_INSTANCE_CREATE: u64 = 100_000;
     /// Gas cost of roflmarket.InstanceChangeAdmin call.
     const GAS_COST_CALL_INSTANCE_CHANGE_ADMIN: u64 = 10_000;
+    /// Gas cost of roflmarket.InstanceAcceptAdmin call.
+    const GAS_COST_CALL_INSTANCE_ACCEPT_ADMIN: u64 = 10_000;
     /// Gas cost of roflmarket.InstanceAccept call.
     const GAS_COST_CALL_INSTANCE_ACCEPT_BASE: u64 = 10_000;
     /// Gas cost of each accepted instance in roflmarket.InstanceAccept call.

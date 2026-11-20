@@ -229,6 +229,9 @@ type Instance struct {
 	Creator types.Address `json:"creator"`
 	// Admin is the address of the administrator account.
 	Admin types.Address `json:"admin"`
+	// PendingAdmin is the address of the proposed new administrator account which has not yet
+	// accepted the change.
+	PendingAdmin *types.Address `json:"pending_admin,omitempty"`
 	// NodeID is the optional identifier of the node where the instance has been provisioned.
 	NodeID *signature.PublicKey `json:"node_id,omitempty"`
 	// Metadata is arbitrary metadata (key-value pairs) assigned by the provider's scheduler.
@@ -349,7 +352,10 @@ type InstanceCreate struct {
 	Provider types.Address `json:"provider"`
 	// Offer is the unique identifier of the provider's offer.
 	Offer OfferID `json:"offer"`
-	// Admin is the optional administrator address. If not given, the caller becomes the admin.
+	// Admin is the optional administrator address.
+	//
+	// The caller always becomes the initial admin. If a different admin is given, it becomes the
+	// pending admin which must accept the change via roflmarket.InstanceAcceptAdmin.
 	Admin *types.Address `json:"admin,omitempty"`
 	// Deployment is the optional deployment that should be made once an instance is accepted by the
 	// provider. If not specified, it should be done later via `roflmarket.InstanceDeploy`.
@@ -362,6 +368,8 @@ type InstanceCreate struct {
 
 // InstanceChangeAdmin is the body of roflmarket.InstanceChangeAdmin method.
 //
+// The change only takes effect once the new admin accepts it via roflmarket.InstanceAcceptAdmin.
+// Proposing the current admin cancels any pending change.
 // Only an instance admin can call this method.
 type InstanceChangeAdmin struct {
 	// Provider is the provider address.
@@ -370,6 +378,16 @@ type InstanceChangeAdmin struct {
 	ID InstanceID `json:"id"`
 	// Admin is the new administrator address.
 	Admin types.Address `json:"admin"`
+}
+
+// InstanceAcceptAdmin is the body of roflmarket.InstanceAcceptAdmin method.
+//
+// Only the pending instance admin can call this method.
+type InstanceAcceptAdmin struct {
+	// Provider is the provider address.
+	Provider types.Address `json:"provider"`
+	// ID is the target instance identifier.
+	ID InstanceID `json:"id"`
 }
 
 // InstanceTopUp is the body of roflmarket.InstanceTopUp method.

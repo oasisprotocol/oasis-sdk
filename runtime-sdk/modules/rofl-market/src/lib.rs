@@ -368,7 +368,8 @@ impl<Cfg: Config> Module<Cfg> {
             offer: offer.id,
             status: types::InstanceStatus::Created,
             creator: caller_address,
-            admin: body.admin.unwrap_or(caller_address),
+            admin: caller_address,
+            pending_admin: body.admin.filter(|admin| *admin != caller_address),
             resources: offer.resources,
             deployment: body.deployment,
             created_at: ctx.now(),
@@ -420,7 +421,40 @@ impl<Cfg: Config> Module<Cfg> {
             state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
         Self::ensure_caller_is_instance_admin(&instance)?;
 
-        instance.admin = body.admin;
+        // Only record the proposed admin as the change takes effect once the new admin accepts it
+        // via `roflmarket.InstanceAcceptAdmin`. Proposing the current admin cancels any pending
+        // change.
+        instance.pending_admin = (body.admin != instance.admin).then_some(body.admin);
+        instance.updated_at = ctx.now();
+        state::set_instance(instance);
+
+        CurrentState::with(|state| {
+            state.emit_event(Event::InstanceUpdated {
+                provider: body.provider,
+                id: body.id,
+            })
+        });
+
+        Ok(())
+    }
+
+    #[handler(call = "roflmarket.InstanceAcceptAdmin")]
+    fn tx_instance_accept_admin<C: Context>(
+        ctx: &C,
+        body: types::InstanceAcceptAdmin,
+    ) -> Result<(), Error> {
+        <C::Runtime as Runtime>::Core::use_tx_gas(Cfg::GAS_COST_CALL_INSTANCE_ACCEPT_ADMIN)?;
+
+        if CurrentState::with_env(|env| env.is_check_only()) {
+            return Ok(());
+        }
+
+        let mut instance =
+            state::get_instance(body.provider, body.id).ok_or(Error::InstanceNotFound)?;
+        let new_admin = Self::ensure_caller_is_pending_instance_admin(&instance)?;
+
+        instance.admin = new_admin;
+        instance.pending_admin = None;
         // Clear deployment and any queued commands to ensure that the new admin deploys an
         // authorized configuration.
         instance.deployment = None;
@@ -667,6 +701,25 @@ impl<Cfg: Config> Module<Cfg> {
             return Err(Error::Forbidden);
         }
         Ok(())
+    }
+
+    /// Ensure caller is the pending instance administrator and return its address, return an error
+    /// otherwise.
+    fn ensure_caller_is_pending_instance_admin(
+        instance: &types::Instance,
+    ) -> Result<Address, Error> {
+        let caller = CurrentState::with_env(|env| env.tx_caller_address());
+
+        // Skip checks in simulation mode for correct gas estimation.
+        // This is fine because no confidential data is being protected here.
+        if CurrentState::with_env(|env| env.is_simulation()) {
+            return Ok(caller);
+        }
+
+        match instance.pending_admin {
+            Some(pending_admin) if pending_admin == caller => Ok(caller),
+            _ => Err(Error::Forbidden),
+        }
     }
 
     #[handler(call = "roflmarket.InstanceCancel")]

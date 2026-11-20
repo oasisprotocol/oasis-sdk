@@ -18,10 +18,12 @@ use oasis_runtime_sdk::{
             policy::{BasicEndorsementPolicyEvaluator, EndorsementPolicyEvaluator},
         },
     },
+    subcall,
     testing::{keys, mock},
     types::{
         address::Address,
         token::{BaseUnits, Denomination},
+        transaction::CallerAddress,
     },
     Runtime, Version,
 };
@@ -1000,37 +1002,90 @@ fn test_instance_change_admin() {
         id: 0.into(),
         admin: keys::erin::address(),
     };
+    let accept_admin = types::InstanceAcceptAdmin {
+        provider: keys::alice::address(),
+        id: 0.into(),
+    };
+    let query_instance = |signer: &mock::Signer| -> types::Instance {
+        signer
+            .query(
+                &ctx,
+                "roflmarket.Instance",
+                types::InstanceQuery {
+                    provider: keys::alice::address(),
+                    id: 0.into(),
+                },
+            )
+            .unwrap()
+    };
 
     // Only the current instance admin should be allowed to change the admin.
     let mut signer_erin = mock::Signer::new(0, keys::erin::sigspec());
     let dispatch_result =
         signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
     assert!(!dispatch_result.result.is_success(), "call should fail");
-    println!("{dispatch_result:?}");
     let (module, code) = dispatch_result.result.unwrap_failed();
     assert_eq!(module, "roflmarket");
     assert_eq!(code, 4); // Forbidden.
 
-    // Instance admin should be allowed to change the admin of an instance.
+    // Nobody should be able to accept the admin change before it is proposed.
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+    assert!(!dispatch_result.result.is_success(), "call should fail");
+    let (module, code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(module, "roflmarket");
+    assert_eq!(code, 4); // Forbidden.
+
+    // Instance admin should be allowed to propose a new admin of an instance.
     let dispatch_result =
         signer_charlie.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
 
+    // Ensure the admin has not yet changed.
+    let instance = query_instance(&signer_alice);
+    assert_eq!(
+        instance.admin,
+        keys::charlie::address(),
+        "admin should not be changed before the new admin accepts"
+    );
+    assert_eq!(instance.pending_admin, Some(keys::erin::address()));
+    assert!(
+        instance.deployment.is_some(),
+        "deployment should not be cleared before the new admin accepts"
+    );
+    assert_eq!(
+        instance.cmd_count, 1,
+        "queued commands should not be cleared before the new admin accepts"
+    );
+
+    // Only the pending admin should be allowed to accept the change.
+    for signer in [
+        &mut signer_charlie,
+        &mut mock::Signer::new(0, keys::dave::sigspec()),
+    ] {
+        let dispatch_result =
+            signer.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+        assert!(!dispatch_result.result.is_success(), "call should fail");
+        let (module, code) = dispatch_result.result.unwrap_failed();
+        assert_eq!(module, "roflmarket");
+        assert_eq!(code, 4); // Forbidden.
+    }
+
+    // Pending admin should be allowed to accept the change.
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
     // Ensure instance has been correctly updated.
-    let instance: types::Instance = signer_alice
-        .query(
-            &ctx,
-            "roflmarket.Instance",
-            types::InstanceQuery {
-                provider: keys::alice::address(),
-                id: 0.into(),
-            },
-        )
-        .unwrap();
+    let instance = query_instance(&signer_alice);
     assert_eq!(
         instance.admin,
         keys::erin::address(),
         "admin should be changed"
+    );
+    assert_eq!(
+        instance.pending_admin, None,
+        "pending admin should be cleared"
     );
     assert_eq!(
         instance.deployment, None,
@@ -1040,6 +1095,28 @@ fn test_instance_change_admin() {
         instance.cmd_count, 0,
         "queued commands should be cleared on transfer"
     );
+    let cmds: Vec<types::QueuedCommand> = signer_alice
+        .query(
+            &ctx,
+            "roflmarket.InstanceCommands",
+            types::InstanceQuery {
+                provider: keys::alice::address(),
+                id: 0.into(),
+            },
+        )
+        .unwrap();
+    assert!(
+        cmds.is_empty(),
+        "queued commands should be removed on transfer"
+    );
+
+    // Accepting again should fail as there is no pending change.
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+    assert!(!dispatch_result.result.is_success(), "call should fail");
+    let (module, code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(module, "roflmarket");
+    assert_eq!(code, 4); // Forbidden.
 
     // Change the instance back.
     let change_admin = types::InstanceChangeAdmin {
@@ -1056,12 +1133,134 @@ fn test_instance_change_admin() {
     assert_eq!(module, "roflmarket");
     assert_eq!(code, 4); // Forbidden.
 
-    // Instance admin should be allowed to transfer the instance back.
+    // Instance admin should be allowed to propose transferring the instance back.
     let dispatch_result =
         signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
     assert!(dispatch_result.result.is_success(), "call should succeed");
+    let instance = query_instance(&signer_alice);
+    assert_eq!(instance.pending_admin, Some(keys::charlie::address()));
+
+    // Instance admin should be allowed to cancel the pending change by proposing itself.
+    let cancel_change_admin = types::InstanceChangeAdmin {
+        provider: keys::alice::address(),
+        id: 0.into(),
+        admin: keys::erin::address(),
+    };
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", cancel_change_admin);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+    let instance = query_instance(&signer_alice);
+    assert_eq!(instance.admin, keys::erin::address());
+    assert_eq!(
+        instance.pending_admin, None,
+        "pending admin should be cleared"
+    );
+
+    // Previously proposed admin should no longer be able to accept.
+    let dispatch_result =
+        signer_charlie.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+    assert!(!dispatch_result.result.is_success(), "call should fail");
+    let (module, code) = dispatch_result.result.unwrap_failed();
+    assert_eq!(module, "roflmarket");
+    assert_eq!(code, 4); // Forbidden.
+
+    // Propose again and accept.
+    let dispatch_result =
+        signer_erin.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+    let dispatch_result =
+        signer_charlie.call(&ctx, "roflmarket.InstanceAcceptAdmin", accept_admin.clone());
+    assert!(dispatch_result.result.is_success(), "call should succeed");
 
     // Ensure instance has been correctly updated.
+    let instance = query_instance(&signer_alice);
+    assert_eq!(instance.admin, keys::charlie::address());
+    assert_eq!(instance.pending_admin, None);
+}
+
+#[test]
+fn test_instance_change_admin_contract() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    // Create a provider.
+    let create = types::ProviderCreate {
+        offers: vec![types::Offer {
+            payment: types::Payment::Native {
+                denomination: Denomination::NATIVE,
+                terms: BTreeMap::from([(types::Term::Month, 10_000)]),
+            },
+            resources: types::Resources {
+                tee: types::TeeType::TDX,
+                memory: 512,
+                cpus: 1,
+                storage: 1024,
+                gpu: None,
+            },
+            capacity: 1,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "roflmarket.ProviderCreate", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Create an instance.
+    let create = types::InstanceCreate {
+        provider: keys::alice::address(),
+        offer: 0.into(),
+        admin: None, // Caller.
+        deployment: None,
+        term: types::Term::Month,
+        term_count: 1,
+    };
+    let mut signer_charlie = mock::Signer::new(0, keys::charlie::sigspec());
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // Propose a smart contract (which cannot sign transactions) as the new admin.
+    let contract = [0x42; 20];
+    let contract_address = Address::from_eth(&contract);
+    let change_admin = types::InstanceChangeAdmin {
+        provider: keys::alice::address(),
+        id: 0.into(),
+        admin: contract_address,
+    };
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceChangeAdmin", change_admin);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // The contract accepts the change via a subcall, the same way the EVM subcall precompile
+    // dispatches calls on behalf of a contract.
+    let accept_admin = |caller: [u8; 20]| {
+        subcall::call(
+            &ctx,
+            subcall::SubcallInfo {
+                caller: CallerAddress::EthAddress(caller),
+                method: "roflmarket.InstanceAcceptAdmin".to_string(),
+                body: cbor::to_value(types::InstanceAcceptAdmin {
+                    provider: keys::alice::address(),
+                    id: 0.into(),
+                }),
+                max_depth: 8,
+                max_gas: 1_000_000,
+                read_only: false,
+            },
+            subcall::AllowAllValidator,
+        )
+        .expect("subcall should be dispatched")
+    };
+
+    // A different contract should not be able to accept.
+    let result = accept_admin([0x43; 20]);
+    assert!(!result.call_result.is_success(), "call should fail");
+
+    // The pending admin contract should be able to accept.
+    let result = accept_admin(contract);
+    assert!(result.call_result.is_success(), "call should succeed");
+
     let instance: types::Instance = signer_alice
         .query(
             &ctx,
@@ -1072,7 +1271,121 @@ fn test_instance_change_admin() {
             },
         )
         .unwrap();
+    assert_eq!(instance.admin, contract_address, "admin should be changed");
+    assert_eq!(instance.pending_admin, None);
+}
+
+#[test]
+fn test_instance_create_with_admin() {
+    let mut mock = mock::Mock::default();
+    let ctx = mock.create_ctx_for_runtime::<TestRuntime>(true);
+
+    TestRuntime::migrate(&ctx);
+
+    // Create a provider.
+    let create = types::ProviderCreate {
+        offers: vec![types::Offer {
+            payment: types::Payment::Native {
+                denomination: Denomination::NATIVE,
+                terms: BTreeMap::from([(types::Term::Month, 10_000)]),
+            },
+            resources: types::Resources {
+                tee: types::TeeType::TDX,
+                memory: 512,
+                cpus: 1,
+                storage: 1024,
+                gpu: None,
+            },
+            capacity: 1,
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut signer_alice = mock::Signer::new(0, keys::alice::sigspec());
+    let dispatch_result = signer_alice.call(&ctx, "roflmarket.ProviderCreate", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let query_instance = |id: u64| -> types::Instance {
+        signer_alice
+            .query(
+                &ctx,
+                "roflmarket.Instance",
+                types::InstanceQuery {
+                    provider: keys::alice::address(),
+                    id: id.into(),
+                },
+            )
+            .unwrap()
+    };
+
+    // Create an instance requesting a different admin.
+    let create = types::InstanceCreate {
+        provider: keys::alice::address(),
+        offer: 0.into(),
+        admin: Some(keys::erin::address()),
+        deployment: Some(types::Deployment::default()),
+        term: types::Term::Month,
+        term_count: 1,
+    };
+    let mut signer_charlie = mock::Signer::new(0, keys::charlie::sigspec());
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    // The caller should be the admin until the requested admin accepts.
+    let instance = query_instance(0);
+    assert_eq!(instance.creator, keys::charlie::address());
+    assert_eq!(
+        instance.admin,
+        keys::charlie::address(),
+        "caller should be the initial admin"
+    );
+    assert_eq!(
+        instance.pending_admin,
+        Some(keys::erin::address()),
+        "requested admin should be pending"
+    );
+    assert!(instance.deployment.is_some());
+
+    // Requested admin should be allowed to accept the change.
+    let mut signer_erin = mock::Signer::new(0, keys::erin::sigspec());
+    let dispatch_result = signer_erin.call(
+        &ctx,
+        "roflmarket.InstanceAcceptAdmin",
+        types::InstanceAcceptAdmin {
+            provider: keys::alice::address(),
+            id: 0.into(),
+        },
+    );
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let instance = query_instance(0);
+    assert_eq!(instance.creator, keys::charlie::address());
+    assert_eq!(
+        instance.admin,
+        keys::erin::address(),
+        "admin should be changed"
+    );
+    assert_eq!(instance.pending_admin, None);
+    assert_eq!(
+        instance.deployment, None,
+        "deployment should be cleared on transfer"
+    );
+
+    // Requesting the caller as the admin should not result in a pending change.
+    let create = types::InstanceCreate {
+        provider: keys::alice::address(),
+        offer: 0.into(),
+        admin: Some(keys::charlie::address()),
+        deployment: None,
+        term: types::Term::Month,
+        term_count: 1,
+    };
+    let dispatch_result = signer_charlie.call(&ctx, "roflmarket.InstanceCreate", create);
+    assert!(dispatch_result.result.is_success(), "call should succeed");
+
+    let instance = query_instance(1);
     assert_eq!(instance.admin, keys::charlie::address());
+    assert_eq!(instance.pending_admin, None);
 }
 
 #[test]
