@@ -1598,6 +1598,7 @@ fn test_endorsement_policy_evaluator() {
         provider: keys::alice::address(),
         status: types::InstanceStatus::Accepted,
         node_id: Some(keys::bob::pk_ed25519().into()),
+        creator: keys::erin::address(),
         admin: keys::charlie::address(),
         ..Default::default()
     };
@@ -1667,6 +1668,18 @@ fn test_endorsement_policy_evaluator() {
         (
             vec![Box::new(
                 rofl::policy::AllowedEndorsement::ProviderInstanceAdmin(keys::dave::address()),
+            )],
+            false,
+        ),
+        (
+            vec![Box::new(
+                rofl::policy::AllowedEndorsement::ProviderInstanceCreator(keys::erin::address()),
+            )],
+            true,
+        ),
+        (
+            vec![Box::new(
+                rofl::policy::AllowedEndorsement::ProviderInstanceCreator(keys::charlie::address()),
             )],
             false,
         ),
