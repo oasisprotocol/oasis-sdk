@@ -36,7 +36,7 @@ use oasis_runtime_sdk::{
     },
     runtime::Runtime,
     sdk_derive,
-    state::{CurrentState, Mode, Options, TransactionResult, TransactionWithMeta},
+    state::{CurrentState, Mode, Options, TransactionInfo, TransactionResult},
     types::{
         address::{self, Address},
         token, transaction,
@@ -429,39 +429,15 @@ impl<Cfg: Config> API for Module<Cfg> {
             tx_metadata,
         ) = Self::decode_simulate_call_query(ctx, call)?;
 
-        let (method, body, exec): (_, _, Box<dyn FnOnce() -> Result<_, _>>) = match address {
+        let exec: Box<dyn FnOnce() -> Result<_, _>> = match address {
+            // Address is set, this is a simulated `evm.Call`.
             Some(address) => {
-                // Address is set, this is a simulated `evm.Call`.
-                (
-                    "evm.Call",
-                    cbor::to_value(types::Call {
-                        address,
-                        value,
-                        data: data.clone(),
-                    }),
-                    Box::new(move || Self::evm_call(ctx, caller, address, value, data, false)),
-                )
+                Box::new(move || Self::evm_call(ctx, caller, address, value, data, false))
             }
-            None => {
-                // Address is not set, this is a simulated `evm.Create`.
-                (
-                    "evm.Create",
-                    cbor::to_value(types::Create {
-                        value,
-                        init_code: data.clone(),
-                    }),
-                    Box::new(|| Self::evm_create(ctx, caller, value, data, false)),
-                )
-            }
+            // Address is not set, this is a simulated `evm.Create`.
+            None => Box::new(|| Self::evm_create(ctx, caller, value, data, false)),
         };
-        let tx = transaction::Transaction {
-            version: 1,
-            call: transaction::Call {
-                format: transaction::CallFormat::Plain,
-                method: method.to_owned(),
-                body,
-                ..Default::default()
-            },
+        let tx_info = TransactionInfo {
             auth_info: transaction::AuthInfo {
                 signer_info: vec![transaction::SignerInfo {
                     address_spec: transaction::AddressSpec::Internal(
@@ -483,11 +459,16 @@ impl<Cfg: Config> API for Module<Cfg> {
                 },
                 ..Default::default()
             },
+            call_format: transaction::CallFormat::Plain,
+            read_only: false,
+            size: 0,
+            index: 0,
+            hash: Default::default(),
         };
 
         let evm_result = CurrentState::with_transaction_opts(
             Options::new()
-                .with_tx(TransactionWithMeta::internal(tx))
+                .with_tx(tx_info.into())
                 .with_mode(Mode::Simulate),
             || TransactionResult::Rollback(exec()),
         );

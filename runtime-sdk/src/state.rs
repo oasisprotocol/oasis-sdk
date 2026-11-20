@@ -5,6 +5,7 @@ use std::{
     fmt,
     marker::PhantomData,
     mem,
+    sync::Arc,
 };
 
 use oasis_core_runtime::{common::crypto::hash::Hash, consensus::roothash, storage::mkvs};
@@ -59,7 +60,7 @@ impl From<&Mode> for &'static str {
 #[derive(Clone, Default, Debug)]
 pub struct Environment {
     mode: Mode,
-    tx: Option<TransactionWithMeta>,
+    tx: Option<Arc<TransactionInfo>>,
     internal: bool,
 }
 
@@ -126,7 +127,7 @@ impl Environment {
     pub fn tx_auth_info(&self) -> &transaction::AuthInfo {
         self.tx
             .as_ref()
-            .map(|tx| &tx.data.auth_info)
+            .map(|tx| &tx.auth_info)
             .expect("only in transaction environment")
     }
 
@@ -138,7 +139,7 @@ impl Environment {
     pub fn tx_call_format(&self) -> transaction::CallFormat {
         self.tx
             .as_ref()
-            .map(|tx| tx.data.call.format)
+            .map(|tx| tx.call_format)
             .expect("only in transaction environment")
     }
 
@@ -150,7 +151,7 @@ impl Environment {
     pub fn is_read_only(&self) -> bool {
         self.tx
             .as_ref()
-            .map(|tx| tx.data.call.read_only)
+            .map(|tx| tx.read_only)
             .expect("only in transaction environment")
     }
 
@@ -192,11 +193,18 @@ impl Environment {
     }
 }
 
-/// Decoded transaction with additional metadata.
+/// Information about a transaction that is exposed through the execution environment.
+///
+/// The call method and body are intentionally not part of this information as they are consumed
+/// by the dispatcher.
 #[derive(Clone, Debug)]
-pub struct TransactionWithMeta {
-    /// Decoded transaction.
-    pub data: transaction::Transaction,
+pub struct TransactionInfo {
+    /// Transaction authentication information.
+    pub auth_info: transaction::AuthInfo,
+    /// Call format.
+    pub call_format: transaction::CallFormat,
+    /// Read-only flag.
+    pub read_only: bool,
     /// Transaction size.
     pub size: u32,
     /// Transaction index within the batch.
@@ -205,24 +213,38 @@ pub struct TransactionWithMeta {
     pub hash: Hash,
 }
 
-impl TransactionWithMeta {
-    /// Create transaction with metadata for an internally generated transaction.
+impl TransactionInfo {
+    /// Split the given transaction into transaction information and the call to dispatch.
+    pub fn from_tx(
+        tx: transaction::Transaction,
+        size: u32,
+        index: usize,
+        hash: Hash,
+    ) -> (Self, transaction::Call) {
+        let info = Self {
+            auth_info: tx.auth_info,
+            call_format: tx.call.format,
+            read_only: tx.call.read_only,
+            size,
+            index,
+            hash,
+        };
+        (info, tx.call)
+    }
+
+    /// Split the given internally generated transaction into transaction information and the call
+    /// to dispatch.
     ///
     /// Internally generated transactions have zero size, index and hash.
-    pub fn internal(tx: transaction::Transaction) -> Self {
-        Self {
-            data: tx,
-            size: 0,
-            index: 0,
-            hash: Default::default(),
-        }
+    pub fn internal(tx: transaction::Transaction) -> (Self, transaction::Call) {
+        Self::from_tx(tx, 0, 0, Default::default())
     }
 }
 
 #[cfg(any(test, feature = "test"))]
-impl From<transaction::Transaction> for TransactionWithMeta {
+impl From<transaction::Transaction> for Arc<TransactionInfo> {
     fn from(tx: transaction::Transaction) -> Self {
-        Self::internal(tx) // For use in tests.
+        Arc::new(TransactionInfo::internal(tx).0) // For use in tests.
     }
 }
 
@@ -230,7 +252,7 @@ impl From<transaction::Transaction> for TransactionWithMeta {
 #[derive(Clone, Default, Debug)]
 pub struct Options {
     pub mode: Option<Mode>,
-    pub tx: Option<TransactionWithMeta>,
+    pub tx: Option<Arc<TransactionInfo>>,
     pub internal: Option<bool>,
     pub rng_local_entropy: bool,
 }
@@ -250,7 +272,7 @@ impl Options {
     }
 
     /// Change the active transaction of the environment.
-    pub fn with_tx(self, tx: TransactionWithMeta) -> Self {
+    pub fn with_tx(self, tx: Arc<TransactionInfo>) -> Self {
         Self {
             tx: Some(tx),
             ..self
@@ -1079,13 +1101,15 @@ impl<'a, V: Any + Default> StateValue<'a, V> {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
     use oasis_core_runtime::{
         common::versioned::Versioned,
         consensus::{roothash, staking},
         storage::mkvs,
     };
 
-    use super::{CurrentState, Mode, Options, TransactionResult, TransactionWithMeta};
+    use super::{CurrentState, Mode, Options, TransactionInfo, TransactionResult};
     use crate::{
         modules::core::Event,
         storage::{MKVSStore, Store},
@@ -1433,12 +1457,11 @@ mod test {
             Options::new()
                 .with_mode(Mode::Check)
                 .with_internal(true)
-                .with_tx(TransactionWithMeta {
-                    data: mock::transaction(),
+                .with_tx(Arc::new(TransactionInfo {
                     size: 888,
                     index: 42,
-                    hash: Default::default(),
-                }),
+                    ..TransactionInfo::internal(mock::transaction()).0
+                })),
             || {
                 CurrentState::with_env(|env| {
                     assert!(env.is_check_only(), "environment should be updated");

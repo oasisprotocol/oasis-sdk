@@ -39,7 +39,7 @@ use crate::{
     runtime::Runtime,
     schedule_control::ScheduleControlHost,
     sender::SenderMeta,
-    state::{self, CurrentState, Mode, TransactionResult, TransactionWithMeta},
+    state::{self, CurrentState, Mode, TransactionInfo, TransactionResult},
     storage::{self, Prefix},
     types,
     types::transaction::{AuthProof, Transaction},
@@ -272,17 +272,13 @@ impl<R: Runtime> Dispatcher<R> {
                 return Ok(err.into_call_result().into());
             }
         }
-        let tx_auth_info = tx.auth_info.clone();
-        let is_read_only = tx.call.read_only;
-        let call = tx.call.clone(); // TODO: Avoid clone.
+        let (tx_info, call) =
+            TransactionInfo::from_tx(tx, opts.tx_size, opts.tx_index, opts.tx_hash);
+        let tx_info = Arc::new(tx_info);
+        let is_read_only = tx_info.read_only;
 
         let result = CurrentState::with_transaction_opts(
-            state::Options::new().with_tx(TransactionWithMeta {
-                data: tx,
-                size: opts.tx_size,
-                index: opts.tx_index,
-                hash: opts.tx_hash,
-            }),
+            state::Options::new().with_tx(tx_info.clone()),
             || {
                 let (result, call_format_metadata) = Self::dispatch_tx_call(ctx, call, opts);
                 if !result.is_success() || is_read_only {
@@ -325,7 +321,7 @@ impl<R: Runtime> Dispatcher<R> {
         );
 
         // Run after dispatch hooks.
-        R::Modules::after_dispatch_tx(ctx, &tx_auth_info, &result.result);
+        R::Modules::after_dispatch_tx(ctx, &tx_info.auth_info, &result.result);
 
         // Propagate batch aborts.
         if let module::CallResult::Aborted(err) = result.result {
@@ -451,9 +447,14 @@ impl<R: Runtime> Dispatcher<R> {
     /// Prefetch prefixes for the given transaction.
     pub fn prefetch_tx(
         prefixes: &mut BTreeSet<Prefix>,
-        tx: types::transaction::Transaction,
+        tx: &types::transaction::Transaction,
     ) -> Result<(), RuntimeError> {
-        match R::Modules::prefetch(prefixes, &tx.call.method, tx.call.body, &tx.auth_info) {
+        match R::Modules::prefetch(
+            prefixes,
+            &tx.call.method,
+            tx.call.body.clone(),
+            &tx.auth_info,
+        ) {
             module::DispatchResult::Handled(r) => r,
             module::DispatchResult::Unhandled(_) => Ok(()), // Unimplemented prefetch is allowed.
         }
@@ -651,11 +652,11 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     // Correct proposers should only include transactions which have passed check_tx.
                     let tx = Self::decode_tx(ctx, tx)
                         .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-                    txs.push((tx_size, tx_hash, tx.clone()));
-
                     if prefetch_enabled {
-                        Self::prefetch_tx(&mut prefixes, tx)?;
+                        Self::prefetch_tx(&mut prefixes, &tx)?;
                     }
+
+                    txs.push((tx_size, tx_hash, tx));
                 }
                 if prefetch_enabled {
                     CurrentState::with_store(|store| {
@@ -860,7 +861,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     let res = match Self::decode_tx(&ctx, tx) {
                         Ok(tx) => {
                             if prefetch_enabled {
-                                Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| (tx_size, tx))
+                                Self::prefetch_tx(&mut prefixes, &tx).map(|_| (tx_size, tx))
                             } else {
                                 Ok((tx_size, tx))
                             }
