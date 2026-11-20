@@ -447,9 +447,14 @@ impl<R: Runtime> Dispatcher<R> {
     /// Prefetch prefixes for the given transaction.
     pub fn prefetch_tx(
         prefixes: &mut BTreeSet<Prefix>,
-        tx: types::transaction::Transaction,
+        tx: &types::transaction::Transaction,
     ) -> Result<(), RuntimeError> {
-        match R::Modules::prefetch(prefixes, &tx.call.method, tx.call.body, &tx.auth_info) {
+        match R::Modules::prefetch(
+            prefixes,
+            &tx.call.method,
+            tx.call.body.clone(),
+            &tx.auth_info,
+        ) {
             module::DispatchResult::Handled(r) => r,
             module::DispatchResult::Unhandled(_) => Ok(()), // Unimplemented prefetch is allowed.
         }
@@ -647,11 +652,11 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     // Correct proposers should only include transactions which have passed check_tx.
                     let tx = Self::decode_tx(ctx, tx)
                         .map_err(|err| Error::MalformedTransactionInBatch(err.into()))?;
-                    txs.push((tx_size, tx_hash, tx.clone()));
-
                     if prefetch_enabled {
-                        Self::prefetch_tx(&mut prefixes, tx)?;
+                        Self::prefetch_tx(&mut prefixes, &tx)?;
                     }
+
+                    txs.push((tx_size, tx_hash, tx));
                 }
                 if prefetch_enabled {
                     CurrentState::with_store(|store| {
@@ -856,7 +861,7 @@ impl<R: Runtime + Send + Sync> transaction::dispatcher::Dispatcher for Dispatche
                     let res = match Self::decode_tx(&ctx, tx) {
                         Ok(tx) => {
                             if prefetch_enabled {
-                                Self::prefetch_tx(&mut prefixes, tx.clone()).map(|_| (tx_size, tx))
+                                Self::prefetch_tx(&mut prefixes, &tx).map(|_| (tx_size, tx))
                             } else {
                                 Ok((tx_size, tx))
                             }
