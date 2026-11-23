@@ -16,6 +16,7 @@ use crate::{
     proxy::domain::CustomDomainVerificationNotifier,
     types::{
         domain_verification_token, METADATA_KEY_PROXY_CUSTOM_DOMAINS, METADATA_KEY_PROXY_PROTOCOL,
+        METADATA_KEY_PROXY_TIMEOUT_CONNECTION, METADATA_KEY_PROXY_TIMEOUT_RW,
         METADATA_VALUE_PROXY_PROTOCOL_V2,
     },
 };
@@ -30,9 +31,70 @@ struct InstanceInfo {
     dst_address: String,
     dst_port: u16,
     proxy_protocol: bool,
+    timeouts: http::Timeouts,
+    /// Connection group shared by all mappings of the instance.
+    connection_group: http::ConnectionGroup,
     custom_domains: Vec<String>,
     #[allow(dead_code)]
     domain_verification_handle: Arc<CancelVerificationsOnDrop>,
+}
+
+/// Range of timeout values that deployments may request.
+#[derive(Clone, Copy, Debug)]
+struct TimeoutBounds {
+    min: Duration,
+    max: Duration,
+}
+
+impl TimeoutBounds {
+    /// Create bounds from the proxy default and an optional maximum (in seconds).
+    fn new(default: Duration, max: Option<u64>) -> Self {
+        let max = max.map_or(default, Duration::from_secs);
+        Self {
+            min: default,
+            max: max.max(default),
+        }
+    }
+
+    fn clamp(&self, timeout: Duration) -> Duration {
+        timeout.clamp(self.min, self.max)
+    }
+}
+
+/// Policy for proxy timeouts that deployments may request.
+#[derive(Clone, Copy, Debug)]
+struct TimeoutPolicy {
+    rw: TimeoutBounds,
+    connection: TimeoutBounds,
+}
+
+impl TimeoutPolicy {
+    fn new(cfg: &ProxyConfig, http_cfg: &http::Config) -> Self {
+        Self {
+            rw: TimeoutBounds::new(http_cfg.timeout_rw, cfg.max_timeout_rw),
+            connection: TimeoutBounds::new(http_cfg.timeout_connection, cfg.max_timeout_connection),
+        }
+    }
+
+    /// Proxy timeouts requested by the deployment, clamped to the policy bounds.
+    ///
+    /// Deployments can only raise timeouts as the proxy inside the instance enforces the exact
+    /// per-port values.
+    fn timeouts(&self, deployment: &Deployment) -> http::Timeouts {
+        let requested = |key: &str, bounds: &TimeoutBounds| {
+            deployment
+                .metadata
+                .get(key)
+                .and_then(|value| value.parse::<u64>().ok())
+                .map(|secs| bounds.clamp(Duration::from_secs(secs)))
+        };
+
+        http::Timeouts {
+            rw: requested(METADATA_KEY_PROXY_TIMEOUT_RW, &self.rw),
+            connection: requested(METADATA_KEY_PROXY_TIMEOUT_CONNECTION, &self.connection),
+            ..Default::default()
+        }
+    }
 }
 
 /// Proxy for apps to expose services over.
@@ -41,6 +103,8 @@ pub struct Proxy {
     http: http::Proxy,
     domain: String,
     external_address: Option<String>,
+    timeout_policy: TimeoutPolicy,
+    max_instance_connections: Option<usize>,
     logger: slog::Logger,
     instances: Arc<Mutex<BTreeMap<InstanceId, InstanceInfo>>>,
     domain_verifier: CustomDomainVerifier,
@@ -79,6 +143,11 @@ impl Proxy {
         if let Some(max_connections) = cfg.max_connections {
             http_cfg.max_connections = max_connections as usize;
         }
+        let timeout_policy = TimeoutPolicy::new(cfg, &http_cfg);
+        let max_instance_connections = cfg
+            .max_instance_connections
+            .filter(|&max| max > 0)
+            .map(|max| max as usize);
         let http = http::Proxy::new(http_cfg, acme)?;
 
         let instances = Arc::new(Mutex::new(BTreeMap::new()));
@@ -92,6 +161,8 @@ impl Proxy {
             http,
             domain: cfg.domain.clone(),
             external_address: cfg.external_proxy_address.clone(),
+            timeout_policy,
+            max_instance_connections,
             logger: logger.clone(),
             instances,
             domain_verifier: CustomDomainVerifier::new(8, notifier, logger),
@@ -148,11 +219,9 @@ impl Proxy {
     ) -> Result<ProxyLabel> {
         let mut instances = self.instances.lock().await;
 
-        // If the instance already exists, first deprovision the existing instance.
-        let existing = instances.remove(&instance.id);
-        if let Some(info) = existing {
-            self.http.remove_mapping(&info.http_host).await;
-            self.wireguard.deprovision_client(&info.wireguard_pk)?;
+        // If the instance already exists, first tear down the existing instance.
+        if let Some(info) = instances.remove(&instance.id) {
+            self.teardown_instance(info).await?;
         }
 
         // Generate HTTP host.
@@ -173,6 +242,9 @@ impl Proxy {
             .get(METADATA_KEY_PROXY_PROTOCOL)
             .is_some_and(|v| v == METADATA_VALUE_PROXY_PROTOCOL_V2);
 
+        let timeouts = self.timeout_policy.timeouts(deployment);
+        let connection_group = http::ConnectionGroup::new(self.max_instance_connections);
+
         self.http
             .add_mapping(http::Mapping {
                 name: http_host.clone(),
@@ -180,6 +252,8 @@ impl Proxy {
                 dst_port: 443,
                 mode: http::Mode::ForwardOnly,
                 proxy_protocol,
+                timeouts,
+                connection_group: Some(connection_group.clone()),
             })
             .await;
 
@@ -193,6 +267,8 @@ impl Proxy {
                 dst_address: dst_address.clone(),
                 dst_port: 443,
                 proxy_protocol,
+                timeouts,
+                connection_group,
                 custom_domains: Default::default(),
                 domain_verification_handle: domain_verification_handle.clone(),
             },
@@ -220,6 +296,7 @@ impl Proxy {
             "id" => ?instance.id,
             "host" => &http_host,
             "address" => &dst_address,
+            "timeouts" => ?timeouts,
         );
 
         let label = ProxyLabel {
@@ -252,16 +329,24 @@ impl Proxy {
     pub async fn deprovision_instance(&self, id: InstanceId) -> Result<()> {
         let mut instances = self.instances.lock().await;
         if let Some(info) = instances.remove(&id) {
-            self.http.remove_mapping(&info.http_host).await;
-            for domain in info.custom_domains {
-                self.http.remove_mapping(&domain).await;
-            }
-            self.wireguard.deprovision_client(&info.wireguard_pk)?;
+            self.teardown_instance(info).await?;
 
             slog::info!(self.logger, "deprovisioned keys for instance";
                 "id" => ?id,
             );
         }
+        Ok(())
+    }
+
+    /// Remove all proxy state of an instance and close its existing connections.
+    async fn teardown_instance(&self, info: InstanceInfo) -> Result<()> {
+        // Remove mappings first so that new connections cannot join the closed group.
+        self.http.remove_mapping(&info.http_host).await;
+        for domain in &info.custom_domains {
+            self.http.remove_mapping(domain).await;
+        }
+        info.connection_group.close();
+        self.wireguard.deprovision_client(&info.wireguard_pk)?;
         Ok(())
     }
 }
@@ -295,8 +380,93 @@ impl CustomDomainVerificationNotifier for ProxyDomainVerificationHandler {
                     dst_port: instance.dst_port,
                     mode: http::Mode::ForwardOnly,
                     proxy_protocol: instance.proxy_protocol,
+                    timeouts: instance.timeouts,
+                    connection_group: Some(instance.connection_group.clone()),
                 })
                 .await;
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn deployment(metadata: &[(&str, &str)]) -> Deployment {
+        Deployment {
+            metadata: metadata
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn test_timeout_policy() {
+        let http_cfg = http::Config {
+            timeout_rw: Duration::from_secs(30),
+            timeout_connection: Duration::from_secs(45),
+            ..Default::default()
+        };
+        let secs = |secs| Some(Duration::from_secs(secs));
+
+        // Without configured maximums, deployments cannot raise timeouts.
+        let policy = TimeoutPolicy::new(&ProxyConfig::default(), &http_cfg);
+        let timeouts = policy.timeouts(&deployment(&[
+            (METADATA_KEY_PROXY_TIMEOUT_RW, "300"),
+            (METADATA_KEY_PROXY_TIMEOUT_CONNECTION, "3600"),
+        ]));
+        assert_eq!(timeouts.rw, secs(30));
+        assert_eq!(timeouts.connection, secs(45));
+
+        let cfg = ProxyConfig {
+            max_timeout_rw: Some(600),
+            max_timeout_connection: Some(1800),
+            ..Default::default()
+        };
+        let policy = TimeoutPolicy::new(&cfg, &http_cfg);
+
+        // Missing or malformed requests should use the defaults.
+        assert_eq!(policy.timeouts(&deployment(&[])), http::Timeouts::default());
+        let timeouts = policy.timeouts(&deployment(&[
+            (METADATA_KEY_PROXY_TIMEOUT_RW, "invalid"),
+            (METADATA_KEY_PROXY_TIMEOUT_CONNECTION, "-1"),
+        ]));
+        assert_eq!(timeouts, http::Timeouts::default());
+
+        // Requests within the bounds should be honored.
+        let timeouts = policy.timeouts(&deployment(&[
+            (METADATA_KEY_PROXY_TIMEOUT_RW, "300"),
+            (METADATA_KEY_PROXY_TIMEOUT_CONNECTION, "900"),
+        ]));
+        assert_eq!(timeouts.rw, secs(300));
+        assert_eq!(timeouts.connection, secs(900));
+        assert_eq!(timeouts.connect, None);
+
+        // Requests above the maximum should be clamped.
+        let timeouts = policy.timeouts(&deployment(&[
+            (METADATA_KEY_PROXY_TIMEOUT_RW, "100000"),
+            (METADATA_KEY_PROXY_TIMEOUT_CONNECTION, "100000"),
+        ]));
+        assert_eq!(timeouts.rw, secs(600));
+        assert_eq!(timeouts.connection, secs(1800));
+
+        // Requests cannot lower the timeouts below the defaults.
+        let timeouts = policy.timeouts(&deployment(&[
+            (METADATA_KEY_PROXY_TIMEOUT_RW, "1"),
+            (METADATA_KEY_PROXY_TIMEOUT_CONNECTION, "0"),
+        ]));
+        assert_eq!(timeouts.rw, secs(30));
+        assert_eq!(timeouts.connection, secs(45));
+
+        // Maximums below the defaults should not lower the defaults.
+        let cfg = ProxyConfig {
+            max_timeout_rw: Some(10),
+            ..Default::default()
+        };
+        let policy = TimeoutPolicy::new(&cfg, &http_cfg);
+        let timeouts = policy.timeouts(&deployment(&[(METADATA_KEY_PROXY_TIMEOUT_RW, "300")]));
+        assert_eq!(timeouts.rw, secs(30));
     }
 }

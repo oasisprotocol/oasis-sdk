@@ -151,6 +151,7 @@ impl App for SchedulerApp {
                             dst_port: api_server_port,
                             mode: rofl_proxy::http::Mode::ForwardOnly,
                             proxy_protocol: false,
+                            ..Default::default()
                         })
                         .await;
 

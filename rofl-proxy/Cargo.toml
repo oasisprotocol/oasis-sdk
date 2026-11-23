@@ -30,7 +30,7 @@ tokio = { version = "1.38", features = [
     "net",
     "io-util",
 ] }
-tokio-io-timeout = "1.2.1"
+
 tokio-rustls = "0.26.2"
 x509-parser = "0.18.1"
 zeroize = "1.8.1"

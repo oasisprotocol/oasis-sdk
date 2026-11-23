@@ -1,8 +1,9 @@
-use std::{collections::BTreeMap, str::FromStr};
+use std::{borrow::Cow, collections::BTreeMap, str::FromStr, time::Duration};
 
 use anyhow::{anyhow, Context, Result};
-
 use yaml_rust2::{yaml, Yaml, YamlLoader};
+
+use rofl_proxy::http::Timeouts;
 
 /// A parsed compose file.
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
@@ -64,10 +65,30 @@ impl ParsedCompose {
                     )
                     .map(|version| version.to_string());
 
+                let timeout = |setting: &str| {
+                    annotations
+                        .get(
+                            format!(
+                                "net.oasis.proxy.ports.{}.timeout_{}",
+                                port.host_port, setting
+                            )
+                            .as_str(),
+                        )
+                        .and_then(|value| value.parse::<u64>().ok())
+                        .filter(|&secs| secs > 0)
+                        .map(Duration::from_secs)
+                };
+                let timeouts = Timeouts {
+                    connect: timeout("connect"),
+                    connection: timeout("connection"),
+                    rw: timeout("rw"),
+                };
+
                 result.port_mappings.push(PortMapping {
                     service: service_name.to_string(),
                     custom_domain,
                     proxy_protocol,
+                    timeouts,
                     port,
                     mode,
                 });
@@ -105,15 +126,24 @@ impl ParsedCompose {
         }
     }
 
-    fn parse_annotations(service: &Yaml) -> BTreeMap<&str, &str> {
+    fn parse_annotations(service: &Yaml) -> BTreeMap<&str, Cow<'_, str>> {
         match &service["annotations"] {
             Yaml::Array(list) => list
                 .iter()
                 .filter_map(|v| v.as_str()?.split_once('='))
+                .map(|(k, v)| (k, Cow::Borrowed(v)))
                 .collect(),
             Yaml::Hash(map) => map
                 .into_iter()
-                .filter_map(|(k, v)| Some((k.as_str()?, v.as_str()?)))
+                .filter_map(|(k, v)| {
+                    // Compose accepts numeric annotation values (e.g. timeouts) too.
+                    let v = match v {
+                        Yaml::String(v) => Cow::Borrowed(v.as_str()),
+                        Yaml::Integer(v) => Cow::Owned(v.to_string()),
+                        _ => return None,
+                    };
+                    Some((k.as_str()?, v))
+                })
                 .collect(),
             _ => BTreeMap::new(),
         }
@@ -151,6 +181,8 @@ pub struct PortMapping {
     pub custom_domain: Option<String>,
     /// Optional PROXY protocol version that the service expects on this port.
     pub proxy_protocol: Option<String>,
+    /// Proxy timeout overrides for this port.
+    pub timeouts: Timeouts,
     /// Port descriptor.
     pub port: ParsedPort,
     /// Mode for the proxy behavior on this port.
@@ -409,6 +441,49 @@ services:
         assert_eq!(mapping.mode, PortMappingMode::Ignore);
         assert_eq!(mapping.custom_domain, Some("example.com".to_string()));
         assert_eq!(mapping.proxy_protocol, None);
+    }
+
+    #[test]
+    fn test_parse_compose_file_timeouts() {
+        let data = r#"
+services:
+    frontend:
+        image: docker.io/hashicorp/http-echo:latest
+        annotations:
+            net.oasis.proxy.ports.5678.timeout_rw: "300"
+            net.oasis.proxy.ports.5678.timeout_connection: 3600
+            net.oasis.proxy.ports.5678.timeout_connect: 5
+            net.oasis.proxy.ports.8888.timeout_rw: 0
+            net.oasis.proxy.ports.8888.timeout_connection: invalid
+        ports:
+            - "5678:5678"
+            - "8888:8888"
+            - "9999:9999"
+"#;
+        let parsed = ParsedCompose::parse(data).unwrap();
+        assert_eq!(parsed.port_mappings.len(), 3);
+
+        // Both string and integer values should be accepted.
+        let mapping = &parsed.port_mappings[0];
+        assert_eq!(mapping.port.host_port, 5678);
+        assert_eq!(
+            mapping.timeouts,
+            Timeouts {
+                connect: Some(Duration::from_secs(5)),
+                connection: Some(Duration::from_secs(3600)),
+                rw: Some(Duration::from_secs(300)),
+            }
+        );
+
+        // Invalid values should be ignored.
+        let mapping = &parsed.port_mappings[1];
+        assert_eq!(mapping.port.host_port, 8888);
+        assert_eq!(mapping.timeouts, Timeouts::default());
+
+        // Ports without annotations should use the defaults.
+        let mapping = &parsed.port_mappings[2];
+        assert_eq!(mapping.port.host_port, 9999);
+        assert_eq!(mapping.timeouts, Timeouts::default());
     }
 
     #[test]

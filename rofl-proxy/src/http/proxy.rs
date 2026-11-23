@@ -1,7 +1,7 @@
 use std::{
-    io::Cursor,
+    future,
+    io::{self, Cursor},
     net::{IpAddr, SocketAddr},
-    pin::pin,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -12,15 +12,15 @@ use ptrie::Trie;
 use tokio::{
     io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadBuf},
     net::{TcpListener, TcpStream},
-    sync::Semaphore,
-    time::timeout,
+    sync::{watch, OwnedSemaphorePermit, Semaphore},
+    time::{timeout, timeout_at, Instant},
 };
-use tokio_io_timeout::TimeoutStream;
 use tokio_rustls::TlsAcceptor;
 
 use crate::http::tls;
 
 use super::{
+    idle::IdleTimeout,
     proxy_protocol, sni,
     tls::{CertificateProvisioner, CertificateProvisionerHandle, ACME_TLS_ALPN_PROTOCOL_ID},
 };
@@ -36,14 +36,22 @@ pub enum Mode {
     TerminateTls,
 }
 
+/// Maximum value of a per-mapping timeout override. Longer overrides are clamped to this value.
+pub const MAX_TIMEOUT: Duration = Duration::from_secs(24 * 3600);
+
 /// Proxy configuration.
 pub struct Config {
     pub listen_address: String,
     pub listen_port: u16,
 
+    /// Maximum time to receive the PROXY protocol header (if any) and the TLS ClientHello and,
+    /// when terminating TLS, to complete the TLS handshake.
     pub timeout_handshake: Duration,
+    /// Maximum time to connect to the destination.
     pub timeout_connect: Duration,
+    /// Maximum connection duration.
     pub timeout_connection: Duration,
+    /// Maximum time without data being transferred in either direction.
     pub timeout_rw: Duration,
 
     pub max_connections: usize,
@@ -70,6 +78,86 @@ impl Default for Config {
     }
 }
 
+/// Per-mapping timeout overrides.
+///
+/// Timeouts that are not set fall back to the proxy-wide values from [`Config`]. The handshake
+/// timeout cannot be overridden as it applies before the mapping is known.
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
+pub struct Timeouts {
+    /// Maximum time to connect to the destination.
+    pub connect: Option<Duration>,
+    /// Maximum connection duration.
+    pub connection: Option<Duration>,
+    /// Maximum time without data being transferred in either direction.
+    pub rw: Option<Duration>,
+}
+
+/// A group of connections that can share a concurrency limit and be closed together.
+///
+/// Clones refer to the same group so it can be shared by multiple mappings.
+#[derive(Clone, Debug)]
+pub struct ConnectionGroup(Arc<ConnectionGroupInner>);
+
+#[derive(Debug)]
+struct ConnectionGroupInner {
+    limit: Option<Arc<Semaphore>>,
+    closed: watch::Sender<bool>,
+}
+
+impl ConnectionGroup {
+    /// Create a new connection group, optionally limiting the number of concurrent connections.
+    pub fn new(max_connections: Option<usize>) -> Self {
+        Self(Arc::new(ConnectionGroupInner {
+            limit: max_connections.map(|max| Arc::new(Semaphore::new(max))),
+            closed: watch::Sender::new(false),
+        }))
+    }
+
+    /// Close all connections in the group and reject any new ones.
+    pub fn close(&self) {
+        self.0.closed.send_replace(true);
+    }
+
+    /// Add a connection to the group without waiting for a free slot.
+    fn join(&self) -> Result<ConnectionGroupMember> {
+        // Subscribe before checking so that a concurrent close is not missed.
+        let closed = self.0.closed.subscribe();
+        if *closed.borrow() {
+            return Err(anyhow!("connection group closed"));
+        }
+        let permit = match &self.0.limit {
+            Some(limit) => Some(
+                limit
+                    .clone()
+                    .try_acquire_owned()
+                    .map_err(|_| anyhow!("connection limit reached"))?,
+            ),
+            None => None,
+        };
+
+        Ok(ConnectionGroupMember {
+            _permit: permit,
+            closed,
+        })
+    }
+}
+
+/// Membership of a connection in a group. The connection slot is held until dropped.
+struct ConnectionGroupMember {
+    _permit: Option<OwnedSemaphorePermit>,
+    closed: watch::Receiver<bool>,
+}
+
+impl ConnectionGroupMember {
+    /// Wait until the group is closed.
+    async fn closed(&mut self) {
+        if self.closed.wait_for(|closed| *closed).await.is_err() {
+            // The group can no longer be closed.
+            future::pending().await
+        }
+    }
+}
+
 /// Proxy mapping.
 #[derive(Clone, Default, Debug)]
 pub struct Mapping {
@@ -83,6 +171,10 @@ pub struct Mapping {
     pub mode: Mode,
     /// Whether to send a PROXY protocol header to the destination.
     pub proxy_protocol: bool,
+    /// Timeout overrides for this mapping.
+    pub timeouts: Timeouts,
+    /// Optional group that connections for this mapping belong to.
+    pub connection_group: Option<ConnectionGroup>,
 }
 
 /// Proxy mapping set.
@@ -117,6 +209,11 @@ impl Mappings {
         let tree = self.tree.lock().unwrap();
         tree.find_longest_prefix(reverse(name)).cloned()
     }
+}
+
+/// Resolve a timeout override, falling back to the given default.
+fn effective_timeout(timeout: Option<Duration>, default: Duration) -> Duration {
+    timeout.unwrap_or(default).min(MAX_TIMEOUT)
 }
 
 /// Convert a given domain name into a reversed vector of domain atoms.
@@ -222,9 +319,7 @@ impl Proxy {
                     tokio::spawn(async move {
                         let logger = get_logger("proxy/http");
 
-                        if let Err(err) =
-                            Self::handle_connection_with_timeout(state, stream, peer).await
-                        {
+                        if let Err(err) = Self::handle_connection(state, stream, peer).await {
                             slog::error!(logger, "failed to handle connection"; "err" => ?err);
                         }
                         drop(connection_permit);
@@ -235,25 +330,20 @@ impl Proxy {
         }
     }
 
-    async fn handle_connection_with_timeout(
-        state: Arc<State>,
-        stream: TcpStream,
-        peer: SocketAddr,
-    ) -> Result<()> {
-        timeout(
-            state.cfg.timeout_connection,
-            Self::handle_connection(state, stream, peer),
-        )
-        .await
-        .context("max connection time limit reached")?
-    }
-
     async fn handle_connection(
         state: Arc<State>,
         mut stream: TcpStream,
         peer: SocketAddr,
     ) -> Result<()> {
-        let (proxy_addrs, tls_hello) = timeout(state.cfg.timeout_handshake, async {
+        let start = Instant::now();
+        // Only proxy-wide limits can apply until the mapping is known.
+        let timeout_handshake = state
+            .cfg
+            .timeout_handshake
+            .min(state.cfg.timeout_connection);
+        let handshake_deadline = start + timeout_handshake;
+
+        let (proxy_addrs, tls_hello) = timeout_at(handshake_deadline, async {
             // The hub sends a PROXY protocol header before the TLS handshake.
             let proxy_addrs = match state.cfg.proxy_protocol_hub {
                 Some(hub) if hub.to_canonical() == peer.ip().to_canonical() => Some(
@@ -278,6 +368,19 @@ impl Proxy {
             .get(&tls_hello.sni)
             .ok_or(anyhow!("unknown host ({})", tls_hello.sni))?;
 
+        // Join the connection group (if any), holding a slot until the connection is closed.
+        let mut member = mapping
+            .connection_group
+            .as_ref()
+            .map(ConnectionGroup::join)
+            .transpose()?;
+        let group_closed = async {
+            match member.as_mut() {
+                Some(member) => member.closed().await,
+                None => future::pending().await,
+            }
+        };
+
         // Prepare the PROXY protocol header for the destination, forwarding the addresses received
         // from the hub when available.
         let proxy_header = match (mapping.proxy_protocol, proxy_addrs) {
@@ -286,9 +389,42 @@ impl Proxy {
             (true, None) => Some(proxy_protocol::encode(peer, stream.local_addr()?)),
         };
 
+        // The maximum connection duration also includes the time spent on the handshake.
+        let timeout_connection =
+            effective_timeout(mapping.timeouts.connection, state.cfg.timeout_connection);
+        let connection = timeout_at(
+            start + timeout_connection,
+            Self::handle_mapped_connection(
+                state,
+                stream,
+                mapping,
+                tls_hello,
+                proxy_header,
+                handshake_deadline,
+            ),
+        );
+
+        tokio::select! {
+            result = connection => result.context("max connection time limit reached")?,
+            _ = group_closed => Err(anyhow!("connection group closed")),
+        }
+    }
+
+    async fn handle_mapped_connection(
+        state: Arc<State>,
+        mut stream: TcpStream,
+        mapping: Arc<Mapping>,
+        tls_hello: TlsHello,
+        proxy_header: Option<Vec<u8>>,
+        handshake_deadline: Instant,
+    ) -> Result<()> {
+        let timeout_connect =
+            effective_timeout(mapping.timeouts.connect, state.cfg.timeout_connect);
+        let timeout_rw = effective_timeout(mapping.timeouts.rw, state.cfg.timeout_rw);
+
         let connect_to_destination = async || -> Result<_> {
             let dst = timeout(
-                state.cfg.timeout_connect,
+                timeout_connect,
                 TcpStream::connect((mapping.dst_address.clone(), mapping.dst_port)),
             )
             .await
@@ -312,30 +448,31 @@ impl Proxy {
                     Some(header) => dst.write_all(&[header, tls_hello.raw].concat()).await?,
                     None => dst.write_all(&tls_hello.raw).await?,
                 }
-                Self::handle_forwarding(state, &mut stream, &mut dst).await?;
+                Self::handle_forwarding(&mut stream, &mut dst, timeout_rw).await?;
             }
             Mode::TerminateTls => {
-                // Handle TLS termination.
-                let mut stream = state
-                    .acceptor
-                    .accept_with(stream, |conn| {
-                        // Replay TLS handshake buffer.
-                        let mut cursor = Cursor::new(&tls_hello.raw);
-                        while cursor.position() < cursor.get_ref().len() as u64 {
-                            match conn.read_tls(&mut cursor) {
-                                Ok(count) => {
-                                    if conn.process_new_packets().is_err() {
-                                        break;
-                                    }
-                                    if count == 0 {
-                                        break;
-                                    }
+                // Handle TLS termination. The TLS handshake must also complete in time as the
+                // connection is not yet subject to the idle timeout.
+                let accept = state.acceptor.accept_with(stream, |conn| {
+                    // Replay TLS handshake buffer.
+                    let mut cursor = Cursor::new(&tls_hello.raw);
+                    while cursor.position() < cursor.get_ref().len() as u64 {
+                        match conn.read_tls(&mut cursor) {
+                            Ok(count) => {
+                                if conn.process_new_packets().is_err() {
+                                    break;
                                 }
-                                Err(_) => break,
+                                if count == 0 {
+                                    break;
+                                }
                             }
+                            Err(_) => break,
                         }
-                    })
-                    .await?;
+                    }
+                });
+                let mut stream = timeout_at(handshake_deadline, accept)
+                    .await
+                    .context("TLS handshake timeout")??;
 
                 // Skip further connection processing in case of ACME-TLS ALPN protocol.
                 if stream.get_ref().1.alpn_protocol() == Some(ACME_TLS_ALPN_PROTOCOL_ID) {
@@ -346,32 +483,30 @@ impl Proxy {
                 if let Some(header) = proxy_header {
                     dst.write_all(&header).await?;
                 }
-                Self::handle_forwarding(state, &mut stream, &mut dst).await?;
+                Self::handle_forwarding(&mut stream, &mut dst, timeout_rw).await?;
             }
         }
 
         Ok(())
     }
 
-    async fn handle_forwarding<A, B>(state: Arc<State>, a: &mut A, b: &mut B) -> Result<()>
+    async fn handle_forwarding<A, B>(a: &mut A, b: &mut B, timeout_rw: Duration) -> Result<()>
     where
         A: AsyncRead + AsyncWrite + Unpin,
         B: AsyncRead + AsyncWrite + Unpin,
     {
-        // Impose read/write timeouts.
-        let mut a = TimeoutStream::new(a);
-        a.set_read_timeout(Some(state.cfg.timeout_rw));
-        a.set_write_timeout(Some(state.cfg.timeout_rw));
-        let mut a = pin!(a);
+        // Close the connection when no data is transferred in either direction for too long.
+        let idle = IdleTimeout::new(timeout_rw);
+        let mut a = idle.track(a);
+        let mut b = idle.track(b);
 
-        let mut b = TimeoutStream::new(b);
-        b.set_read_timeout(Some(state.cfg.timeout_rw));
-        b.set_write_timeout(Some(state.cfg.timeout_rw));
-        let mut b = pin!(b);
-
-        tokio::io::copy_bidirectional(&mut a, &mut b).await?;
-
-        Ok(())
+        tokio::select! {
+            result = tokio::io::copy_bidirectional(&mut a, &mut b) => {
+                result?;
+                Ok(())
+            }
+            _ = idle.expired() => Err(io::Error::from(io::ErrorKind::TimedOut).into()),
+        }
     }
 
     async fn parse_tls_hello(stream: &mut TcpStream) -> Result<TlsHello> {
@@ -487,6 +622,7 @@ mod test {
                 dst_port: destination.local_addr()?.port(),
                 mode: Mode::ForwardOnly,
                 proxy_protocol,
+                ..Default::default()
             });
 
             let mut client = TcpStream::connect(listener.local_addr()?).await?;
@@ -505,6 +641,282 @@ mod test {
 
             Ok((peer, local, received.await??))
         })
+    }
+
+    /// Open a connection through the proxy that remains idle after the TLS hello is forwarded.
+    ///
+    /// Returns the task handling the connection, the client stream and the destination stream.
+    async fn open_idle_connection(
+        state: &Arc<State>,
+        listener: &TcpListener,
+        destination: &TcpListener,
+    ) -> Result<(tokio::task::JoinHandle<Result<()>>, TcpStream, TcpStream)> {
+        let mut client = TcpStream::connect(listener.local_addr()?).await?;
+        client.write_all(RECORD_SNI).await?;
+        let (stream, peer) = listener.accept().await?;
+        let handle = tokio::spawn(Proxy::handle_connection(state.clone(), stream, peer));
+        let (mut dst, _) = timeout(Duration::from_secs(10), destination.accept()).await??;
+        let mut hello = vec![0; RECORD_SNI.len()];
+        dst.read_exact(&mut hello).await?;
+        Ok((handle, client, dst))
+    }
+
+    /// Open a connection through the proxy, returning the error it was rejected with.
+    async fn open_rejected_connection(
+        state: &Arc<State>,
+        listener: &TcpListener,
+    ) -> Result<anyhow::Error> {
+        let mut client = TcpStream::connect(listener.local_addr()?).await?;
+        client.write_all(RECORD_SNI).await?;
+        let (stream, peer) = listener.accept().await?;
+        let result = timeout(
+            Duration::from_secs(10),
+            Proxy::handle_connection(state.clone(), stream, peer),
+        )
+        .await?;
+        Ok(result.unwrap_err())
+    }
+
+    /// Create proxy state that terminates TLS using a self-signed certificate for the test SNI.
+    fn tls_state(cfg: Config) -> Arc<State> {
+        let cert = rcgen::generate_simple_self_signed(vec!["example.net".to_string()]).unwrap();
+        let key = rustls::pki_types::PrivateKeyDer::Pkcs8(cert.signing_key.serialize_der().into());
+        let server_cfg = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(vec![cert.cert.der().clone()], key)
+            .unwrap();
+        let provisioner = CertificateProvisioner::new(acme_account());
+
+        Arc::new(State {
+            cfg,
+            mappings: Mappings::new(),
+            provisioner: provisioner.handle().clone(),
+            acceptor: TlsAcceptor::from(Arc::new(server_cfg)),
+        })
+    }
+
+    #[test]
+    fn test_handshake_deadline() {
+        let cfg = Config {
+            timeout_handshake: Duration::from_secs(60),
+            timeout_connection: Duration::from_millis(100),
+            ..Default::default()
+        };
+        let proxy = Proxy::new(cfg, acme_account()).unwrap();
+
+        proxy
+            .rt
+            .block_on(async {
+                let listener = TcpListener::bind("127.0.0.1:0").await?;
+
+                // Waiting for the ClientHello should be bounded by the connection timeout.
+                let _client = TcpStream::connect(listener.local_addr()?).await?;
+                let (stream, peer) = listener.accept().await?;
+                let err = timeout(
+                    Duration::from_secs(10),
+                    Proxy::handle_connection(proxy.state.clone(), stream, peer),
+                )
+                .await?
+                .unwrap_err();
+                assert_eq!(err.to_string(), "TLS handshake timeout");
+
+                anyhow::Ok(())
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_tls_handshake_deadline() {
+        let state = tls_state(Config {
+            timeout_handshake: Duration::from_millis(200),
+            ..Default::default()
+        });
+        state.mappings.add(Mapping {
+            name: "example.net".to_string(),
+            dst_address: "127.0.0.1".to_string(),
+            dst_port: 1,
+            mode: Mode::TerminateTls,
+            timeouts: Timeouts {
+                connection: Some(Duration::from_secs(3600)),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+
+        tokio_test::block_on(async {
+            let listener = TcpListener::bind("127.0.0.1:0").await?;
+
+            // A client that stalls the TLS handshake should be closed at the handshake deadline
+            // instead of after the maximum connection duration.
+            let mut client = TcpStream::connect(listener.local_addr()?).await?;
+            client.write_all(RECORD_SNI).await?;
+            let (stream, peer) = listener.accept().await?;
+            let err = timeout(
+                Duration::from_secs(10),
+                Proxy::handle_connection(state.clone(), stream, peer),
+            )
+            .await?
+            .unwrap_err();
+            assert_eq!(err.to_string(), "TLS handshake timeout");
+
+            anyhow::Ok(())
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn test_idle_timeout() {
+        let cfg = Config {
+            timeout_rw: Duration::from_millis(300),
+            ..Default::default()
+        };
+        let proxy = Proxy::new(cfg, acme_account()).unwrap();
+
+        proxy
+            .rt
+            .block_on(async {
+                let listener = TcpListener::bind("127.0.0.1:0").await?;
+                let destination = TcpListener::bind("127.0.0.1:0").await?;
+                proxy.state.mappings.add(Mapping {
+                    name: "example.net".to_string(),
+                    dst_address: "127.0.0.1".to_string(),
+                    dst_port: destination.local_addr()?.port(),
+                    ..Default::default()
+                });
+
+                for server_to_client in [true, false] {
+                    let (handle, mut client, mut dst) =
+                        open_idle_connection(&proxy.state, &listener, &destination).await?;
+                    let (sender, receiver) = match server_to_client {
+                        true => (&mut dst, &mut client),
+                        false => (&mut client, &mut dst),
+                    };
+
+                    // Data flowing in a single direction should keep the connection open for
+                    // longer than the idle timeout.
+                    let mut data = [0u8; 1];
+                    for _ in 0..10 {
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        sender.write_all(b"x").await?;
+                        receiver.read_exact(&mut data).await?;
+                    }
+                    assert!(!handle.is_finished());
+
+                    // The connection should be closed once no more data is transferred.
+                    let err = timeout(Duration::from_secs(10), handle)
+                        .await??
+                        .unwrap_err();
+                    assert_eq!(err.downcast::<io::Error>()?.kind(), io::ErrorKind::TimedOut);
+                }
+
+                anyhow::Ok(())
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_mapping_timeouts() {
+        let proxy = Proxy::new(Config::default(), acme_account()).unwrap();
+
+        proxy
+            .rt
+            .block_on(async {
+                let listener = TcpListener::bind("127.0.0.1:0").await?;
+                let destination = TcpListener::bind("127.0.0.1:0").await?;
+                let dst_port = destination.local_addr()?.port();
+                let add_mapping = |timeouts| {
+                    proxy.state.mappings.add(Mapping {
+                        name: "example.net".to_string(),
+                        dst_address: "127.0.0.1".to_string(),
+                        dst_port,
+                        timeouts,
+                        ..Default::default()
+                    })
+                };
+                // Much lower than the defaults so that the overrides are what closes connections.
+                let short = Some(Duration::from_millis(100));
+                let deadline = Duration::from_secs(10);
+
+                // An idle connection should be closed after the read/write timeout.
+                add_mapping(Timeouts {
+                    rw: short,
+                    ..Default::default()
+                });
+                let (handle, _client, _dst) =
+                    open_idle_connection(&proxy.state, &listener, &destination).await?;
+                let err = timeout(deadline, handle).await??.unwrap_err();
+                assert_eq!(err.downcast::<io::Error>()?.kind(), io::ErrorKind::TimedOut);
+
+                // A connection should be closed after the maximum connection duration.
+                add_mapping(Timeouts {
+                    connection: short,
+                    ..Default::default()
+                });
+                let (handle, _client, _dst) =
+                    open_idle_connection(&proxy.state, &listener, &destination).await?;
+                let err = timeout(deadline, handle).await??.unwrap_err();
+                assert_eq!(err.to_string(), "max connection time limit reached");
+
+                anyhow::Ok(())
+            })
+            .unwrap();
+    }
+
+    #[test]
+    fn test_mapping_connection_group() {
+        let proxy = Proxy::new(Config::default(), acme_account()).unwrap();
+
+        proxy
+            .rt
+            .block_on(async {
+                let listener = TcpListener::bind("127.0.0.1:0").await?;
+                let destination = TcpListener::bind("127.0.0.1:0").await?;
+                let dst_port = destination.local_addr()?.port();
+                let add_mapping = |group: &ConnectionGroup| {
+                    proxy.state.mappings.add(Mapping {
+                        name: "example.net".to_string(),
+                        dst_address: "127.0.0.1".to_string(),
+                        dst_port,
+                        connection_group: Some(group.clone()),
+                        ..Default::default()
+                    })
+                };
+                let deadline = Duration::from_secs(10);
+
+                let group = ConnectionGroup::new(Some(1));
+                add_mapping(&group);
+
+                // The first connection occupies the only slot.
+                let (handle, client, dst) =
+                    open_idle_connection(&proxy.state, &listener, &destination).await?;
+
+                // Further connections should be rejected while the slot is occupied.
+                let err = open_rejected_connection(&proxy.state, &listener).await?;
+                assert_eq!(err.to_string(), "connection limit reached");
+
+                // The slot should be released once the first connection is closed.
+                drop(client);
+                drop(dst);
+                let _ = timeout(deadline, handle).await?;
+                let (handle, _client, _dst) =
+                    open_idle_connection(&proxy.state, &listener, &destination).await?;
+
+                // Closing the group should close its connections and reject new ones.
+                group.close();
+                let err = timeout(deadline, handle).await??.unwrap_err();
+                assert_eq!(err.to_string(), "connection group closed");
+                let err = open_rejected_connection(&proxy.state, &listener).await?;
+                assert_eq!(err.to_string(), "connection group closed");
+
+                // A mapping with a new group should accept connections again.
+                add_mapping(&ConnectionGroup::new(Some(1)));
+                let (handle, _client, _dst) =
+                    open_idle_connection(&proxy.state, &listener, &destination).await?;
+                handle.abort();
+
+                anyhow::Ok(())
+            })
+            .unwrap();
     }
 
     #[test]
@@ -556,6 +968,7 @@ mod test {
             dst_port: 1234,
             mode: Mode::ForwardOnly,
             proxy_protocol: false,
+            ..Default::default()
         });
         mappings.add(Mapping {
             name: "bar.foo.example.com".to_string(),
@@ -563,6 +976,7 @@ mod test {
             dst_port: 1234,
             mode: Mode::ForwardOnly,
             proxy_protocol: false,
+            ..Default::default()
         });
         mappings.add(Mapping {
             name: "another.example.com".to_string(),
@@ -570,6 +984,7 @@ mod test {
             dst_port: 1234,
             mode: Mode::ForwardOnly,
             proxy_protocol: false,
+            ..Default::default()
         });
 
         // Top-level should not exist.
