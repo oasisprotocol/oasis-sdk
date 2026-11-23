@@ -85,20 +85,8 @@ fn verify_epoch<C: Context>(ctx: &C, epoch: beacon::EpochTime) -> Result<(), Err
 ///
 /// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
 /// execution needs to be deferred (e.g., because key manager access is required).
-pub fn decode_call<C: Context>(
-    ctx: &C,
-    call: Call,
-    additional_data: Vec<u8>,
-) -> Result<Option<(Call, Metadata)>, Error> {
-    decode_call_ex(ctx, call, additional_data, false)
-}
-
-/// Decode call arguments.
-///
-/// Returns `Some((Call, Metadata))` when processing should proceed and `None` in case further
-/// execution needs to be deferred (e.g., because key manager access is required).
 /// If `assume_km_reachable` is set, then this method will return errors instead of `None`.
-pub fn decode_call_ex<C: Context>(
+pub fn decode_call<C: Context>(
     ctx: &C,
     call: Call,
     additional_data: Vec<u8>,

@@ -231,17 +231,17 @@ impl<R: Runtime> Dispatcher<R> {
         });
         let caller = CurrentState::with_env(|env| env.tx_caller_address());
         let additional_data = Self::build_additional_data(mode, caller);
-        let (call, call_format_metadata) = match callformat::decode_call(ctx, call, additional_data)
-        {
-            Ok(Some(result)) => result,
-            Ok(None) => {
-                return (
-                    module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
-                    callformat::Metadata::Empty,
-                )
-            }
-            Err(err) => return (err.into_call_result(), callformat::Metadata::Empty),
-        };
+        let (call, call_format_metadata) =
+            match callformat::decode_call(ctx, call, additional_data, false) {
+                Ok(Some(result)) => result,
+                Ok(None) => {
+                    return (
+                        module::CallResult::Ok(cbor::Value::Simple(cbor::SimpleValue::NullValue)),
+                        callformat::Metadata::Empty,
+                    )
+                }
+                Err(err) => return (err.into_call_result(), callformat::Metadata::Empty),
+            };
 
         // Apply optional method authorization.
         if let Some(method_authorizer) = opts.method_authorizer {

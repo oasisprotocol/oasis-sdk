@@ -641,7 +641,7 @@ impl<Cfg: Config> Module<Cfg> {
         call: transaction::Call,
         additional_data: Vec<u8>,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        match callformat::decode_call_ex(ctx, call, additional_data, true)? {
+        match callformat::decode_call(ctx, call, additional_data, true)? {
             Some((
                 transaction::Call {
                     body: cbor::Value::ByteString(data),
