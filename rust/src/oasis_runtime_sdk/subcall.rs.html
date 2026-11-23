@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a>    module::CallResult,
 <a href=#8 id=8 data-nosnippet>8</a>    modules::core::{Error, API <span class="kw">as _</span>},
 <a href=#9 id=9 data-nosnippet>9</a>    runtime::Runtime,
-<a href=#10 id=10 data-nosnippet>10</a>    state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
+<a href=#10 id=10 data-nosnippet>10</a>    state::{CurrentState, Options, TransactionInfo, TransactionResult},
 <a href=#11 id=11 data-nosnippet>11</a>    types::{token::BaseUnits, transaction, transaction::CallerAddress},
 <a href=#12 id=12 data-nosnippet>12</a>};
 <a href=#13 id=13 data-nosnippet>13</a>
@@ -161,40 +161,38 @@
 <a href=#161 id=161 data-nosnippet>161</a>            ..Default::default()
 <a href=#162 id=162 data-nosnippet>162</a>        },
 <a href=#163 id=163 data-nosnippet>163</a>    };
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>call = tx.call.clone(); <span class="comment">// TODO: Avoid clone.
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>(tx_info, call) = TransactionInfo::internal(tx);
 <a href=#165 id=165 data-nosnippet>165</a>
-<a href=#166 id=166 data-nosnippet>166</a>    // Execute a transaction in a child context.
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="comment">// Execute a transaction in a child context.
 <a href=#167 id=167 data-nosnippet>167</a>    </span><span class="kw">let </span>(call_result, gas) = CurrentState::with_transaction_opts(
-<a href=#168 id=168 data-nosnippet>168</a>        Options::new()
-<a href=#169 id=169 data-nosnippet>169</a>            .with_internal(<span class="bool-val">true</span>)
-<a href=#170 id=170 data-nosnippet>170</a>            .with_tx(TransactionWithMeta::internal(tx)),
-<a href=#171 id=171 data-nosnippet>171</a>        || {
-<a href=#172 id=172 data-nosnippet>172</a>            <span class="comment">// Dispatch the call.
-<a href=#173 id=173 data-nosnippet>173</a>            </span><span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
-<a href=#174 id=174 data-nosnippet>174</a>                <span class="kw-2">&amp;</span>ctx.clone(), <span class="comment">// Must clone to avoid infinite type.
-<a href=#175 id=175 data-nosnippet>175</a>                </span>call,
-<a href=#176 id=176 data-nosnippet>176</a>                <span class="kw-2">&amp;</span>Default::default(),
-<a href=#177 id=177 data-nosnippet>177</a>            );
-<a href=#178 id=178 data-nosnippet>178</a>            <span class="comment">// Retrieve remaining gas.
-<a href=#179 id=179 data-nosnippet>179</a>            </span><span class="kw">let </span>gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a>            <span class="comment">// Commit store and return emitted tags and messages on successful dispatch,
-<a href=#182 id=182 data-nosnippet>182</a>            // otherwise revert state and ignore any emitted events/messages.
-<a href=#183 id=183 data-nosnippet>183</a>            </span><span class="kw">if </span>result.is_success() {
-<a href=#184 id=184 data-nosnippet>184</a>                TransactionResult::Commit((result, gas))
-<a href=#185 id=185 data-nosnippet>185</a>            } <span class="kw">else </span>{
-<a href=#186 id=186 data-nosnippet>186</a>                <span class="comment">// Ignore tags/messages on failure.
-<a href=#187 id=187 data-nosnippet>187</a>                </span>TransactionResult::Rollback((result, gas))
-<a href=#188 id=188 data-nosnippet>188</a>            }
-<a href=#189 id=189 data-nosnippet>189</a>        },
-<a href=#190 id=190 data-nosnippet>190</a>    );
-<a href=#191 id=191 data-nosnippet>191</a>
-<a href=#192 id=192 data-nosnippet>192</a>    <span class="comment">// Compute the amount of gas used.
-<a href=#193 id=193 data-nosnippet>193</a>    </span><span class="kw">let </span>gas_used = info.max_gas.saturating_sub(gas);
-<a href=#194 id=194 data-nosnippet>194</a>
-<a href=#195 id=195 data-nosnippet>195</a>    <span class="prelude-val">Ok</span>(SubcallResult {
-<a href=#196 id=196 data-nosnippet>196</a>        call_result,
-<a href=#197 id=197 data-nosnippet>197</a>        gas_used,
-<a href=#198 id=198 data-nosnippet>198</a>    })
-<a href=#199 id=199 data-nosnippet>199</a>}
+<a href=#168 id=168 data-nosnippet>168</a>        Options::new().with_internal(<span class="bool-val">true</span>).with_tx(tx_info.into()),
+<a href=#169 id=169 data-nosnippet>169</a>        || {
+<a href=#170 id=170 data-nosnippet>170</a>            <span class="comment">// Dispatch the call.
+<a href=#171 id=171 data-nosnippet>171</a>            </span><span class="kw">let </span>(result, <span class="kw">_</span>) = dispatcher::Dispatcher::&lt;C::Runtime&gt;::dispatch_tx_call(
+<a href=#172 id=172 data-nosnippet>172</a>                <span class="kw-2">&amp;</span>ctx.clone(), <span class="comment">// Must clone to avoid infinite type.
+<a href=#173 id=173 data-nosnippet>173</a>                </span>call,
+<a href=#174 id=174 data-nosnippet>174</a>                <span class="kw-2">&amp;</span>Default::default(),
+<a href=#175 id=175 data-nosnippet>175</a>            );
+<a href=#176 id=176 data-nosnippet>176</a>            <span class="comment">// Retrieve remaining gas.
+<a href=#177 id=177 data-nosnippet>177</a>            </span><span class="kw">let </span>gas = &lt;C::Runtime <span class="kw">as </span>Runtime&gt;::Core::remaining_tx_gas();
+<a href=#178 id=178 data-nosnippet>178</a>
+<a href=#179 id=179 data-nosnippet>179</a>            <span class="comment">// Commit store and return emitted tags and messages on successful dispatch,
+<a href=#180 id=180 data-nosnippet>180</a>            // otherwise revert state and ignore any emitted events/messages.
+<a href=#181 id=181 data-nosnippet>181</a>            </span><span class="kw">if </span>result.is_success() {
+<a href=#182 id=182 data-nosnippet>182</a>                TransactionResult::Commit((result, gas))
+<a href=#183 id=183 data-nosnippet>183</a>            } <span class="kw">else </span>{
+<a href=#184 id=184 data-nosnippet>184</a>                <span class="comment">// Ignore tags/messages on failure.
+<a href=#185 id=185 data-nosnippet>185</a>                </span>TransactionResult::Rollback((result, gas))
+<a href=#186 id=186 data-nosnippet>186</a>            }
+<a href=#187 id=187 data-nosnippet>187</a>        },
+<a href=#188 id=188 data-nosnippet>188</a>    );
+<a href=#189 id=189 data-nosnippet>189</a>
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="comment">// Compute the amount of gas used.
+<a href=#191 id=191 data-nosnippet>191</a>    </span><span class="kw">let </span>gas_used = info.max_gas.saturating_sub(gas);
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="prelude-val">Ok</span>(SubcallResult {
+<a href=#194 id=194 data-nosnippet>194</a>        call_result,
+<a href=#195 id=195 data-nosnippet>195</a>        gas_used,
+<a href=#196 id=196 data-nosnippet>196</a>    })
+<a href=#197 id=197 data-nosnippet>197</a>}
 </code></pre></div></section></main></body></html>

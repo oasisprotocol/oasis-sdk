@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["Mode","TransactionResult"],"struct":["CurrentState","Environment","Options","State","StateValue","TransactionWithMeta"]};
+window.SIDEBAR_ITEMS = {"enum":["Mode","TransactionResult"],"struct":["CurrentState","Environment","Options","State","StateValue","TransactionInfo"]};
