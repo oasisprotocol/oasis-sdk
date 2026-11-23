@@ -7,7 +7,7 @@ use crate::{
     module::CallResult,
     modules::core::{Error, API as _},
     runtime::Runtime,
-    state::{CurrentState, Options, TransactionResult, TransactionWithMeta},
+    state::{CurrentState, Options, TransactionInfo, TransactionResult},
     types::{token::BaseUnits, transaction, transaction::CallerAddress},
 };
 
@@ -161,13 +161,11 @@ pub fn call<C: Context, V: Validator + 'static>(
             ..Default::default()
         },
     };
-    let call = tx.call.clone(); // TODO: Avoid clone.
+    let (tx_info, call) = TransactionInfo::internal(tx);
 
     // Execute a transaction in a child context.
     let (call_result, gas) = CurrentState::with_transaction_opts(
-        Options::new()
-            .with_internal(true)
-            .with_tx(TransactionWithMeta::internal(tx)),
+        Options::new().with_internal(true).with_tx(tx_info.into()),
         || {
             // Dispatch the call.
             let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(

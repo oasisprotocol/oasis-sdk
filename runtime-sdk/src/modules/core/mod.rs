@@ -21,7 +21,7 @@ use crate::{
         ModuleInfoHandler as _,
     },
     sender::SenderMeta,
-    state::{CurrentState, Mode, Options, TransactionWithMeta},
+    state::{CurrentState, Mode, Options, TransactionInfo},
     storage::{self},
     types::{
         token::{self, Denomination},
@@ -702,17 +702,12 @@ impl<Cfg: Config> Module<Cfg> {
         let simulate = |tx: &transaction::Transaction, gas: u64, report_failure: bool| {
             let mut tx = tx.clone();
             tx.auth_info.fee.gas = gas;
-            let call = tx.call.clone(); // TODO: Avoid clone.
+            let (tx_info, call) = TransactionInfo::from_tx(tx, tx_size, 0, Default::default());
 
             CurrentState::with_transaction_opts(
                 Options::new()
                     .with_mode(Mode::Simulate)
-                    .with_tx(TransactionWithMeta {
-                        data: tx,
-                        size: tx_size,
-                        index: 0,
-                        hash: Default::default(),
-                    }),
+                    .with_tx(tx_info.into()),
                 || {
                     let (result, _) = dispatcher::Dispatcher::<C::Runtime>::dispatch_tx_call(
                         ctx,
