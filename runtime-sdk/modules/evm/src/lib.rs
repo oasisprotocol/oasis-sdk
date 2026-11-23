@@ -346,7 +346,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         // trivially computable by anyone who can observe the create tx and receipt status.
         // Therefore, we don't need the `tx_metadata` or to encode the result.
         let (init_code, _tx_metadata) =
-            Self::decode_call_data(ctx, init_code, additional_data, tx_call_format, true)?
+            Self::decode_call_data(ctx, init_code, additional_data, tx_call_format)?
                 .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -381,7 +381,7 @@ impl<Cfg: Config> API for Module<Cfg> {
         );
 
         let (data, tx_metadata) =
-            Self::decode_call_data(ctx, data, additional_data, tx_call_format, true)?
+            Self::decode_call_data(ctx, data, additional_data, tx_call_format)?
                 .expect("processing always proceeds");
 
         // If in simulation, this must be EstimateGas query.
@@ -622,7 +622,6 @@ impl<Cfg: Config> Module<Cfg> {
         data: Vec<u8>,
         additional_data: Vec<u8>,
         format: transaction::CallFormat, // The tx call format.
-        assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
         if !Cfg::CONFIDENTIAL || format != transaction::CallFormat::Plain {
             // Either the runtime is non-confidential and all txs are plaintext, or the tx
@@ -630,7 +629,7 @@ impl<Cfg: Config> Module<Cfg> {
             return Ok(Some((data, callformat::Metadata::Empty)));
         }
         match cbor::from_slice(&data) {
-            Ok(call) => Self::decode_call(ctx, call, additional_data, assume_km_reachable),
+            Ok(call) => Self::decode_call(ctx, call, additional_data),
             Err(_) => Ok(Some((data, callformat::Metadata::Empty))), // It's not encrypted.
         }
     }
@@ -641,9 +640,8 @@ impl<Cfg: Config> Module<Cfg> {
         ctx: &C,
         call: transaction::Call,
         additional_data: Vec<u8>,
-        assume_km_reachable: bool,
     ) -> Result<Option<(Vec<u8>, callformat::Metadata)>, Error> {
-        match callformat::decode_call_ex(ctx, call, additional_data, assume_km_reachable)? {
+        match callformat::decode_call_ex(ctx, call, additional_data, true)? {
             Some((
                 transaction::Call {
                     body: cbor::Value::ByteString(data),
@@ -678,8 +676,8 @@ impl<Cfg: Config> Module<Cfg> {
                 call.address,
             );
 
-            let (data, tx_metadata) = Self::decode_call(ctx, data, additional_data, true)?
-                .expect("processing always proceeds");
+            let (data, tx_metadata) =
+                Self::decode_call(ctx, data, additional_data)?.expect("processing always proceeds");
             return Ok((
                 signed_call::verify::<_, Cfg>(
                     ctx,
@@ -696,7 +694,7 @@ impl<Cfg: Config> Module<Cfg> {
             Self::build_additional_data(callformat::TransactionMode::Simulate, None, call.address);
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) =
-            Self::decode_call_data(ctx, call.data, additional_data, tx_call_format, true)?
+            Self::decode_call_data(ctx, call.data, additional_data, tx_call_format)?
                 .expect("processing always proceeds");
         Ok((
             types::SimulateCallQuery {

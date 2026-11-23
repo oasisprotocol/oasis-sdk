@@ -432,7 +432,6 @@ fn test_c10l_enc_call_identity_decoded() {
         data.clone(),
         vec![],
         transaction::CallFormat::EncryptedX25519DeoxysII,
-        true,
     )
     .expect("decode failed")
     .expect("km is unreachable");
