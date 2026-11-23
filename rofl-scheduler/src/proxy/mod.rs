@@ -1,6 +1,6 @@
 mod domain;
 
-use std::{collections::BTreeMap, time::Duration};
+use std::{collections::BTreeMap, ptr, sync::Weak, time::Duration};
 
 use anyhow::{anyhow, Result};
 
@@ -34,9 +34,79 @@ struct InstanceInfo {
     timeouts: http::Timeouts,
     /// Connection group shared by all mappings of the instance.
     connection_group: http::ConnectionGroup,
-    custom_domains: Vec<String>,
-    #[allow(dead_code)]
+    /// Handle of the custom domain verifications queued for the current deployment.
     domain_verification_handle: Arc<CancelVerificationsOnDrop>,
+}
+
+/// Current owner of each verified custom domain.
+///
+/// A domain can be verified by multiple instances (e.g. when moving it to a new instance), in
+/// which case the instance that verified it last owns it.
+#[derive(Default)]
+struct CustomDomainOwners(BTreeMap<String, InstanceId>);
+
+impl CustomDomainOwners {
+    /// Make the instance the owner of the domain, returning the previous owner (if different).
+    fn claim(&mut self, domain: &str, id: InstanceId) -> Option<InstanceId> {
+        self.0
+            .insert(domain.to_string(), id)
+            .filter(|previous| *previous != id)
+    }
+
+    /// Release all domains owned by the instance, returning them.
+    fn release(&mut self, id: InstanceId) -> Vec<String> {
+        let domains: Vec<String> = self
+            .0
+            .iter()
+            .filter(|(_, owner)| **owner == id)
+            .map(|(domain, _)| domain.clone())
+            .collect();
+        for domain in &domains {
+            self.0.remove(domain);
+        }
+        domains
+    }
+}
+
+/// Provisioned instances.
+#[derive(Default)]
+struct Instances {
+    info: BTreeMap<InstanceId, InstanceInfo>,
+    custom_domain_owners: CustomDomainOwners,
+}
+
+impl Instances {
+    /// Remove an instance, returning its information and the custom domains that it owned.
+    fn remove(&mut self, id: InstanceId) -> Option<(InstanceInfo, Vec<String>)> {
+        let info = self.info.remove(&id)?;
+        Some((info, self.custom_domain_owners.release(id)))
+    }
+
+    /// Make the instance the owner of a verified custom domain.
+    ///
+    /// The verification must have been queued for the instance's current deployment, as
+    /// verifications for a previous deployment of the same instance may still complete.
+    ///
+    /// Returns the instance and the previous owner of the domain (if different), or `None` if
+    /// the verification is stale.
+    fn claim_custom_domain(
+        &mut self,
+        id: InstanceId,
+        domain: &str,
+        handle: &Weak<CancelVerificationsOnDrop>,
+    ) -> Option<(&InstanceInfo, Option<InstanceId>)> {
+        let info = self.info.get(&id)?;
+        // The weak reference keeps the allocation of a dropped handle alive, so its address
+        // cannot be reused by the handle of a newer deployment.
+        if !ptr::eq(
+            handle.as_ptr(),
+            Arc::as_ptr(&info.domain_verification_handle),
+        ) {
+            return None;
+        }
+        let previous = self.custom_domain_owners.claim(domain, id);
+        Some((info, previous))
+    }
 }
 
 /// Range of timeout values that deployments may request.
@@ -106,7 +176,7 @@ pub struct Proxy {
     timeout_policy: TimeoutPolicy,
     max_instance_connections: Option<usize>,
     logger: slog::Logger,
-    instances: Arc<Mutex<BTreeMap<InstanceId, InstanceInfo>>>,
+    instances: Arc<Mutex<Instances>>,
     domain_verifier: CustomDomainVerifier,
 }
 
@@ -150,10 +220,11 @@ impl Proxy {
             .map(|max| max as usize);
         let http = http::Proxy::new(http_cfg, acme)?;
 
-        let instances = Arc::new(Mutex::new(BTreeMap::new()));
+        let instances = Arc::new(Mutex::new(Instances::default()));
         let notifier = Arc::new(ProxyDomainVerificationHandler::new(
             http.handle().clone(),
             instances.clone(),
+            logger.clone(),
         ));
 
         Ok(Self {
@@ -220,8 +291,8 @@ impl Proxy {
         let mut instances = self.instances.lock().await;
 
         // If the instance already exists, first tear down the existing instance.
-        if let Some(info) = instances.remove(&instance.id) {
-            self.teardown_instance(info).await?;
+        if let Some((info, custom_domains)) = instances.remove(instance.id) {
+            self.teardown_instance(info, custom_domains).await?;
         }
 
         // Generate HTTP host.
@@ -259,7 +330,7 @@ impl Proxy {
 
         let domain_verification_handle = CancelVerificationsOnDrop::new();
 
-        instances.insert(
+        instances.info.insert(
             instance.id,
             InstanceInfo {
                 wireguard_pk: wireguard.sk.public_key(),
@@ -269,7 +340,6 @@ impl Proxy {
                 proxy_protocol,
                 timeouts,
                 connection_group,
-                custom_domains: Default::default(),
                 domain_verification_handle: domain_verification_handle.clone(),
             },
         );
@@ -328,8 +398,8 @@ impl Proxy {
     /// Deprovision the key pair associated with the given instance.
     pub async fn deprovision_instance(&self, id: InstanceId) -> Result<()> {
         let mut instances = self.instances.lock().await;
-        if let Some(info) = instances.remove(&id) {
-            self.teardown_instance(info).await?;
+        if let Some((info, custom_domains)) = instances.remove(id) {
+            self.teardown_instance(info, custom_domains).await?;
 
             slog::info!(self.logger, "deprovisioned keys for instance";
                 "id" => ?id,
@@ -339,10 +409,16 @@ impl Proxy {
     }
 
     /// Remove all proxy state of an instance and close its existing connections.
-    async fn teardown_instance(&self, info: InstanceInfo) -> Result<()> {
+    ///
+    /// Only the custom domains that the instance still owns are removed.
+    async fn teardown_instance(
+        &self,
+        info: InstanceInfo,
+        custom_domains: Vec<String>,
+    ) -> Result<()> {
         // Remove mappings first so that new connections cannot join the closed group.
         self.http.remove_mapping(&info.http_host).await;
-        for domain in &info.custom_domains {
+        for domain in &custom_domains {
             self.http.remove_mapping(domain).await;
         }
         info.connection_group.close();
@@ -354,37 +430,60 @@ impl Proxy {
 /// Handler for domain verification events.
 struct ProxyDomainVerificationHandler {
     http: http::ProxyHandle,
-    instances: Arc<Mutex<BTreeMap<InstanceId, InstanceInfo>>>,
+    instances: Arc<Mutex<Instances>>,
+    logger: slog::Logger,
 }
 
 impl ProxyDomainVerificationHandler {
     /// Creates a new instance of `ProxyDomainVerificationHandler`.
     pub fn new(
         http: http::ProxyHandle,
-        instances: Arc<Mutex<BTreeMap<InstanceId, InstanceInfo>>>,
+        instances: Arc<Mutex<Instances>>,
+        logger: slog::Logger,
     ) -> Self {
-        Self { http, instances }
+        Self {
+            http,
+            instances,
+            logger,
+        }
     }
 }
 
 #[async_trait]
 impl CustomDomainVerificationNotifier for ProxyDomainVerificationHandler {
-    async fn verification_completed(&self, id: InstanceId, domain: &str) {
+    async fn verification_completed(
+        &self,
+        id: InstanceId,
+        domain: &str,
+        handle: &Weak<CancelVerificationsOnDrop>,
+    ) {
+        // Hold the lock until the mapping is added so that the instance cannot be redeployed in
+        // the meantime.
         let mut instances = self.instances.lock().await;
-        if let Some(instance) = instances.get_mut(&id) {
-            instance.custom_domains.push(domain.to_string());
-            self.http
-                .add_mapping(http::Mapping {
-                    name: domain.to_string(),
-                    dst_address: instance.dst_address.clone(),
-                    dst_port: instance.dst_port,
-                    mode: http::Mode::ForwardOnly,
-                    proxy_protocol: instance.proxy_protocol,
-                    timeouts: instance.timeouts,
-                    connection_group: Some(instance.connection_group.clone()),
-                })
-                .await;
+        let Some((instance, previous)) = instances.claim_custom_domain(id, domain, handle) else {
+            slog::info!(self.logger, "ignoring stale custom domain verification";
+                "domain" => domain,
+                "id" => ?id,
+            );
+            return;
+        };
+        if let Some(previous) = previous {
+            slog::info!(self.logger, "custom domain moved to another instance";
+                "domain" => domain,
+                "from" => ?previous,
+                "to" => ?id,
+            );
         }
+        let mapping = http::Mapping {
+            name: domain.to_string(),
+            dst_address: instance.dst_address.clone(),
+            dst_port: instance.dst_port,
+            mode: http::Mode::ForwardOnly,
+            proxy_protocol: instance.proxy_protocol,
+            timeouts: instance.timeouts,
+            connection_group: Some(instance.connection_group.clone()),
+        };
+        self.http.add_mapping(mapping).await;
     }
 }
 
@@ -468,5 +567,92 @@ mod test {
         let policy = TimeoutPolicy::new(&cfg, &http_cfg);
         let timeouts = policy.timeouts(&deployment(&[(METADATA_KEY_PROXY_TIMEOUT_RW, "300")]));
         assert_eq!(timeouts.rw, secs(30));
+    }
+
+    fn instance_info(handle: &Arc<CancelVerificationsOnDrop>) -> InstanceInfo {
+        InstanceInfo {
+            wireguard_pk: x25519::PrivateKey::generate().public_key(),
+            http_host: Default::default(),
+            dst_address: Default::default(),
+            dst_port: 443,
+            proxy_protocol: false,
+            timeouts: Default::default(),
+            connection_group: http::ConnectionGroup::new(None),
+            domain_verification_handle: handle.clone(),
+        }
+    }
+
+    #[test]
+    fn test_claim_custom_domain_stale_verification() {
+        let a: InstanceId = 1.into();
+        let b: InstanceId = 2.into();
+        let domain = "app.example.org";
+        let owner = |instances: &Instances| instances.custom_domain_owners.0.get(domain).copied();
+        let mut instances = Instances::default();
+
+        // Instance B currently owns the domain.
+        let handle_b = CancelVerificationsOnDrop::new();
+        instances.info.insert(b, instance_info(&handle_b));
+        let claimed = instances.claim_custom_domain(b, domain, &Arc::downgrade(&handle_b));
+        assert!(claimed.is_some());
+
+        // A verification is queued for the first deployment of instance A.
+        let handle_a1 = CancelVerificationsOnDrop::new();
+        let stale = Arc::downgrade(&handle_a1);
+        instances.info.insert(a, instance_info(&handle_a1));
+
+        // Instance A is redeployed, dropping the handle of the first deployment.
+        instances.remove(a);
+        drop(handle_a1);
+        let handle_a2 = CancelVerificationsOnDrop::new();
+        instances.info.insert(a, instance_info(&handle_a2));
+
+        // The stale verification should not claim the domain.
+        assert!(instances.claim_custom_domain(a, domain, &stale).is_none());
+        assert_eq!(owner(&instances), Some(b));
+
+        // A verification for the current deployment should claim it.
+        let (_, previous) = instances
+            .claim_custom_domain(a, domain, &Arc::downgrade(&handle_a2))
+            .expect("verification should be current");
+        assert_eq!(previous, Some(b));
+        assert_eq!(owner(&instances), Some(a));
+
+        // Verifications for removed instances should be ignored.
+        let unknown: InstanceId = 3.into();
+        assert!(instances
+            .claim_custom_domain(unknown, domain, &Arc::downgrade(&handle_a2))
+            .is_none());
+        assert_eq!(owner(&instances), Some(a));
+    }
+
+    #[test]
+    fn test_custom_domain_owners() {
+        let a: InstanceId = 1.into();
+        let b: InstanceId = 2.into();
+        let mut owners = CustomDomainOwners::default();
+
+        // Claiming an unowned domain or re-claiming an owned one should not report an owner.
+        assert_eq!(owners.claim("a.example.com", a), None);
+        assert_eq!(owners.claim("shared.example.com", a), None);
+        assert_eq!(owners.claim("shared.example.com", a), None);
+        assert_eq!(owners.claim("b.example.com", b), None);
+
+        // Claiming a domain owned by another instance should move it.
+        assert_eq!(owners.claim("shared.example.com", b), Some(a));
+
+        // Releasing an instance should only return the domains that it still owns.
+        assert_eq!(owners.release(a), vec!["a.example.com".to_string()]);
+        assert!(owners.release(a).is_empty());
+        assert_eq!(
+            owners.release(b),
+            vec![
+                "b.example.com".to_string(),
+                "shared.example.com".to_string()
+            ]
+        );
+
+        // A released domain can be claimed again without reporting an owner.
+        assert_eq!(owners.claim("shared.example.com", a), None);
     }
 }

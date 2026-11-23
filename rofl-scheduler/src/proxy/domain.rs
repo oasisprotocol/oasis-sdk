@@ -19,7 +19,16 @@ use rofl_app_core::prelude::*;
 #[async_trait]
 pub trait CustomDomainVerificationNotifier: Send + Sync {
     /// Called when a domain verification completes successfully.
-    async fn verification_completed(&self, id: InstanceId, domain: &str);
+    ///
+    /// The `handle` is the one the verification was queued with. As the instance may have been
+    /// redeployed while the verification was in progress, implementations must ignore the
+    /// result unless the handle belongs to the instance's current deployment.
+    async fn verification_completed(
+        &self,
+        id: InstanceId,
+        domain: &str,
+        handle: &Weak<CancelVerificationsOnDrop>,
+    );
 }
 
 /// Handle that can be used to cancel the verification.
@@ -313,7 +322,11 @@ impl CustomDomainVerifier {
                     );
 
                     notifier
-                        .verification_completed(verification.instance_id, &verification.domain)
+                        .verification_completed(
+                            verification.instance_id,
+                            &verification.domain,
+                            &verification.handle,
+                        )
                         .await;
                 }
                 Err(err) => {
