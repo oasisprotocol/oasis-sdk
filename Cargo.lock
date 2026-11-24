@@ -5406,6 +5406,7 @@ dependencies = [
  "defguard_wireguard_rs",
  "hex",
  "honggfuzz",
+ "idna",
  "instant-acme",
  "oasis-cbor",
  "oasis-runtime-sdk",

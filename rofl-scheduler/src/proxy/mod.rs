@@ -38,22 +38,31 @@ struct InstanceInfo {
     domain_verification_handle: Arc<CancelVerificationsOnDrop>,
 }
 
+/// A custom domain requested by a deployment.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CustomDomain {
+    /// Domain as written in the deployment, from which the verification token is derived.
+    provided: String,
+    /// Canonical name of the domain, used for DNS verification, ownership and routing.
+    canonical: String,
+}
+
 /// Current owner of each verified custom domain.
 ///
 /// A domain can be verified by multiple instances (e.g. when moving it to a new instance), in
-/// which case the instance that verified it last owns it.
+/// which case the instance that verified it last owns it. Domains are keyed by their canonical
+/// name, the same as proxy routes, so differently written names refer to the same domain.
 #[derive(Default)]
 struct CustomDomainOwners(BTreeMap<String, InstanceId>);
 
 impl CustomDomainOwners {
     /// Make the instance the owner of the domain, returning the previous owner (if different).
-    fn claim(&mut self, domain: &str, id: InstanceId) -> Option<InstanceId> {
-        self.0
-            .insert(domain.to_string(), id)
-            .filter(|previous| *previous != id)
+    fn claim(&mut self, domain: &str, id: InstanceId) -> Result<Option<InstanceId>> {
+        let name = http::canonical_name(domain).ok_or_else(|| anyhow!("invalid domain name"))?;
+        Ok(self.0.insert(name, id).filter(|previous| *previous != id))
     }
 
-    /// Release all domains owned by the instance, returning them.
+    /// Release all domains owned by the instance, returning their canonical names.
     fn release(&mut self, id: InstanceId) -> Vec<String> {
         let domains: Vec<String> = self
             .0
@@ -87,25 +96,28 @@ impl Instances {
     /// The verification must have been queued for the instance's current deployment, as
     /// verifications for a previous deployment of the same instance may still complete.
     ///
-    /// Returns the instance and the previous owner of the domain (if different), or `None` if
-    /// the verification is stale.
+    /// Returns the instance and the previous owner of the domain (if different). Fails if the
+    /// verification is stale or the domain name is invalid.
     fn claim_custom_domain(
         &mut self,
         id: InstanceId,
         domain: &str,
         handle: &Weak<CancelVerificationsOnDrop>,
-    ) -> Option<(&InstanceInfo, Option<InstanceId>)> {
-        let info = self.info.get(&id)?;
+    ) -> Result<(&InstanceInfo, Option<InstanceId>)> {
+        let info = self
+            .info
+            .get(&id)
+            .ok_or_else(|| anyhow!("instance not provisioned"))?;
         // The weak reference keeps the allocation of a dropped handle alive, so its address
         // cannot be reused by the handle of a newer deployment.
         if !ptr::eq(
             handle.as_ptr(),
             Arc::as_ptr(&info.domain_verification_handle),
         ) {
-            return None;
+            return Err(anyhow!("stale verification"));
         }
-        let previous = self.custom_domain_owners.claim(domain, id);
-        Some((info, previous))
+        let previous = self.custom_domain_owners.claim(domain, id)?;
+        Ok((info, previous))
     }
 }
 
@@ -188,6 +200,11 @@ impl Proxy {
         acme: rofl_proxy::http::tls::AcmeAccount,
     ) -> Result<Self> {
         let logger = get_logger("scheduler/proxy");
+
+        // Instance hosts are subdomains of the proxy domain, so it must be a valid domain name.
+        if http::canonical_name(&cfg.domain).is_none() {
+            return Err(anyhow!("invalid proxy domain ({})", cfg.domain));
+        }
 
         let wireguard = wireguard::Hub::new(wireguard::HubConfig {
             external_address: cfg.external_wireguard_address.clone(),
@@ -275,8 +292,8 @@ impl Proxy {
     }
 
     /// Add a static HTTP proxy mapping.
-    pub async fn add_static_mapping(&self, mapping: http::Mapping) {
-        self.http.add_mapping(mapping).await;
+    pub async fn add_static_mapping(&self, mapping: http::Mapping) -> Result<()> {
+        self.http.add_mapping(mapping).await
     }
 
     /// Generate a fresh key pair and assign an IP address for the instance.
@@ -316,7 +333,8 @@ impl Proxy {
         let timeouts = self.timeout_policy.timeouts(deployment);
         let connection_group = http::ConnectionGroup::new(self.max_instance_connections);
 
-        self.http
+        let result = self
+            .http
             .add_mapping(http::Mapping {
                 name: http_host.clone(),
                 dst_address: dst_address.clone(),
@@ -327,6 +345,12 @@ impl Proxy {
                 connection_group: Some(connection_group.clone()),
             })
             .await;
+        if let Err(err) = result {
+            // Not expected as the proxy domain is validated on startup.
+            self.wireguard
+                .deprovision_client(&wireguard.sk.public_key())?;
+            return Err(err);
+        }
 
         let domain_verification_handle = CancelVerificationsOnDrop::new();
 
@@ -345,18 +369,26 @@ impl Proxy {
         );
 
         // Check if any custom domains have been configured and queue verification.
-        let custom_domains = Self::extract_custom_domains(deployment);
+        let custom_domains = Self::extract_custom_domains(&self.logger, instance.id, deployment);
         for domain in &custom_domains {
-            let token = domain_verification_token(instance, deployment, domain);
+            // Derive the token from the domain as written in the deployment (not its canonical
+            // name) so that existing TXT records remain valid.
+            let token = domain_verification_token(instance, deployment, &domain.provided);
 
+            // Verify the canonical name, as that is the name that will be routed.
             if let Err(err) = self
                 .domain_verifier
-                .queue_verification(instance.id, domain, &token, &domain_verification_handle)
+                .queue_verification(
+                    instance.id,
+                    &domain.canonical,
+                    &token,
+                    &domain_verification_handle,
+                )
                 .await
             {
                 slog::error!(self.logger, "failed to queue domain verification";
                     "id" => ?instance.id,
-                    "domain" => domain,
+                    "domain" => &domain.provided,
                     "err" => ?err
                 );
             }
@@ -381,8 +413,12 @@ impl Proxy {
         Ok(label)
     }
 
-    /// Extract custom domains from deployment metadata.
-    fn extract_custom_domains(deployment: &Deployment) -> Vec<String> {
+    /// Extract valid custom domains from deployment metadata.
+    fn extract_custom_domains(
+        logger: &slog::Logger,
+        id: InstanceId,
+        deployment: &Deployment,
+    ) -> Vec<CustomDomain> {
         let empty = String::new();
         deployment
             .metadata
@@ -390,8 +426,20 @@ impl Proxy {
             .unwrap_or(&empty)
             .split(' ')
             .filter(|s| !s.is_empty())
+            .filter_map(|domain| {
+                let Some(canonical) = http::canonical_name(domain) else {
+                    slog::warn!(logger, "ignoring invalid custom domain";
+                        "id" => ?id,
+                        "domain" => domain,
+                    );
+                    return None;
+                };
+                Some(CustomDomain {
+                    provided: domain.to_string(),
+                    canonical,
+                })
+            })
             .take(MAX_CUSTOM_DOMAINS)
-            .map(|s| s.to_string())
             .collect()
     }
 
@@ -460,12 +508,16 @@ impl CustomDomainVerificationNotifier for ProxyDomainVerificationHandler {
         // Hold the lock until the mapping is added so that the instance cannot be redeployed in
         // the meantime.
         let mut instances = self.instances.lock().await;
-        let Some((instance, previous)) = instances.claim_custom_domain(id, domain, handle) else {
-            slog::info!(self.logger, "ignoring stale custom domain verification";
-                "domain" => domain,
-                "id" => ?id,
-            );
-            return;
+        let (instance, previous) = match instances.claim_custom_domain(id, domain, handle) {
+            Ok(claimed) => claimed,
+            Err(err) => {
+                slog::info!(self.logger, "ignoring custom domain verification";
+                    "domain" => domain,
+                    "id" => ?id,
+                    "err" => ?err,
+                );
+                return;
+            }
         };
         if let Some(previous) = previous {
             slog::info!(self.logger, "custom domain moved to another instance";
@@ -483,7 +535,14 @@ impl CustomDomainVerificationNotifier for ProxyDomainVerificationHandler {
             timeouts: instance.timeouts,
             connection_group: Some(instance.connection_group.clone()),
         };
-        self.http.add_mapping(mapping).await;
+        if let Err(err) = self.http.add_mapping(mapping).await {
+            // Not expected as the domain name was validated when claiming it.
+            slog::error!(self.logger, "failed to add custom domain mapping";
+                "domain" => domain,
+                "id" => ?id,
+                "err" => ?err,
+            );
+        }
     }
 }
 
@@ -594,7 +653,7 @@ mod test {
         let handle_b = CancelVerificationsOnDrop::new();
         instances.info.insert(b, instance_info(&handle_b));
         let claimed = instances.claim_custom_domain(b, domain, &Arc::downgrade(&handle_b));
-        assert!(claimed.is_some());
+        assert!(claimed.is_ok());
 
         // A verification is queued for the first deployment of instance A.
         let handle_a1 = CancelVerificationsOnDrop::new();
@@ -608,7 +667,8 @@ mod test {
         instances.info.insert(a, instance_info(&handle_a2));
 
         // The stale verification should not claim the domain.
-        assert!(instances.claim_custom_domain(a, domain, &stale).is_none());
+        let result = instances.claim_custom_domain(a, domain, &stale);
+        assert_eq!(result.err().unwrap().to_string(), "stale verification");
         assert_eq!(owner(&instances), Some(b));
 
         // A verification for the current deployment should claim it.
@@ -622,7 +682,7 @@ mod test {
         let unknown: InstanceId = 3.into();
         assert!(instances
             .claim_custom_domain(unknown, domain, &Arc::downgrade(&handle_a2))
-            .is_none());
+            .is_err());
         assert_eq!(owner(&instances), Some(a));
     }
 
@@ -633,13 +693,13 @@ mod test {
         let mut owners = CustomDomainOwners::default();
 
         // Claiming an unowned domain or re-claiming an owned one should not report an owner.
-        assert_eq!(owners.claim("a.example.com", a), None);
-        assert_eq!(owners.claim("shared.example.com", a), None);
-        assert_eq!(owners.claim("shared.example.com", a), None);
-        assert_eq!(owners.claim("b.example.com", b), None);
+        assert_eq!(owners.claim("a.example.com", a).unwrap(), None);
+        assert_eq!(owners.claim("shared.example.com", a).unwrap(), None);
+        assert_eq!(owners.claim("shared.example.com", a).unwrap(), None);
+        assert_eq!(owners.claim("b.example.com", b).unwrap(), None);
 
         // Claiming a domain owned by another instance should move it.
-        assert_eq!(owners.claim("shared.example.com", b), Some(a));
+        assert_eq!(owners.claim("shared.example.com", b).unwrap(), Some(a));
 
         // Releasing an instance should only return the domains that it still owns.
         assert_eq!(owners.release(a), vec!["a.example.com".to_string()]);
@@ -653,6 +713,66 @@ mod test {
         );
 
         // A released domain can be claimed again without reporting an owner.
-        assert_eq!(owners.claim("shared.example.com", a), None);
+        assert_eq!(owners.claim("shared.example.com", a).unwrap(), None);
+
+        // Differently written names should refer to the same domain.
+        assert_eq!(owners.claim("App.Example.org.", b).unwrap(), None);
+        assert_eq!(owners.claim("app.example.org", a).unwrap(), Some(b));
+        assert_eq!(owners.claim("APP.example.ORG", b).unwrap(), Some(a));
+        assert_eq!(
+            owners.release(a),
+            vec!["shared.example.com".to_string()],
+            "a domain moved under a different spelling should no longer be owned"
+        );
+        assert_eq!(owners.release(b), vec!["app.example.org".to_string()]);
+
+        // Names with empty labels should be rejected without recording an owner.
+        assert!(owners.claim("docs.example..", a).is_err());
+        assert!(owners.claim("", a).is_err());
+        assert!(owners.release(a).is_empty());
+
+        // Released names should be usable as proxy route names unchanged.
+        owners.claim("Docs.Example.", a).unwrap();
+        for name in owners.release(a) {
+            assert_eq!(http::canonical_name(&name), Some(name.clone()));
+        }
+
+        // Unicode and ASCII spellings of an internationalized domain are the same domain.
+        assert_eq!(owners.claim("xn--bcher-kva.example.org", a).unwrap(), None);
+        assert_eq!(owners.claim("Bücher.example.org", b).unwrap(), Some(a));
+        assert!(owners.release(a).is_empty());
+        assert_eq!(
+            owners.release(b),
+            vec!["xn--bcher-kva.example.org".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_extract_custom_domains() {
+        let logger = slog::Logger::root(slog::Discard, slog::o!());
+        let domains = [
+            "Bücher.example.org",
+            "",
+            "docs.example..",
+            "xn--bcher-kva.example.org",
+            "App.Example.org.",
+            "other.org",
+        ];
+        let deployment = deployment(&[(METADATA_KEY_PROXY_CUSTOM_DOMAINS, &domains.join(" "))]);
+        let domain = |spelling: &str, canonical: &str| CustomDomain {
+            provided: spelling.to_string(),
+            canonical: canonical.to_string(),
+        };
+
+        // Domains should keep their spelling (as tokens are derived from it) next to their
+        // canonical name, with invalid ones skipped without counting towards the limit.
+        assert_eq!(
+            Proxy::extract_custom_domains(&logger, Default::default(), &deployment),
+            vec![
+                domain("Bücher.example.org", "xn--bcher-kva.example.org"),
+                domain("xn--bcher-kva.example.org", "xn--bcher-kva.example.org"),
+                domain("App.Example.org.", "app.example.org"),
+            ]
+        );
     }
 }

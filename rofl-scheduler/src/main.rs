@@ -144,7 +144,7 @@ impl App for SchedulerApp {
                     let api_server_address = "127.0.0.1";
                     let api_server_port = 444;
 
-                    proxy
+                    let result = proxy
                         .add_static_mapping(rofl_proxy::http::Mapping {
                             name: domain.clone(),
                             dst_address: api_server_address.to_string(),
@@ -154,6 +154,10 @@ impl App for SchedulerApp {
                             ..Default::default()
                         })
                         .await;
+                    if let Err(err) = result {
+                        slog::error!(logger, "failed to add API server proxy mapping"; "err" => ?err);
+                        process::abort();
+                    }
 
                     &format!("0.0.0.0:{api_server_port}")
                 }

@@ -5,5 +5,6 @@ pub mod sni;
 pub mod tls;
 
 pub use proxy::{
-    Config, ConnectionGroup, Mapping, Mode, Proxy, ProxyHandle, Timeouts, MAX_TIMEOUT,
+    canonical_name, Config, ConnectionGroup, Mapping, Mode, Proxy, ProxyHandle, Timeouts,
+    MAX_TIMEOUT,
 };

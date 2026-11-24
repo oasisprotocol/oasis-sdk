@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Result};
+use idna::uts46::{AsciiDenyList, DnsLength, Hyphens, Uts46};
 use oasis_runtime_sdk::core::common::logger::get_logger;
 use ptrie::Trie;
 use tokio::{
@@ -17,13 +18,12 @@ use tokio::{
 };
 use tokio_rustls::TlsAcceptor;
 
-use crate::http::tls;
-
 use super::{
     idle::IdleTimeout,
     proxy_protocol, sni,
     tls::{CertificateProvisioner, CertificateProvisionerHandle, ACME_TLS_ALPN_PROTOCOL_ID},
 };
+use crate::http::tls;
 
 /// Proxy operation mode.
 #[derive(Debug, Default, Clone, Copy)]
@@ -161,7 +161,7 @@ impl ConnectionGroupMember {
 /// Proxy mapping.
 #[derive(Clone, Default, Debug)]
 pub struct Mapping {
-    /// Domain name to map (based on SNI extension).
+    /// Domain name to map (based on SNI extension). Names are matched case-insensitively.
     pub name: String,
     /// Destination address to connect to.
     pub dst_address: String,
@@ -190,25 +190,56 @@ impl Mappings {
         }
     }
 
-    /// Add a new proxy mapping.
+    /// Add a new proxy mapping, storing it under the canonical form of its name.
     ///
-    /// If a mapping for the same domain exists, it is overwritten.
-    fn add(&self, mapping: Mapping) {
+    /// If a mapping for the same domain exists, it is overwritten. Returns the stored mapping.
+    fn add(&self, mut mapping: Mapping) -> Result<Arc<Mapping>> {
+        mapping.name = canonical_name(&mapping.name)
+            .ok_or_else(|| anyhow!("invalid domain name ({})", mapping.name))?;
+        let mapping = Arc::new(mapping);
         let mut tree = self.tree.lock().unwrap();
-        tree.insert(reverse(&mapping.name.clone()), Arc::new(mapping));
+        tree.insert(reverse(&mapping.name), mapping.clone());
+        Ok(mapping)
     }
 
     /// Remove an existing proxy mapping, returning it.
     fn remove(&self, name: &str) -> Option<Arc<Mapping>> {
+        let name = canonical_name(name)?;
         let mut tree = self.tree.lock().unwrap();
-        tree.remove(reverse(name))
+        tree.remove(reverse(&name))
     }
 
     /// Lookup an existing proxy mapping by using the longest suffix match.
     fn get(&self, name: &str) -> Option<Arc<Mapping>> {
+        let name = canonical_name(name)?;
         let tree = self.tree.lock().unwrap();
-        tree.find_longest_prefix(reverse(name)).cloned()
+        tree.find_longest_prefix(reverse(&name)).cloned()
     }
+}
+
+/// Canonical form of a DNS name, used whenever names are compared.
+///
+/// This is the lowercase IDNA ASCII form (UTS #46, non-transitional), the same form that DNS
+/// resolution and SNI use (RFC 6066), so e.g. `Bücher.example.org` and `xn--bcher-kva.example.org`
+/// are the same name. A trailing dot for the root zone is removed as SNI carries names without it.
+///
+/// Returns `None` for names that cannot be converted or have empty labels (e.g. `a..b` or `a..`),
+/// which ensures that canonicalizing a canonical name does not change it.
+pub fn canonical_name(name: &str) -> Option<String> {
+    let name = Uts46::new()
+        .to_ascii(
+            name.as_bytes(),
+            AsciiDenyList::EMPTY,
+            Hyphens::Allow,
+            DnsLength::Ignore,
+        )
+        .ok()?;
+    // Conversion is done first as it can map other characters (e.g. U+3002) to dots.
+    let name = name.strip_suffix('.').unwrap_or(&name);
+    if name.split('.').any(str::is_empty) {
+        return None;
+    }
+    Some(name.to_string())
 }
 
 /// Resolve a timeout override, falling back to the given default.
@@ -267,7 +298,7 @@ impl Proxy {
     }
 
     /// Add a new proxy mapping.
-    pub async fn add_mapping(&self, mapping: Mapping) {
+    pub async fn add_mapping(&self, mapping: Mapping) -> Result<()> {
         self.handle.add_mapping(mapping).await
     }
 
@@ -546,11 +577,17 @@ pub struct ProxyHandle {
 
 impl ProxyHandle {
     /// Add a new proxy mapping.
-    pub async fn add_mapping(&self, mapping: Mapping) {
+    ///
+    /// The mapping is stored under the canonical form of its name (see [`canonical_name`]). Fails
+    /// if the name is not a valid domain name.
+    pub async fn add_mapping(&self, mapping: Mapping) -> Result<()> {
+        let mapping = self.state.mappings.add(mapping)?;
+        // Certificates are also provisioned for the canonical name, as TLS looks them up by the
+        // lowercase SNI.
         if matches!(mapping.mode, Mode::TerminateTls) {
             self.state.provisioner.add_domain(&mapping.name).await;
         }
-        self.state.mappings.add(mapping);
+        Ok(())
     }
 
     /// Remove an existing proxy mapping.
@@ -558,7 +595,7 @@ impl ProxyHandle {
         let mapping = self.state.mappings.remove(name);
         if let Some(mapping) = mapping {
             if matches!(mapping.mode, Mode::TerminateTls) {
-                self.state.provisioner.remove_domain(name).await;
+                self.state.provisioner.remove_domain(&mapping.name).await;
             }
         }
     }
@@ -616,14 +653,18 @@ mod test {
         proxy.rt.block_on(async {
             let listener = TcpListener::bind("127.0.0.1:0").await?;
             let destination = TcpListener::bind("127.0.0.1:0").await?;
-            proxy.state.mappings.add(Mapping {
-                name: "example.net".to_string(),
-                dst_address: "127.0.0.1".to_string(),
-                dst_port: destination.local_addr()?.port(),
-                mode: Mode::ForwardOnly,
-                proxy_protocol,
-                ..Default::default()
-            });
+            proxy
+                .state
+                .mappings
+                .add(Mapping {
+                    name: "example.net".to_string(),
+                    dst_address: "127.0.0.1".to_string(),
+                    dst_port: destination.local_addr()?.port(),
+                    mode: Mode::ForwardOnly,
+                    proxy_protocol,
+                    ..Default::default()
+                })
+                .unwrap();
 
             let mut client = TcpStream::connect(listener.local_addr()?).await?;
             client.write_all(data).await?;
@@ -731,17 +772,20 @@ mod test {
             timeout_handshake: Duration::from_millis(200),
             ..Default::default()
         });
-        state.mappings.add(Mapping {
-            name: "example.net".to_string(),
-            dst_address: "127.0.0.1".to_string(),
-            dst_port: 1,
-            mode: Mode::TerminateTls,
-            timeouts: Timeouts {
-                connection: Some(Duration::from_secs(3600)),
+        state
+            .mappings
+            .add(Mapping {
+                name: "example.net".to_string(),
+                dst_address: "127.0.0.1".to_string(),
+                dst_port: 1,
+                mode: Mode::TerminateTls,
+                timeouts: Timeouts {
+                    connection: Some(Duration::from_secs(3600)),
+                    ..Default::default()
+                },
                 ..Default::default()
-            },
-            ..Default::default()
-        });
+            })
+            .unwrap();
 
         tokio_test::block_on(async {
             let listener = TcpListener::bind("127.0.0.1:0").await?;
@@ -777,12 +821,16 @@ mod test {
             .block_on(async {
                 let listener = TcpListener::bind("127.0.0.1:0").await?;
                 let destination = TcpListener::bind("127.0.0.1:0").await?;
-                proxy.state.mappings.add(Mapping {
-                    name: "example.net".to_string(),
-                    dst_address: "127.0.0.1".to_string(),
-                    dst_port: destination.local_addr()?.port(),
-                    ..Default::default()
-                });
+                proxy
+                    .state
+                    .mappings
+                    .add(Mapping {
+                        name: "example.net".to_string(),
+                        dst_address: "127.0.0.1".to_string(),
+                        dst_port: destination.local_addr()?.port(),
+                        ..Default::default()
+                    })
+                    .unwrap();
 
                 for server_to_client in [true, false] {
                     let (handle, mut client, mut dst) =
@@ -825,13 +873,17 @@ mod test {
                 let destination = TcpListener::bind("127.0.0.1:0").await?;
                 let dst_port = destination.local_addr()?.port();
                 let add_mapping = |timeouts| {
-                    proxy.state.mappings.add(Mapping {
-                        name: "example.net".to_string(),
-                        dst_address: "127.0.0.1".to_string(),
-                        dst_port,
-                        timeouts,
-                        ..Default::default()
-                    })
+                    proxy
+                        .state
+                        .mappings
+                        .add(Mapping {
+                            name: "example.net".to_string(),
+                            dst_address: "127.0.0.1".to_string(),
+                            dst_port,
+                            timeouts,
+                            ..Default::default()
+                        })
+                        .unwrap()
                 };
                 // Much lower than the defaults so that the overrides are what closes connections.
                 let short = Some(Duration::from_millis(100));
@@ -873,13 +925,17 @@ mod test {
                 let destination = TcpListener::bind("127.0.0.1:0").await?;
                 let dst_port = destination.local_addr()?.port();
                 let add_mapping = |group: &ConnectionGroup| {
-                    proxy.state.mappings.add(Mapping {
-                        name: "example.net".to_string(),
-                        dst_address: "127.0.0.1".to_string(),
-                        dst_port,
-                        connection_group: Some(group.clone()),
-                        ..Default::default()
-                    })
+                    proxy
+                        .state
+                        .mappings
+                        .add(Mapping {
+                            name: "example.net".to_string(),
+                            dst_address: "127.0.0.1".to_string(),
+                            dst_port,
+                            connection_group: Some(group.clone()),
+                            ..Default::default()
+                        })
+                        .unwrap()
                 };
                 let deadline = Duration::from_secs(10);
 
@@ -962,30 +1018,36 @@ mod test {
         let mapping = mappings.get("example.com");
         assert!(mapping.is_none());
 
-        mappings.add(Mapping {
-            name: "foo.example.com".to_string(),
-            dst_address: "a".to_string(),
-            dst_port: 1234,
-            mode: Mode::ForwardOnly,
-            proxy_protocol: false,
-            ..Default::default()
-        });
-        mappings.add(Mapping {
-            name: "bar.foo.example.com".to_string(),
-            dst_address: "b".to_string(),
-            dst_port: 1234,
-            mode: Mode::ForwardOnly,
-            proxy_protocol: false,
-            ..Default::default()
-        });
-        mappings.add(Mapping {
-            name: "another.example.com".to_string(),
-            dst_address: "c".to_string(),
-            dst_port: 1234,
-            mode: Mode::ForwardOnly,
-            proxy_protocol: false,
-            ..Default::default()
-        });
+        mappings
+            .add(Mapping {
+                name: "foo.example.com".to_string(),
+                dst_address: "a".to_string(),
+                dst_port: 1234,
+                mode: Mode::ForwardOnly,
+                proxy_protocol: false,
+                ..Default::default()
+            })
+            .unwrap();
+        mappings
+            .add(Mapping {
+                name: "bar.foo.example.com".to_string(),
+                dst_address: "b".to_string(),
+                dst_port: 1234,
+                mode: Mode::ForwardOnly,
+                proxy_protocol: false,
+                ..Default::default()
+            })
+            .unwrap();
+        mappings
+            .add(Mapping {
+                name: "another.example.com".to_string(),
+                dst_address: "c".to_string(),
+                dst_port: 1234,
+                mode: Mode::ForwardOnly,
+                proxy_protocol: false,
+                ..Default::default()
+            })
+            .unwrap();
 
         // Top-level should not exist.
         let mapping = mappings.get("example.com");
@@ -1011,5 +1073,172 @@ mod test {
             .expect("mapping should exist");
         assert_eq!(mapping.name, "bar.foo.example.com");
         assert_eq!(mapping.dst_address, "b");
+
+        // Names should be matched case-insensitively and regardless of a trailing dot.
+        let mapping = mappings
+            .get("My.Custom.FOO.example.com.")
+            .expect("mapping should exist");
+        assert_eq!(mapping.name, "foo.example.com");
+
+        // A mapping with a differently written name should replace the existing one.
+        mappings
+            .add(Mapping {
+                name: "Another.Example.COM.".to_string(),
+                dst_address: "d".to_string(),
+                ..Default::default()
+            })
+            .unwrap();
+        let mapping = mappings
+            .get("another.example.com")
+            .expect("mapping should exist");
+        assert_eq!(mapping.name, "another.example.com");
+        assert_eq!(mapping.dst_address, "d");
+
+        // Removal should also match differently written names.
+        assert!(mappings.remove("ANOTHER.example.com").is_some());
+        assert!(mappings.get("another.example.com").is_none());
+
+        // Names with empty labels should be rejected and never match.
+        for name in [
+            "docs.example..",
+            "docs..example.com",
+            ".example.com",
+            "",
+            ".",
+        ] {
+            let result = mappings.add(Mapping {
+                name: name.to_string(),
+                ..Default::default()
+            });
+            assert!(result.is_err(), "{name:?} should be rejected");
+            assert!(mappings.remove(name).is_none());
+            assert!(mappings.get(name).is_none());
+        }
+        assert!(mappings.get("docs.example").is_none());
+
+        // Unicode and ASCII spellings of an internationalized name should be the same route.
+        mappings
+            .add(Mapping {
+                name: "xn--bcher-kva.example.org".to_string(),
+                dst_address: "old".to_string(),
+                ..Default::default()
+            })
+            .unwrap();
+        mappings
+            .add(Mapping {
+                name: "Bücher.example.org".to_string(),
+                dst_address: "new".to_string(),
+                ..Default::default()
+            })
+            .unwrap();
+        for name in ["xn--bcher-kva.example.org", "bücher.example.org"] {
+            let mapping = mappings.get(name).expect("mapping should exist");
+            assert_eq!(mapping.name, "xn--bcher-kva.example.org");
+            assert_eq!(mapping.dst_address, "new");
+        }
+        assert!(mappings.remove("bücher.example.org").is_some());
+        assert!(mappings.get("xn--bcher-kva.example.org").is_none());
+    }
+
+    #[test]
+    fn test_canonical_name() {
+        let canonical = |name: &str| canonical_name(name).unwrap();
+        assert_eq!(canonical("app.example.org"), "app.example.org");
+        assert_eq!(canonical("App.Example.ORG"), "app.example.org");
+        assert_eq!(canonical("app.example.org."), "app.example.org");
+        assert_eq!(canonical("localhost"), "localhost");
+
+        // Internationalized names should use their ASCII form.
+        assert_eq!(canonical("bücher.example.org"), "xn--bcher-kva.example.org");
+        assert_eq!(
+            canonical("BÜCHER.Example.org."),
+            "xn--bcher-kva.example.org"
+        );
+        assert_eq!(
+            canonical("XN--BCHER-KVA.example.org"),
+            "xn--bcher-kva.example.org"
+        );
+        // Processing is non-transitional, the same as current browsers.
+        assert_eq!(canonical("straße.example"), "xn--strae-oqa.example");
+        // Other characters can map to label separators.
+        assert_eq!(
+            canonical("bücher。example。org"),
+            "xn--bcher-kva.example.org"
+        );
+
+        // Names with empty labels or that cannot be converted are invalid.
+        for name in [
+            "",
+            ".",
+            "..",
+            "docs.example..",
+            "a..b",
+            ".a",
+            "a...",
+            "docs。。example",
+            "xn--a.example.org",
+        ] {
+            assert_eq!(canonical_name(name), None, "{name:?} should be invalid");
+        }
+
+        // Canonicalizing a canonical name should not change it.
+        for name in ["App.Example.org.", "x.y", "Z", "Bücher.example.org"] {
+            let once = canonical(name);
+            assert_eq!(canonical(&once), once);
+        }
+    }
+
+    #[test]
+    fn test_handle_canonical_names() {
+        let proxy = Proxy::new(Config::default(), acme_account()).unwrap();
+        let handle = proxy.handle().clone();
+
+        proxy.rt.block_on(async {
+            for mode in [Mode::ForwardOnly, Mode::TerminateTls] {
+                handle
+                    .add_mapping(Mapping {
+                        name: "App.Example.org".to_string(),
+                        mode,
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
+                let mapping = handle
+                    .get_mapping("app.example.org")
+                    .expect("mapping should exist");
+                assert_eq!(mapping.name, "app.example.org");
+
+                handle.remove_mapping("APP.example.org.").await;
+                assert!(handle.get_mapping("app.example.org").is_none());
+
+                // Internationalized names should be stored (and certificates provisioned) in
+                // their ASCII form, which is what TLS clients send.
+                handle
+                    .add_mapping(Mapping {
+                        name: "Bücher.example.org".to_string(),
+                        mode,
+                        ..Default::default()
+                    })
+                    .await
+                    .unwrap();
+                let mapping = handle
+                    .get_mapping("xn--bcher-kva.example.org")
+                    .expect("mapping should exist");
+                assert_eq!(mapping.name, "xn--bcher-kva.example.org");
+                handle.remove_mapping("xn--bcher-kva.example.org").await;
+                assert!(handle.get_mapping("bücher.example.org").is_none());
+
+                // A malformed name should not install a route that it cannot remove.
+                let result = handle
+                    .add_mapping(Mapping {
+                        name: "docs.example..".to_string(),
+                        mode,
+                        ..Default::default()
+                    })
+                    .await;
+                assert!(result.is_err());
+                assert!(handle.get_mapping("docs.example").is_none());
+            }
+        });
     }
 }
