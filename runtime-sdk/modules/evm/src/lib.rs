@@ -339,8 +339,11 @@ impl<Cfg: Config> API for Module<Cfg> {
         let (tx_call_format, is_simulation) =
             CurrentState::with_env(|env| (env.tx_call_format(), env.is_simulation()));
 
-        let additional_data =
-            Self::build_additional_data(callformat::TransactionMode::Execute, Some(caller), None);
+        let additional_data = Self::build_additional_data(
+            callformat::TransactionMode::Execute,
+            caller,
+            Default::default(),
+        );
 
         // Create output (the contract address) does not need to be encrypted because it's
         // trivially computable by anyone who can observe the create tx and receipt status.
@@ -374,11 +377,8 @@ impl<Cfg: Config> API for Module<Cfg> {
             (env.tx_call_format(), env.tx_index(), env.is_simulation())
         });
 
-        let additional_data = Self::build_additional_data(
-            callformat::TransactionMode::Execute,
-            Some(caller),
-            Some(address),
-        );
+        let additional_data =
+            Self::build_additional_data(callformat::TransactionMode::Execute, caller, address);
 
         let (data, tx_metadata) =
             Self::decode_call_data(ctx, data, additional_data, tx_call_format)?
@@ -672,8 +672,8 @@ impl<Cfg: Config> Module<Cfg> {
         {
             let additional_data = Self::build_additional_data(
                 callformat::TransactionMode::Simulate,
-                Some(call.caller),
-                call.address,
+                call.caller,
+                call.address.unwrap_or_default(),
             );
 
             let (data, tx_metadata) =
@@ -690,8 +690,11 @@ impl<Cfg: Config> Module<Cfg> {
         }
 
         // The call is not signed, but it must be encoded as an oasis-sdk call.
-        let additional_data =
-            Self::build_additional_data(callformat::TransactionMode::Simulate, None, call.address);
+        let additional_data = Self::build_additional_data(
+            callformat::TransactionMode::Simulate,
+            Default::default(),
+            call.address.unwrap_or_default(),
+        );
         let tx_call_format = transaction::CallFormat::Plain; // Queries cannot be encrypted.
         let (data, tx_metadata) =
             Self::decode_call_data(ctx, call.data, additional_data, tx_call_format)?
@@ -732,22 +735,14 @@ impl<Cfg: Config> Module<Cfg> {
     /// Builds additional data to bind encrypted call data to its transaction context.
     fn build_additional_data(
         mode: callformat::TransactionMode,
-        caller: Option<H160>,
-        address: Option<H160>,
+        caller: H160,
+        address: H160,
     ) -> Vec<u8> {
-        let cap = 34 + 20 * (caller.is_some() as usize + address.is_some() as usize);
-
-        let mut additional_data = Vec::with_capacity(cap);
+        let mut additional_data = Vec::with_capacity(74);
         additional_data.extend_from_slice(callformat::EVM_ADDITIONAL_DATA_DOMAIN.as_bytes());
         additional_data.push(mode as u8);
-
-        if let Some(caller) = caller {
-            additional_data.extend_from_slice(caller.as_bytes());
-        }
-
-        if let Some(address) = address {
-            additional_data.extend_from_slice(address.as_bytes());
-        }
+        additional_data.extend_from_slice(caller.as_bytes());
+        additional_data.extend_from_slice(address.as_bytes());
 
         additional_data
     }
