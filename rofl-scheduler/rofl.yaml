@@ -1,5 +1,5 @@
 name: rofl-scheduler
-version: 0.10.0
+version: 0.11.0
 repository: https://github.com/oasisprotocol/oasis-sdk
 description: Schedules and manages machines so you don't have to! Deploy your ROFL app today.
 tee: tdx
@@ -12,33 +12,26 @@ resources:
     size: 64
 artifacts:
   builder: ghcr.io/oasisprotocol/rofl-dev:v0.7.0@sha256:afc6d1baa1ad8df4031baa30ac627b86cdc5b726e62c69ddf7de30326637392f
-  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.3/ovmf.tdx.fd#db47100a7d6a0c1f6983be224137c3f8d7cb09b63bb1c7a5ee7829d8e994a42f
-  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.3/stage1.bin#2a39f1e317f217e3e46e036383d6716c199d89e58d14901251e54c195e5261f0
-  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.6.3/stage2-basic.tar.bz2#9a2b4d71e9779801bde73c16b3be789bc50672019a87e8c90fe3c94e034907c1
+  firmware: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.7.0/ovmf.tdx.fd#cb3675d68f450dcc95861c6360181a63dc1e7fa176cc23bfca26fd689663d6bc
+  platform: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.7.0/ovmf.tdx.platform.json.gz#0c61429b8cd69566cb32abda134a4e4501941a625423a6801078ebff47325ad0
+  kernel: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.7.0/stage1.bin#0658d197ddbac905c07c1e90b47b51efef54c72d27ba5589bb05ae59446fa6cc
+  stage2: https://github.com/oasisprotocol/oasis-boot/releases/download/v0.7.0/stage2-basic.tar.bz2#9a2b4d71e9779801bde73c16b3be789bc50672019a87e8c90fe3c94e034907c1
 deployments:
   mainnet:
     app_id: rofl1qr95suussttd2g9ehu3zcpgx8ewtwgayyuzsl0x2
     network: mainnet
     paratime: sapphire
-    admin: rofl_scheduler_admin
+    admin: oasis1qqwste8v87agsmajjj5q90g8e0pmkueykymnegxy
     trust_root:
-      height: 32743141
-      hash: 54d8d03e4402d1d0f56537232a98d6ff65f289c31f6adea32954b2ba67d3f9b3
+      height: 32876468
+      hash: 34cdbf62ecff080de7ba8ffef5d18a59279b4b1761c43212f6019fe3c4f1c3a6
     policy:
       quotes:
         pcs:
           tcb_validity_period: 30
-          min_tcb_evaluation_data_number: 21
+          min_tcb_evaluation_data_number: 22
           tdx: {}
       enclaves:
-        - id: Q93d04I7OA5aWotmB9717cT19DXWueiuZBz5AQdmBhwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.0
-        - id: aVhLf5JvG0cYzqrBzrtGslAfgiofMsrLgWxwkXYpSA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.0
-        - id: 1T2E93k/KBFGT+Bt0VdE3Qn65fbetLCcvZxac7FO7mYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.1
-        - id: 1e+03hCIHJ1iRjob3cRJMrzj8Rd6S4jXxBMa93tSPp0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.1
         - id: sOebCE4o7Ab3xbknAUirwNojIBRBf4vVqgYaCYy5c2EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.8.0
         - id: xU+f/6yYn7SsqVJ6AOE7mNUUbUk7A0MwEYoQtqhR4mEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
@@ -48,7 +41,11 @@ deployments:
         - id: 1BS188B3BnB7hcN7+ZmXx1ac7RObZXMcvbEUp7EUnoYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.9.0
         - id: 0rVbg7qKuXw4k7GDpEcf96facvvHl35R/3DPhk8YSxkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.10.0
         - id: UdfYXHK+gfK9AQDbjkf3q1sw+ZqPA/E9KBoaiId8SYoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.10.0
+        - id: CHSGbBImbk995fg3OHaYAj6x+2z9G2RlQqvnLHmElDsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: WAG9XpBzjh0ptQYytdzf+7ZqhfQc/LxVsUGWQhTkRi8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
@@ -57,25 +54,17 @@ deployments:
     app_id: rofl1qrqw99h0f7az3hwt2cl7yeew3wtz0fxunu7luyfg
     network: testnet
     paratime: sapphire
-    admin: test_a
+    admin: oasis1qpwaggvmhwq5uk40clase3knt655nn2tdy39nz2f
     trust_root:
-      height: 34897810
-      hash: 8a82334f30f23ab8fbf8a3f3467a6b938549e25d52ac2f5d0378f805dd611f05
+      height: 35034345
+      hash: 6a93364d04842dde5a81580e42aaad530ec3d4cad759715e2d67b7b049f369e7
     policy:
       quotes:
         pcs:
           tcb_validity_period: 30
-          min_tcb_evaluation_data_number: 21
+          min_tcb_evaluation_data_number: 22
           tdx: {}
       enclaves:
-        - id: wcj3vGIU8JQtALywmJf/83AlGfKvTEUVD4J8d2aGaEwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.0
-        - id: hlr8yDrlEKcvZbfhAm5raS0BrbW7j2OZQ59Gic0zyN0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.0
-        - id: /lfKZDnSGk7l3JWfc5gxX/nrRqEvYBP976S8m+8TeQsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.1
-        - id: TtqGUQ868crT1Wci8oIVJm6Y87tqPyWApyjDiyfx0YwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
-          version: 0.7.1
         - id: a5rt/zQnCMYahzvkUeFtBLYfZN6cn11GtiFey9IjRbIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.8.0
         - id: F9dwGzNniA3qn9N+81oZiOrkieRPSTL8MLp6sjG/42wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
@@ -85,10 +74,14 @@ deployments:
         - id: Say1bW082RK9hkajQE3MEoa/GpMqzkR2+mspGTZAN9kAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
           version: 0.9.0
         - id: imxeyqJHfvZ0EkyqCBmE+BkmP+LFoPtX8WuqkY6QcvwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.10.0
         - id: 68Wud+YklYQSYRyVSZcJs/Gek6mmRFmcDFPqVrASmdoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+          version: 0.10.0
+        - id: bVLfW1AHsYTwuzkzC+sxuY2YBT0xyWZt0ahwiQ67BroAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
+        - id: Ae0Fx1A7y9Oz/MjEpSCmysehx4wkXxQ8GkU/VqnhNdAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==
       endorsements:
         - any: {}
       fees: endorsing_node
       max_expiration: 3
 tooling:
-  version: 0.22.2
+  version: 0.24.0
