@@ -430,9 +430,8 @@ fn test_c10l_enc_call_identity_decoded() {
     let (decoded_data, metadata) = EVMModule::<ConfidentialEVMConfig>::decode_call_data(
         &ctx,
         data.clone(),
+        vec![],
         transaction::CallFormat::EncryptedX25519DeoxysII,
-        0,
-        true,
     )
     .expect("decode failed")
     .expect("km is unreachable");

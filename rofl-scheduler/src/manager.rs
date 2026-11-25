@@ -1808,7 +1808,7 @@ mod test {
             ),
             (
                 format!("{METADATA_KEY_OFFER_ALLOWED_ARTIFACTS_PREFIX}initrd"),
-                format!(""),
+                String::new(),
             ),
         ]);
 
