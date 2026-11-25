@@ -55,7 +55,7 @@ Where:
 
 - `<published_port>`: The external port exposed in your compose.yaml
 - `<setting>`: The specific proxy configuration (e.g., `mode`, `custom_domain`,
-  `proxy_protocol`)
+  `proxy_protocol`, `timeout_rw`, `timeout_connect`, `timeout_connection`)
 
 ### Example Configuration
 
@@ -155,5 +155,31 @@ services:
 - The address is reported by the provider's proxy. Unlike the TLS traffic, it
   is not protected from the provider, so do not use it as proof of who the
   client is.
-- Your app must use a `rofl-containers` version with PROXY protocol support,
-  and the provider must support it too. Otherwise the port is not reachable.
+
+#### `net.oasis.proxy.ports.<published_port>.timeout_*`
+
+The proxy closes connections that exceed its timeouts. You can change the
+timeouts of each port, for example to support WebSocket connections or slow
+streaming responses. Values are in seconds, from 1 to 86400 (one day).
+
+| Setting              | Default | Description                                                           |
+| -------------------- | ------- | --------------------------------------------------------------------- |
+| `timeout_rw`         | 30      | Closes the connection when no data flows in either direction this long. |
+| `timeout_connection` | 45      | Closes the connection after this long, even when it is active.        |
+| `timeout_connect`    | 1       | Maximum time to connect to your service.                              |
+
+```yaml title="compose.yaml"
+services:
+  myservice:
+    image: docker.io/my/service:latest
+    ports:
+      - "8080:8080"
+    annotations:
+      net.oasis.proxy.ports.8080.timeout_rw: 300
+      net.oasis.proxy.ports.8080.timeout_connection: 3600
+```
+
+- The provider's proxy applies its own `timeout_rw` and `timeout_connection`
+  to all connections and decides how far your deployment may raise them. The
+  connection is closed by whichever timeout is lower. `oasis rofl deploy`
+  requests the highest values used by any of your ports from the provider.

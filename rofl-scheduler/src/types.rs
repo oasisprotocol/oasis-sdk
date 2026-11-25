@@ -63,6 +63,12 @@ pub const METADATA_KEY_PROXY_PROTOCOL: &str = "net.oasis.proxy.proxy_protocol";
 /// Metadata value that enables PROXY protocol version 2.
 pub const METADATA_VALUE_PROXY_PROTOCOL_V2: &str = "v2";
 
+/// Metadata key used to request the proxy read/write timeout (in seconds) for the deployment.
+pub const METADATA_KEY_PROXY_TIMEOUT_RW: &str = "net.oasis.proxy.timeout_rw";
+/// Metadata key used to request the maximum proxy connection duration (in seconds) for the
+/// deployment.
+pub const METADATA_KEY_PROXY_TIMEOUT_CONNECTION: &str = "net.oasis.proxy.timeout_connection";
+
 /// Domain verification token context.
 pub const DOMAIN_VERIFICATION_TOKEN_CONTEXT: &[u8] =
     b"rofl-scheduler/proxy: domain verification token";

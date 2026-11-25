@@ -84,6 +84,24 @@ runtime:
                             external_wireguard_address: x.y.z.w
                             # Optional external IP address for incoming HTTPS proxy connections.
                             external_proxy_address: x.y.z.w
+                            # Optional read/write timeout in seconds (default: 30). Connections are
+                            # closed when no data flows in either direction for this long.
+                            timeout_rw: 30
+                            # Optional maximum connection duration in seconds (default: 45).
+                            timeout_connection: 45
+                            # Optional maximum read/write timeout in seconds that deployments may
+                            # request. When not set, deployments cannot raise `timeout_rw`.
+                            max_timeout_rw: 300
+                            # Optional maximum connection duration in seconds that deployments may
+                            # request. When not set, deployments cannot raise `timeout_connection`.
+                            max_timeout_connection: 3600
+                            # Optional maximum number of concurrent proxy connections (default: 1024).
+                            max_connections: 1024
+                            # Optional maximum number of concurrent proxy connections per instance.
+                            # Recommended when deployments may raise timeouts, so that a single
+                            # instance cannot use up all connections. When not set, only
+                            # `max_connections` applies.
+                            max_instance_connections: 256
 ```
 
 ## Reproducible Build

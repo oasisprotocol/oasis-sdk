@@ -5,6 +5,7 @@ use backoff::backoff::Backoff;
 use hickory_resolver::{
     config::{ServerGroup, CLOUDFLARE, GOOGLE, QUAD9},
     net::runtime::TokioRuntimeProvider,
+    proto::rr::Name,
 };
 use tokio::{sync::mpsc, task::JoinSet, time::Instant};
 
@@ -19,7 +20,16 @@ use rofl_app_core::prelude::*;
 #[async_trait]
 pub trait CustomDomainVerificationNotifier: Send + Sync {
     /// Called when a domain verification completes successfully.
-    async fn verification_completed(&self, id: InstanceId, domain: &str);
+    ///
+    /// The `handle` is the one the verification was queued with. As the instance may have been
+    /// redeployed while the verification was in progress, implementations must ignore the
+    /// result unless the handle belongs to the instance's current deployment.
+    async fn verification_completed(
+        &self,
+        id: InstanceId,
+        domain: &str,
+        handle: &Weak<CancelVerificationsOnDrop>,
+    );
 }
 
 /// Handle that can be used to cancel the verification.
@@ -40,7 +50,7 @@ impl CancelVerificationsOnDrop {
 pub struct DomainVerification {
     /// The instance ID that requested this domain verification.
     instance_id: InstanceId,
-    /// The domain name to verify.
+    /// The domain name to verify, in canonical (ASCII) form.
     domain: String,
     /// The token to verify.
     token: String,
@@ -152,6 +162,7 @@ impl CustomDomainVerifier {
 
     /// Queue a new domain verification request.
     ///
+    /// The `domain` must be in canonical (ASCII) form, see `rofl_proxy::http::canonical_name`.
     /// When all strong instances of `handle` are dropped, the verification will be canceled.
     pub async fn queue_verification(
         &self,
@@ -313,7 +324,11 @@ impl CustomDomainVerifier {
                     );
 
                     notifier
-                        .verification_completed(verification.instance_id, &verification.domain)
+                        .verification_completed(
+                            verification.instance_id,
+                            &verification.domain,
+                            &verification.handle,
+                        )
                         .await;
                 }
                 Err(err) => {
@@ -340,7 +355,12 @@ impl CustomDomainVerifier {
     ) -> Result<()> {
         let expected_token = format!("oasis-rofl-verification={}", verification.token);
 
-        let lookup = resolver.txt_lookup(&verification.domain).await?;
+        // Look up the fully qualified name so that it is never subject to search domains. The
+        // name is already in ASCII form, so it must not be processed again.
+        let mut name = Name::from_ascii(&verification.domain)?;
+        name.set_fqdn(true);
+
+        let lookup = resolver.txt_lookup(name).await?;
         for record in lookup.answers() {
             if record.data.to_string().contains(&expected_token) {
                 return Ok(());
@@ -354,6 +374,22 @@ impl CustomDomainVerifier {
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn test_lookup_name() {
+        // Canonical names should be looked up as fully qualified names, unchanged.
+        for domain in [
+            "xn--bcher-kva.example.org",
+            "app.example.org",
+            "_acme.example.org",
+        ] {
+            let mut name = Name::from_ascii(domain).unwrap();
+            name.set_fqdn(true);
+            assert!(name.is_fqdn());
+            assert_eq!(name.to_ascii(), format!("{domain}."));
+            assert_eq!(name.num_labels(), 3);
+        }
+    }
 
     #[test]
     fn test_domain_verification_ordering() {

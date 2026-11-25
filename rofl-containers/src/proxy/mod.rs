@@ -5,6 +5,7 @@ use std::{
     collections::{BTreeMap, HashSet},
     fs, future,
     sync::Arc,
+    time::Duration,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -31,6 +32,9 @@ use firewall::Firewall;
 const COMPOSE_FILE_PATH: &str = "/etc/oasis/containers/compose.yaml";
 /// Port that the HTTPS proxy should listen on.
 const PROXY_HTTPS_LISTEN_PORT: u16 = 443;
+/// Handshake timeout of the HTTPS proxy. This also covers the TLS handshake when terminating TLS,
+/// which requires a round trip to the client.
+const PROXY_HTTPS_HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 /// Name of the environment variable for the host.
 const PROXY_HOST_ENV_NAME: &str = "ROFL_PROXY_HOST";
 /// Name of the environment variable for the external address.
@@ -201,6 +205,7 @@ async fn run(
         http::Config {
             listen_address: listen_address.clone(),
             listen_port: PROXY_HTTPS_LISTEN_PORT,
+            timeout_handshake: PROXY_HTTPS_HANDSHAKE_TIMEOUT,
             proxy_protocol_hub,
             ..Default::default()
         },
@@ -216,7 +221,17 @@ async fn run(
             None => format!("p{}.{}", mapping.port.host_port, proxy_label.http.host),
         };
 
-        if names.contains(&name) {
+        let Some(canonical_name) = http::canonical_name(&name) else {
+            slog::warn!(logger, "ignoring mapping with invalid domain name";
+                "service" => &mapping.service,
+                "name" => &name,
+                "host_port" => mapping.port.host_port,
+            );
+            continue;
+        };
+
+        // Names that only differ in spelling (e.g. case) map to the same proxy route.
+        if !names.insert(canonical_name) {
             slog::warn!(logger, "ignoring duplicate mapping";
                 "service" => &mapping.service,
                 "name" => &name,
@@ -226,7 +241,6 @@ async fn run(
             );
             continue;
         }
-        names.insert(name.clone());
 
         slog::info!(logger, "adding mapping for port";
             "service" => &mapping.service,
@@ -234,20 +248,31 @@ async fn run(
             "host_address" => &mapping.port.host_address,
             "host_port" => mapping.port.host_port,
             "container_port" => mapping.port.container_port,
+            "timeouts" => ?mapping.timeouts,
         );
 
-        http.add_mapping(http::Mapping {
-            name,
-            dst_address: mapping.port.host_address,
-            dst_port: mapping.port.host_port,
-            mode: match mapping.mode {
-                PortMappingMode::TerminateTls => http::Mode::TerminateTls,
-                PortMappingMode::Passthrough => http::Mode::ForwardOnly,
-                PortMappingMode::Ignore => continue,
-            },
-            proxy_protocol: mapping.proxy_protocol.is_some(),
-        })
-        .await;
+        let result = http
+            .add_mapping(http::Mapping {
+                name: name.clone(),
+                dst_address: mapping.port.host_address,
+                dst_port: mapping.port.host_port,
+                mode: match mapping.mode {
+                    PortMappingMode::TerminateTls => http::Mode::TerminateTls,
+                    PortMappingMode::Passthrough => http::Mode::ForwardOnly,
+                    PortMappingMode::Ignore => continue,
+                },
+                proxy_protocol: mapping.proxy_protocol.is_some(),
+                timeouts: mapping.timeouts,
+                connection_group: None,
+            })
+            .await;
+        if let Err(err) = result {
+            slog::warn!(logger, "failed to add mapping for port";
+                "service" => &mapping.service,
+                "name" => &name,
+                "err" => ?err,
+            );
+        }
     }
 
     // Wait forever.

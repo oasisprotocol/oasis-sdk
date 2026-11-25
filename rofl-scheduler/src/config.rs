@@ -61,8 +61,21 @@ pub struct ProxyConfig {
     /// Optional read/write timeout (in seconds).
     pub timeout_rw: Option<u64>,
 
+    /// Optional maximum read/write timeout that deployments may request (in seconds).
+    ///
+    /// When not set, deployments cannot raise the read/write timeout.
+    pub max_timeout_rw: Option<u64>,
+    /// Optional maximum connection duration that deployments may request (in seconds).
+    ///
+    /// When not set, deployments cannot raise the maximum connection duration.
+    pub max_timeout_connection: Option<u64>,
+
     /// Optional maximum connection limit.
     pub max_connections: Option<u64>,
+    /// Optional maximum number of concurrent connections per instance.
+    ///
+    /// When not set (or zero), only the global connection limit applies.
+    pub max_instance_connections: Option<u64>,
 }
 
 impl RawLocalConfig {
